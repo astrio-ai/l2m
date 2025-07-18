@@ -1,0 +1,51 @@
+# These templates are heavily inspired by the ones from stagewise.io
+
+name: 🤖 Agent Request
+description: Request support for an existing coding agent in the OpenLegacy ecosystem
+title: 'agent: '
+labels: ['agent request']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for proposing a coding agent to integrate with OpenLegacy! Please fill out this form so we can evaluate it quickly.
+  - type: input
+    attributes:
+      label: Agent name
+      description: The official name of the coding agent (e.g. Cursor, Windsurf, Cline).
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Repository or homepage URL
+      description: Provide a link to the agent’s GitHub repo, website, or documentation.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Brief description
+      description: |
+        What does this agent do?  
+        Summarize its core capabilities and intended workflows.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Key features & integrations (optional)
+      description: |
+        Which languages, frameworks, or services does it support out-of-the-box?  
+        Does it integrate with specific APIs, SDKs, or tools?
+    validations:
+      required: false
+  - type: textarea
+    attributes:
+      label: Additional notes for maintainers
+      description: |
+        Anything else we should know at a glance?  
+        (e.g. maturity, community adoption, performance considerations)
+  - type: checkboxes
+    attributes:
+      label: 👨‍👧‍👦 Contributing
+      description: We welcome all contributions. Would you be willing to help add or test this integration?
+      options:
+        - label: 🙋‍♂️ Yes, I’d be happy to contribute a PR!
