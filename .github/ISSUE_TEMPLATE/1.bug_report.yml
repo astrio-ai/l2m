@@ -13,13 +13,14 @@ body:
 
   - type: checkboxes
     attributes:
-      label: 🔍 Debugging guide
+      label: 🔍 Pre-submission checklist
       description: |
         Please confirm:
         
-        👉 [Read the How to debug guide](https://stagewise.io/docs/debug)
+        👉 I have searched existing issues to avoid duplicates
+        👉 I have checked the documentation for similar issues
       options:
-        - label: I have read the "How to debug" guide, but the problem still persists
+        - label: I have searched existing issues and checked the documentation
     validations:
       required: true
 
@@ -36,7 +37,7 @@ body:
             --system \
             --binaries \
             --browsers \
-            --npmPackages "typescript,next,react,vue,@angular/core,@angular/cli,svelte,@sveltejs/kit,ember-source,preact,gatsby,nuxt,astro,@stagewise/toolbar,@stagewise/toolbar-next,@stagewise/toolbar-react,@stagewise/toolbar-vue,@stagewise/toolbar-angular,@stagewise/toolbar-svelte,@stagewise/toolbar-preact,@stagewise/toolbar-ember,@stagewise/toolbar-gatsby,@stagewise/toolbar-nuxt,@stagewise/toolbar-astro"
+            --npmPackages "typescript,next,react,vue,@angular/core,@angular/cli,svelte,@sveltejs/kit,ember-source,preact,gatsby,nuxt,astro"
           ```
 
         To get the npm list result, run:
@@ -45,19 +46,6 @@ body:
           npm list --depth=0
           ```
       placeholder: '<Paste envinfo & npm list results here>'
-    validations:
-      required: true
-
-  - type: textarea
-    attributes:
-      label: Provide VS Code extension version
-      description: |
-        Run this command to list installed extensions and versions:
-
-          ```terminal
-          code --list-extensions --show-versions | grep stagewise
-          ```
-      placeholder: '<Paste VS Code extension version here>'
     validations:
       required: true
 
