@@ -4,7 +4,7 @@
 
 <!-- Keep the gap above this line, otherwise they won't render correctly! -->
 [![GitHub Repo stars](https://img.shields.io/github/stars/astrio-ai/openlegacy)](https://github.com/astrio-ai/openlegacy) 
-[![Join us on Discord](https://img.shields.io/discord/1396038465002405948?label=Discord&logo=discord&logoColor=white)](https://discord.gg/2BVwAUzW)
+[![Join us on Discord](https://img.shields.io/discord/1396038465002405948?logo=discord&logoColor=white&label=discord)](https://discord.gg/2BVwAUzW)
 [![Contributing Guide](https://img.shields.io/badge/Contributing-Guide-informational)](https://github.com/openrewrite/.github/blob/main/CONTRIBUTING.md)
 </div>
 
