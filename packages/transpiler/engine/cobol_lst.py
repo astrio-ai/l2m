@@ -9,6 +9,8 @@ from antlr4 import InputStream, CommonTokenStream
 from ..grammars.cobol85.Cobol85Lexer import Cobol85Lexer
 from ..grammars.cobol85.Cobol85Parser import Cobol85Parser
 from typing import Optional, List, Tuple, Any, Dict
+from rich.tree import Tree
+from rich.console import Console
 
 class LosslessNode:
     """
@@ -302,6 +304,34 @@ class CobolSemanticAnalyzer:
         # TODO: Implement data flow analysis
         self.data_flow_graph = None
 
+def symbol_table_to_rich_tree(node, rich_tree=None):
+    label = f"[bold]{node.kind}[/bold]: {node.name} [dim]{node.metadata}[/dim]"
+    if rich_tree is None:
+        rich_tree = Tree(label)
+    else:
+        rich_tree = rich_tree.add(label)
+    for child in node.children:
+        symbol_table_to_rich_tree(child, rich_tree)
+    return rich_tree
+
+def symbol_table_to_dot(node, dot=None, parent_id=None, node_id=0):
+    """
+    Recursively output the symbol table as a DOT graph.
+    """
+    if dot is None:
+        dot = ["digraph SymbolTable {", "  node [shape=box, fontname=monospace];"]
+    this_id = f"n{node_id}"
+    label = f"{node.kind}: {node.name}\\n{node.metadata}"
+    dot.append(f'  {this_id} [label="{label}"];')
+    if parent_id is not None:
+        dot.append(f"  {parent_id} -> {this_id};")
+    next_id = node_id + 1
+    for child in node.children:
+        dot, next_id = symbol_table_to_dot(child, dot, this_id, next_id)
+    if parent_id is None:
+        dot.append("}")
+    return dot, next_id
+
 # Example usage
 if __name__ == "__main__":
     import sys
@@ -314,6 +344,14 @@ if __name__ == "__main__":
     print(lst)
     analyzer = CobolSemanticAnalyzer(lst, tokens)
     analyzer.analyze()
+    console = Console()
+    tree = symbol_table_to_rich_tree(analyzer.symbol_table_root)
+    console.print(tree)
     print("Symbol Table (hierarchical):\n", analyzer.symbol_table_root.pretty())
     print("Type Info:", analyzer.type_info)
-    print("Semantic analysis complete.") 
+    print("Semantic analysis complete.")
+    # Output DOT file for Graphviz
+    dot_lines, _ = symbol_table_to_dot(analyzer.symbol_table_root)
+    with open("symbol_table.dot", "w") as f:
+        f.write("\n".join(dot_lines))
+    print("DOT file written to symbol_table.dot")
