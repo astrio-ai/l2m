@@ -1,4 +1,4 @@
-# OpenLegacy — AI-Powered Legacy Code Transpilation Engine
+# Legacy2Modern — AI-Powered Legacy Code Transpilation Engine
 
 <div align="center">
 
@@ -8,11 +8,11 @@
 [![Contributing Guide](https://img.shields.io/badge/Contributing-Guide-informational)](https://github.com/openrewrite/.github/blob/main/CONTRIBUTING.md)
 </div>
 
-Welcome to **OpenLegacy**, an open-source engine for transforming legacy source code into modern, maintainable software.
+Welcome to **Legacy2Modern**, an open-source engine for transforming legacy source code into modern, maintainable software.
 
-OpenLegacy specializes in **intelligent transpilation** of legacy languages (starting with COBOL) into modern languages like Python. It combines the precision of AST-based parsing with the flexibility of template-driven code generation, optionally augmented by Large Language Models (LLMs).
+Legacy2Modern specializes in **intelligent transpilation** of legacy languages (starting with COBOL) into modern languages like Python. It combines the precision of AST-based parsing with the flexibility of template-driven code generation, optionally augmented by Large Language Models (LLMs).
 
-Whether you're modernizing COBOL business systems, migrating legacy applications to the cloud, or transforming decades-old enterprise code — OpenLegacy is built to help you do it **safely**, **accurately**, and **transparently**.
+Whether you're modernizing COBOL business systems, migrating legacy applications to the cloud, or transforming decades-old enterprise code — Legacy2Modern is built to help you do it **safely**, **accurately**, and **transparently**.
 
 ## ✨ Features
 
@@ -75,8 +75,8 @@ packages/transpiler/engine/
 ### 1. Clone the Repo
 
 ```bash
-git clone https://github.com/astrio-ai/openlegacy.git
-cd openlegacy
+git clone https://github.com/astrio-ai/legacy2modern.git
+cd legacy2modern
 ```
 
 ### 2. Install Dependencies
@@ -150,7 +150,7 @@ if __name__ == '__main__':
 ### **Project Structure**
 
 ```
-openlegacy/
+legacy2modern/
 ├── packages/
 │   ├── transpiler/           # Core transpilation engine
 │   │   ├── engine/          # Transpilation components
@@ -201,10 +201,10 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for setup instructions, coding guidelin
 ## 💬 Community & Support
 * 📢 Follow our project updates on [X](https://x.com/nolan-lwin)
 * 👾 Join our [Discord](https://discord.gg/2BVwAUzW)
-* 🧑‍💻 Join the discussion: [GitHub Discussions](https://github.com/astrio-ai/openlegacy/discussions)
-* 🧪 Report bugs: [GitHub Issues](https://github.com/astrio-ai/openlegacy/issues)
+* 🧑‍💻 Join the discussion: [GitHub Discussions](https://github.com/astrio-ai/legacy2modern/discussions)
+* 🧪 Report bugs: [GitHub Issues](https://github.com/astrio-ai/legacy2modern/issues)
 
 ## 📬 Contact Us
 For partnership inquiries or professional use cases:
 
-📧 **[naingoolwin.astrio@gmail.com](mailto:naingoolwin.astrio@gmail.com)**\
+📧 **[naingoolwin.astrio@gmail.com](mailto:naingoolwin.astrio@gmail.com)**
