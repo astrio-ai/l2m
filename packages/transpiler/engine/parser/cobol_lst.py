@@ -6,8 +6,8 @@ and perform semantic analysis, using the ANTLR-generated parser for COBOL85.
 """
 
 from antlr4 import InputStream, CommonTokenStream
-from ..grammars.cobol85.Cobol85Lexer import Cobol85Lexer
-from ..grammars.cobol85.Cobol85Parser import Cobol85Parser
+from ...grammars.cobol85.Cobol85Lexer import Cobol85Lexer
+from ...grammars.cobol85.Cobol85Parser import Cobol85Parser
 from typing import Optional, List, Tuple, Any, Dict
 from rich.tree import Tree
 from rich.console import Console

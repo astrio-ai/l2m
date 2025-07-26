@@ -1,0 +1,19 @@
+{% macro render_expression(expr) %}
+{% if expr.type == 'literal' %}
+{% if expr.literal_type == 'str' %}
+{{ expr.value }}
+{% else %}
+{{ expr.value }}
+{% endif %}
+{% elif expr.type == 'identifier' %}
+{{ expr.name }}
+{% elif expr.type == 'operation' %}
+{% if expr.right %}
+({{ expr.left | render_expression }} {{ expr.operator }} {{ expr.right | render_expression }})
+{% else %}
+{{ expr.operator }}({{ expr.left | render_expression }})
+{% endif %}
+{% else %}
+{{ expr | string }}
+{% endif %}
+{% endmacro %} 
