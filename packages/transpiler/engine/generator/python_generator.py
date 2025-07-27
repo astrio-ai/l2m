@@ -5,7 +5,7 @@ This module generates Python code from the language-agnostic IR representation.
 """
 
 from typing import List, Dict, Any
-from .ir import (
+from ..ir.ir import (
     IRNode, IRProgram, IRFunction, IRVariable, IRAssignment, IROperation,
     IRLiteral, IRIdentifier, IRLoop, IRInput, IROutput, IRReturn,
     IRConditional, IRCall, IRVisitor, IRType, IROperator
