@@ -5,7 +5,7 @@ import pytest
 # Add the project root to sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from packages.transpiler.engine.cobol_lst import parse_cobol_source, CobolSemanticAnalyzer
+from packages.transpiler.engine.parser.cobol_lst import parse_cobol_source, CobolSemanticAnalyzer
 
 # Directory containing sample COBOL files
 EXAMPLES_DIR = os.path.join(os.path.dirname(__file__), "..", "examples", "cobol")
