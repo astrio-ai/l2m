@@ -8,9 +8,9 @@ to convert source languages to target languages.
 import os
 import sys
 from typing import Dict, List, Optional, Any
-from .cobol_lst import parse_cobol_source, CobolSemanticAnalyzer
+from ..parser.cobol_lst import parse_cobol_source, CobolSemanticAnalyzer
 from .cobol_to_ir import CobolToIRTranslator
-from .ir_to_python import generate_python_from_ir
+from ..generator.python_generator import generate_python_from_ir
 from .ir import IRProgram
 
 class IRTranspiler:
