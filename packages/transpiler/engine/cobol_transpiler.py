@@ -8,7 +8,7 @@ handling data definitions and basic procedural statements.
 import os
 import sys
 from typing import Dict, List, Optional, Any
-from .cobol_lst import parse_cobol_source, CobolSemanticAnalyzer, LosslessNode
+from .parser.cobol_lst import parse_cobol_source, CobolSemanticAnalyzer, LosslessNode
 
 class CobolTranspiler:
     """
@@ -196,28 +196,93 @@ class CobolTranspiler:
                 if var_name.isdigit() or var_name in ['01', '05', '77']:
                     continue
                     
+                python_var_name = self.sanitize_python_name(var_name)
                 python_type = var_info.get('python_type', 'str')
                 if python_type == 'str':
-                    self.add_line(f"{var_name} = ''")
+                    self.add_line(f"{python_var_name} = ''")
                 elif python_type == 'int':
-                    self.add_line(f"{var_name} = 0")
+                    self.add_line(f"{python_var_name} = 0")
                 elif python_type == 'float':
-                    self.add_line(f"{var_name} = 0.0")
+                    self.add_line(f"{python_var_name} = 0.0")
                 elif python_type == 'bool':
-                    self.add_line(f"{var_name} = False")
+                    self.add_line(f"{python_var_name} = False")
             self.add_line("")
     
     def generate_main_function(self, lst_root: LosslessNode):
         """
         Generate the main Python function from COBOL procedure division.
         """
+        # First, generate paragraph functions
+        self.generate_paragraph_functions(lst_root)
+        
+        # Then generate the main function that calls the first paragraph
         self.add_line("def main():")
         self.indent_level += 1
         
-        # Find procedure division and translate statements
-        self.translate_procedure_division(lst_root)
+        # Find the first paragraph and call it
+        first_paragraph = self.find_first_paragraph(lst_root)
+        if first_paragraph:
+            python_name = self.sanitize_python_name(first_paragraph)
+            self.add_line(f"{python_name}()")
+        else:
+            # Fallback: translate procedure division directly
+            self.translate_procedure_division(lst_root)
         
         self.indent_level -= 1
+    
+    def generate_paragraph_functions(self, lst_root: LosslessNode):
+        """
+        Generate separate functions for each COBOL paragraph.
+        """
+        # Find and translate all paragraphs
+        def translate_paragraphs(node: LosslessNode):
+            if node.rule_name == "ParagraphContext":
+                self.translate_paragraph(node)
+            else:
+                for child in node.children:
+                    translate_paragraphs(child)
+        
+        translate_paragraphs(lst_root)
+    
+    def find_first_paragraph(self, lst_root: LosslessNode) -> str:
+        """
+        Find the first paragraph name in the procedure division.
+        """
+        def find_paragraphs(node: LosslessNode):
+            if node.rule_name == "ParagraphContext":
+                for child in node.children:
+                    if child.rule_name == "ParagraphNameContext":
+                        tokens = child.get_tokens()
+                        if tokens:
+                            return tokens[0].text
+            
+            for child in node.children:
+                result = find_paragraphs(child)
+                if result:
+                    return result
+            return None
+        
+        return find_paragraphs(lst_root)
+    
+    def find_all_paragraphs(self, lst_root: LosslessNode) -> List[str]:
+        """
+        Find all paragraph names in the procedure division.
+        """
+        paragraphs = []
+        
+        def find_paragraphs(node: LosslessNode):
+            if node.rule_name == "ParagraphContext":
+                for child in node.children:
+                    if child.rule_name == "ParagraphNameContext":
+                        tokens = child.get_tokens()
+                        if tokens:
+                            paragraphs.append(tokens[0].text)
+            
+            for child in node.children:
+                find_paragraphs(child)
+        
+        find_paragraphs(lst_root)
+        return paragraphs
     
     def translate_procedure_division(self, node: LosslessNode):
         """
@@ -240,7 +305,8 @@ class CobolTranspiler:
             self.translate_sentence(node)
         elif node.rule_name in ["DisplayStatementContext", "AcceptStatementContext", "MoveStatementContext", 
                                "AddStatementContext", "SubtractStatementContext", "GobackStatementContext",
-                               "PerformStatementContext", "InspectStatementContext"]:
+                               "PerformStatementContext", "InspectStatementContext", "IfStatementContext",
+                               "EvaluateStatementContext"]:
             # Direct statement translation
             self.translate_statement(node)
         else:
@@ -298,8 +364,20 @@ class CobolTranspiler:
                     i += 1
                 
                 condition = " ".join(condition_parts)
+                # For PERFORM UNTIL, we need to negate the condition
+                # UNTIL A = B becomes while not (A == B)
                 python_condition = self.convert_cobol_condition(condition)
-                self.add_line(f"while {python_condition}:")
+                # Also sanitize variable names in the condition
+                for var_name in self.variables:
+                    if var_name in python_condition:
+                        python_var_name = self.sanitize_python_name(var_name)
+                        python_condition = python_condition.replace(var_name, python_var_name)
+                
+                # Normalize string comparisons - remove trailing spaces
+                python_condition = python_condition.replace("'NO '", "'NO'")
+                python_condition = python_condition.replace("'YES '", "'YES'")
+                
+                self.add_line(f"while not ({python_condition}):")
                 self.indent_level += 1
                 
                 # Parse statements inside the loop
@@ -318,7 +396,16 @@ class CobolTranspiler:
                         if display_parts:
                             if len(display_parts) > 1:
                                 # Handle multiple display items with proper concatenation
-                                display_str = " + ".join(display_parts)
+                                converted_parts = []
+                                for part in display_parts:
+                                    if part.startswith("'") and part.endswith("'"):
+                                        # String literal
+                                        converted_parts.append(part)
+                                    else:
+                                        # Variable - convert to string and sanitize
+                                        python_var = self.sanitize_python_name(part)
+                                        converted_parts.append(f"str({python_var})")
+                                display_str = " + ' ' + ".join(converted_parts)
                             else:
                                 display_str = display_parts[0]
                             self.add_line(f"print({display_str})")
@@ -328,15 +415,16 @@ class CobolTranspiler:
                         i += 1
                         if i < len(token_texts) and token_texts[i] in self.variables:
                             var_name = token_texts[i]
+                            python_var_name = self.sanitize_python_name(var_name)
                             var_info = self.variables.get(var_name, {})
                             python_type = var_info.get('python_type', 'str')
                             
                             if python_type == 'int':
-                                self.add_line(f"{var_name} = int(input())")
+                                self.add_line(f"{python_var_name} = int(input())")
                             elif python_type == 'float':
-                                self.add_line(f"{var_name} = float(input())")
+                                self.add_line(f"{python_var_name} = float(input())")
                             else:
-                                self.add_line(f"{var_name} = input()")
+                                self.add_line(f"{python_var_name} = input()")
                             i += 1
                     
                     elif token_texts[i] == 'MOVE':
@@ -357,12 +445,14 @@ class CobolTranspiler:
                                 i += 1
                         
                         if source and destination:
+                            python_dest = self.sanitize_python_name(destination)
                             if source.startswith("'") and source.endswith("'"):
-                                self.add_line(f"{destination} = {source}")
+                                self.add_line(f"{python_dest} = {source}")
                             elif source.isdigit():
-                                self.add_line(f"{destination} = {source}")
+                                self.add_line(f"{python_dest} = {source}")
                             else:
-                                self.add_line(f"{destination} = {source}")
+                                python_source = self.sanitize_python_name(source)
+                                self.add_line(f"{python_dest} = {python_source}")
                     
                     elif token_texts[i] == 'ADD':
                         # Parse ADD statement
@@ -382,13 +472,17 @@ class CobolTranspiler:
                                 i += 1
                         
                         if result_var and len(operands) >= 2:
-                            expression = " + ".join(operands)
-                            self.add_line(f"{result_var} = {expression}")
+                            python_result = self.sanitize_python_name(result_var)
+                            python_operands = [self.sanitize_python_name(op) if op not in ['ADD', 'GIVING'] else op for op in operands]
+                            expression = " + ".join(python_operands)
+                            self.add_line(f"{python_result} = {expression}")
                         elif len(operands) >= 2:
                             destination = operands[-1]
+                            python_dest = self.sanitize_python_name(destination)
                             sources = operands[:-1]
                             for source in sources:
-                                self.add_line(f"{destination} += {source}")
+                                python_source = self.sanitize_python_name(source)
+                                self.add_line(f"{python_dest} += {python_source}")
                     
                     elif token_texts[i] == 'INSPECT':
                         # Parse INSPECT statement
@@ -402,7 +496,8 @@ class CobolTranspiler:
                             i += 1
                         
                         if variable:
-                            self.add_line(f"{variable} = {variable}.upper()")
+                            python_var = self.sanitize_python_name(variable)
+                            self.add_line(f"{python_var} = {python_var}.upper()")
                             i += 1
                     
                     else:
@@ -466,12 +561,14 @@ class CobolTranspiler:
                         i += 1
                 
                 if source and destination:
+                    python_dest = self.sanitize_python_name(destination)
                     if source.startswith("'") and source.endswith("'"):
-                        self.add_line(f"{destination} = {source}")
+                        self.add_line(f"{python_dest} = {source}")
                     elif source.isdigit():
-                        self.add_line(f"{destination} = {source}")
+                        self.add_line(f"{python_dest} = {source}")
                     else:
-                        self.add_line(f"{destination} = {source}")
+                        python_source = self.sanitize_python_name(source)
+                        self.add_line(f"{python_dest} = {python_source}")
             
             elif token == 'ADD':
                 # Parse ADD statement
@@ -491,13 +588,17 @@ class CobolTranspiler:
                         i += 1
                 
                 if result_var and len(operands) >= 2:
-                    expression = " + ".join(operands)
-                    self.add_line(f"{result_var} = {expression}")
+                    python_result = self.sanitize_python_name(result_var)
+                    python_operands = [self.sanitize_python_name(op) if op not in ['ADD', 'GIVING'] else op for op in operands]
+                    expression = " + ".join(python_operands)
+                    self.add_line(f"{python_result} = {expression}")
                 elif len(operands) >= 2:
                     destination = operands[-1]
+                    python_dest = self.sanitize_python_name(destination)
                     sources = operands[:-1]
                     for source in sources:
-                        self.add_line(f"{destination} += {source}")
+                        python_source = self.sanitize_python_name(source)
+                        self.add_line(f"{python_dest} += {python_source}")
             
             elif token == 'INSPECT':
                 # Parse INSPECT statement
@@ -511,15 +612,50 @@ class CobolTranspiler:
                     i += 1
                 
                 if variable:
-                    self.add_line(f"{variable} = {variable}.upper()")
+                    python_var = self.sanitize_python_name(variable)
+                    self.add_line(f"{python_var} = {python_var}.upper()")
                     i += 1
             
             elif token == 'GOBACK':
                 self.add_line("return")
                 i += 1
+            elif token == 'IF':
+                # Parse IF statement
+                i += 1
+                condition_parts = []
+                while i < len(token_texts) and token_texts[i] != 'THEN':
+                    condition_parts.append(token_texts[i])
+                    i += 1
+                if condition_parts:
+                    condition = " ".join(condition_parts)
+                    python_condition = self.convert_cobol_condition(condition)
+                    self.add_line(f"if {python_condition}:")
+                    self.indent_level += 1
+                    # TODO: Parse THEN and ELSE blocks
+                    self.add_line("# TODO: Implement IF-THEN-ELSE blocks")
+                    self.indent_level -= 1
             
             else:
                 i += 1
+    
+    def sanitize_python_name(self, cobol_name: str) -> str:
+        """
+        Convert COBOL names to valid Python names.
+        - Replace hyphens with underscores
+        - Ensure names don't start with digits
+        - Convert to lowercase
+        """
+        # Replace hyphens with underscores
+        python_name = cobol_name.replace('-', '_')
+        
+        # If name starts with digit, add prefix
+        if python_name[0].isdigit():
+            python_name = f"para_{python_name}"
+        
+        # Convert to lowercase
+        python_name = python_name.lower()
+        
+        return python_name
     
     def translate_paragraph(self, node: LosslessNode):
         """
@@ -535,8 +671,21 @@ class CobolTranspiler:
                     break
         
         if paragraph_name:
-            self.add_line(f"def {paragraph_name.lower().replace('-', '_')}():")
+            python_name = self.sanitize_python_name(paragraph_name)
+            self.add_line(f"def {python_name}():")
             self.indent_level += 1
+            
+            # Add global declarations for all variables
+            if self.variables:
+                global_vars = []
+                for var_name in self.variables:
+                    if not var_name.isdigit() and var_name not in ['01', '05', '77']:
+                        python_var_name = self.sanitize_python_name(var_name)
+                        global_vars.append(python_var_name)
+                
+                if global_vars:
+                    self.add_line(f"global {', '.join(global_vars)}")
+                    self.add_line("")
             
             # Translate statements in paragraph
             for child in node.children:
@@ -591,6 +740,10 @@ class CobolTranspiler:
             self.translate_perform(node)
         elif node.rule_name == "InspectStatementContext":
             self.translate_inspect(node)
+        elif node.rule_name == "IfStatementContext":
+            self.translate_if_statement(node)
+        elif node.rule_name == "EvaluateStatementContext":
+            self.translate_evaluate_statement(node)
         else:
             # Try to find statement types in children
             for child in node.children:
@@ -624,15 +777,25 @@ class CobolTranspiler:
                     # String literal
                     display_parts.append(token.text)
                 elif token.text in self.variables:
-                    # Variable
-                    display_parts.append(token.text)
+                    # Variable - sanitize the name
+                    python_var_name = self.sanitize_python_name(token.text)
+                    display_parts.append(python_var_name)
                 elif token.text == 'DISPLAY':
                     continue  # Skip the DISPLAY keyword
         
         if display_parts:
-            # Join multiple display items
+            # Join multiple display items with proper type conversion
             if len(display_parts) > 1:
-                display_str = " + ' ' + ".join(display_parts)
+                # Convert each part to string and join
+                converted_parts = []
+                for part in display_parts:
+                    if part.startswith("'") and part.endswith("'"):
+                        # String literal
+                        converted_parts.append(part)
+                    else:
+                        # Variable - convert to string
+                        converted_parts.append(f"str({part})")
+                display_str = " + ' ' + ".join(converted_parts)
             else:
                 display_str = display_parts[0]
             self.add_line(f"print({display_str})")
@@ -651,15 +814,16 @@ class CobolTranspiler:
                     break
         
         if variable_name:
+            python_var_name = self.sanitize_python_name(variable_name)
             var_info = self.variables.get(variable_name, {})
             python_type = var_info.get('python_type', 'str')
             
             if python_type == 'int':
-                self.add_line(f"{variable_name} = int(input())")
+                self.add_line(f"{python_var_name} = int(input())")
             elif python_type == 'float':
-                self.add_line(f"{variable_name} = float(input())")
+                self.add_line(f"{python_var_name} = float(input())")
             else:
-                self.add_line(f"{variable_name} = input()")
+                self.add_line(f"{python_var_name} = input()")
     
     def translate_move(self, node: LosslessNode):
         """
@@ -678,15 +842,17 @@ class CobolTranspiler:
                     break
         
         if source and destination:
+            python_dest = self.sanitize_python_name(destination)
             if source.startswith("'") and source.endswith("'"):
                 # String literal
-                self.add_line(f"{destination} = {source}")
+                self.add_line(f"{python_dest} = {source}")
             elif source.isdigit():
                 # Numeric literal
-                self.add_line(f"{destination} = {source}")
+                self.add_line(f"{python_dest} = {source}")
             else:
-                # Variable
-                self.add_line(f"{destination} = {source}")
+                # Variable - sanitize source too
+                python_source = self.sanitize_python_name(source)
+                self.add_line(f"{python_dest} = {python_source}")
     
     def translate_add(self, node: LosslessNode):
         """
@@ -712,14 +878,18 @@ class CobolTranspiler:
         
         if result_var and len(operands) >= 2:
             # ADD with GIVING: result = op1 + op2 + op3
-            expression = " + ".join(operands)
-            self.add_line(f"{result_var} = {expression}")
+            python_result = self.sanitize_python_name(result_var)
+            python_operands = [self.sanitize_python_name(op) if op not in ['ADD', 'GIVING'] else op for op in operands]
+            expression = " + ".join(python_operands)
+            self.add_line(f"{python_result} = {expression}")
         elif len(operands) >= 2:
             # Simple ADD: destination += source
             destination = operands[-1]
+            python_dest = self.sanitize_python_name(destination)
             sources = operands[:-1]
             for source in sources:
-                self.add_line(f"{destination} += {source}")
+                python_source = self.sanitize_python_name(source)
+                self.add_line(f"{python_dest} += {python_source}")
     
     def translate_subtract(self, node: LosslessNode):
         """
@@ -734,9 +904,11 @@ class CobolTranspiler:
         
         if len(operands) >= 2:
             destination = operands[-1]
+            python_dest = self.sanitize_python_name(destination)
             sources = operands[:-1]
             for source in sources:
-                self.add_line(f"{destination} -= {source}")
+                python_source = self.sanitize_python_name(source)
+                self.add_line(f"{python_dest} -= {python_source}")
     
     def translate_perform(self, node: LosslessNode):
         """
@@ -752,7 +924,8 @@ class CobolTranspiler:
             # Simple PERFORM (function call)
             for token in tokens:
                 if hasattr(token, 'text') and token.text and token.text not in ['PERFORM']:
-                    self.add_line(f"{token.text.lower().replace('-', '_')}()")
+                    python_func_name = self.sanitize_python_name(token.text)
+                    self.add_line(f"{python_func_name}()")
     
     def translate_perform_until(self, node: LosslessNode):
         """
@@ -787,16 +960,33 @@ class CobolTranspiler:
         """
         tokens = node.get_tokens()
         variable = None
+        converting_from = None
+        converting_to = None
         
-        for token in tokens:
-            if hasattr(token, 'text') and token.text and token.text not in ['INSPECT', 'CONVERTING']:
+        # Parse INSPECT CONVERTING
+        for i, token in enumerate(tokens):
+            if hasattr(token, 'text') and token.text:
                 if token.text in self.variables:
                     variable = token.text
-                    break
+                elif token.text == 'CONVERTING' and i + 1 < len(tokens):
+                    # Look for the FROM and TO parts
+                    for j in range(i + 1, len(tokens)):
+                        t = tokens[j]
+                        if hasattr(t, 'text') and t.text == 'TO':
+                            # Found TO, now look for the strings
+                            if j > 0 and j + 1 < len(tokens):
+                                converting_from = tokens[j-1].text if hasattr(tokens[j-1], 'text') else None
+                                converting_to = tokens[j+1].text if hasattr(tokens[j+1], 'text') else None
+                            break
         
         if variable:
-            # Simple INSPECT CONVERTING (case conversion)
-            self.add_line(f"{variable} = {variable}.upper()")
+            python_var = self.sanitize_python_name(variable)
+            if converting_from and converting_to:
+                # INSPECT CONVERTING with specific character mapping
+                self.add_line(f"{python_var} = {python_var}.replace('{converting_from}', '{converting_to}')")
+            else:
+                # Simple INSPECT CONVERTING (case conversion)
+                self.add_line(f"{python_var} = {python_var}.upper()")
     
     def convert_cobol_condition(self, condition: str) -> str:
         """
@@ -819,7 +1009,80 @@ class CobolTranspiler:
                     parts[i] = f"'{parts[i]}'"
             condition = "".join(parts)
         
+        # Fix PERFORM UNTIL logic - invert the condition
+        if 'UNTIL' in condition:
+            # For PERFORM UNTIL, we need to negate the condition
+            # UNTIL A = B becomes while not (A == B)
+            condition = f"not ({condition})"
+        
         return condition
+    
+    def translate_if_statement(self, node: LosslessNode):
+        """
+        Translate IF statement to Python if-elif-else.
+        """
+        tokens = node.get_tokens()
+        condition = None
+        then_statements = []
+        else_statements = []
+        
+        # Parse IF-THEN-ELSE structure
+        in_then = False
+        in_else = False
+        
+        for i, token in enumerate(tokens):
+            if hasattr(token, 'text') and token.text:
+                if token.text == 'IF':
+                    # Extract condition
+                    condition_parts = []
+                    j = i + 1
+                    while j < len(tokens) and tokens[j].text != 'THEN':
+                        if hasattr(tokens[j], 'text') and tokens[j].text:
+                            condition_parts.append(tokens[j].text)
+                        j += 1
+                    condition = " ".join(condition_parts)
+                elif token.text == 'THEN':
+                    in_then = True
+                    in_else = False
+                elif token.text == 'ELSE':
+                    in_then = False
+                    in_else = True
+                elif token.text == 'END-IF':
+                    break
+                elif in_then and token.text not in ['IF', 'THEN', 'ELSE', 'END-IF']:
+                    then_statements.append(token.text)
+                elif in_else and token.text not in ['IF', 'THEN', 'ELSE', 'END-IF']:
+                    else_statements.append(token.text)
+        
+        if condition:
+            python_condition = self.convert_cobol_condition(condition)
+            self.add_line(f"if {python_condition}:")
+            self.indent_level += 1
+            
+            # Add THEN statements
+            for stmt in then_statements:
+                if stmt.strip():
+                    self.add_line(f"# {stmt}")
+            
+            if else_statements:
+                self.indent_level -= 1
+                self.add_line("else:")
+                self.indent_level += 1
+                
+                # Add ELSE statements
+                for stmt in else_statements:
+                    if stmt.strip():
+                        self.add_line(f"# {stmt}")
+            
+            self.indent_level -= 1
+    
+    def translate_evaluate_statement(self, node: LosslessNode):
+        """
+        Translate EVALUATE statement to Python if-elif-else.
+        """
+        tokens = node.get_tokens()
+        self.add_line("# EVALUATE statement - convert to if-elif-else")
+        self.add_line("# TODO: Implement full EVALUATE translation")
     
     def translate_goback(self, node: LosslessNode):
         """
