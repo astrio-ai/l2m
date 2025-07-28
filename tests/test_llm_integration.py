@@ -1,7 +1,7 @@
 """
-Test Enhanced LLM Integration
+Test LLM Integration
 
-This module tests the enhanced LLM integration capabilities including
+This module tests the LLM integration capabilities including
 analysis, optimization, and code review features.
 """
 
@@ -17,8 +17,8 @@ from packages.transpiler.engine.llm_augmentor import LLMConfig, LLMAugmentor
 from packages.llm_agent import LLMAgent, AnalysisResult, OptimizationResult, ReviewResult
 
 
-class TestEnhancedLLMIntegration:
-    """Test enhanced LLM integration capabilities."""
+class TestLLMIntegration:
+    """Test LLM integration capabilities."""
     
     def setup_method(self):
         """Set up test fixtures."""
@@ -260,11 +260,11 @@ class TestEnhancedLLMIntegration:
         assert result == "Success response"
         assert mock_provider.generate_response.call_count == 3
     
-    def test_enhanced_cli_integration(self):
-        """Test enhanced CLI integration."""
+    def test_cli_integration(self):
+        """Test CLI integration."""
         # This test would require more complex mocking of the CLI
         # For now, we'll test the basic structure
-        from packages.cli.enhanced_cli import create_llm_config, setup_logging
+        from packages.cli.cli import create_llm_config, setup_logging
         
         # Test config creation
         with patch.dict(os.environ, {'LLM_API_KEY': 'test-key'}):

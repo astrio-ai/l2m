@@ -1,6 +1,6 @@
-# Enhanced LLM Integration Features
+# LLM Integration Features
 
-This document provides a comprehensive overview of the enhanced LLM integration features added to the legacy2modern transpiler.
+This document provides a comprehensive overview of the LLM integration features added to the legacy2modern transpiler.
 
 ## 🚀 What's New
 
@@ -51,15 +51,15 @@ This document provides a comprehensive overview of the enhanced LLM integration 
   - `packages/llm-agent/optimizer.py` - AI-powered code optimization
   - `packages/llm-agent/reviewer.py` - Automated code review
 
-### Enhanced CLI
-- `packages/cli/enhanced_cli.py` - New CLI showcasing all LLM capabilities
+### CLI
+- `packages/cli/cli.py` - CLI showcasing all LLM capabilities
 
 ### Documentation
 - `docs/llm_integration.md` - Updated with comprehensive feature documentation
-- `docs/enhanced_llm_features.md` - This summary document
+- `docs/llm_features.md` - This summary document
 
 ### Testing
-- `tests/test_enhanced_llm_integration.py` - Comprehensive test suite for new features
+- `tests/test_llm_integration.py` - Comprehensive test suite for new features
 
 ## 🔧 Configuration
 
