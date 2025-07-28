@@ -1,8 +1,8 @@
 """
-Enhanced CLI Interface for LLM-Enhanced COBOL Transpiler
+CLI Interface for LLM-Enhanced COBOL Transpiler
 
 This module provides a comprehensive command-line interface that showcases
-all the new LLM integration capabilities including analysis, optimization,
+all the LLM integration capabilities including analysis, optimization,
 and code review.
 """
 
@@ -73,7 +73,7 @@ def transpile_with_analysis(input_file: str, output_file: Optional[str] = None,
         hybrid_transpiler = HybridTranspiler(llm_config)
         llm_agent = LLMAgent(llm_config)
         
-        logger.info(f"Starting enhanced transpilation: {input_file} -> {output_file}")
+        logger.info(f"Starting transpilation: {input_file} -> {output_file}")
         
         # Read source code
         with open(input_file, 'r') as f:
@@ -290,10 +290,10 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python enhanced_cli.py input.cobol
-  python enhanced_cli.py input.cobol -o output.py
-  python enhanced_cli.py input.cobol --verbose --report
-  python enhanced_cli.py input.cobol --analyze-only
+  python cli.py input.cobol
+python cli.py input.cobol -o output.py
+python cli.py input.cobol --verbose --report
+python cli.py input.cobol --analyze-only
         """
     )
     
