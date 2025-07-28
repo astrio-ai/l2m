@@ -10,6 +10,7 @@ import sys
 from typing import Dict, List, Optional, Any
 from .parser.cobol_lst import parse_cobol_source, CobolSemanticAnalyzer, LosslessNode
 from ..rules.rule_engine import RuleEngine
+from .edge_case_detector import EdgeCaseDetector
 
 class CobolTranspiler:
     """
@@ -22,6 +23,7 @@ class CobolTranspiler:
         self.indent_level = 0
         self.loop_counter = 0
         self.rule_engine = RuleEngine()
+        self.edge_case_detector = EdgeCaseDetector()
         
     def transpile_file(self, cobol_file_path: str) -> str:
         """
@@ -30,9 +32,9 @@ class CobolTranspiler:
         with open(cobol_file_path, 'r') as f:
             cobol_source = f.read()
         
-        return self.transpile_source(cobol_source)
+        return self.transpile_source(cobol_source, cobol_file_path)
     
-    def transpile_source(self, cobol_source: str) -> str:
+    def transpile_source(self, cobol_source: str, file_path: str = "") -> str:
         """
         Transpile COBOL source code to Python.
         """
@@ -40,6 +42,10 @@ class CobolTranspiler:
         lst, tokens = parse_cobol_source(cobol_source)
         analyzer = CobolSemanticAnalyzer(lst, tokens)
         analyzer.analyze()
+        
+        # Detect edge cases
+        edge_cases = self.edge_case_detector.detect_edge_cases(lst, "root")
+        self.edge_case_detector.log_edge_cases(edge_cases, file_path)
         
         # Generate Python code
         self.generate_python_code(analyzer)
