@@ -67,7 +67,10 @@ class OpenAIProvider(LLMProvider):
     
     def generate_response(self, messages: List[Dict[str, str]], config: LLMConfig) -> str:
         """Generate response using OpenAI API."""
-        response = openai.ChatCompletion.create(
+        from openai import OpenAI
+        
+        client = OpenAI(api_key=config.api_key)
+        response = client.chat.completions.create(
             model=config.model,
             messages=messages,
             temperature=config.temperature,
