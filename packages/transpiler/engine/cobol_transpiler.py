@@ -9,6 +9,7 @@ import os
 import sys
 from typing import Dict, List, Optional, Any
 from .parser.cobol_lst import parse_cobol_source, CobolSemanticAnalyzer, LosslessNode
+from ..rules.rule_engine import RuleEngine
 
 class CobolTranspiler:
     """
@@ -20,6 +21,7 @@ class CobolTranspiler:
         self.generated_code: List[str] = []
         self.indent_level = 0
         self.loop_counter = 0
+        self.rule_engine = RuleEngine()
         
     def transpile_file(self, cobol_file_path: str) -> str:
         """
@@ -61,6 +63,9 @@ class CobolTranspiler:
         
         # Also try symbol table as backup
         self.extract_variables(analyzer.symbol_table_root)
+        
+        # Set variables in rule engine
+        self.rule_engine.set_variables(self.variables)
         
         # Generate variable declarations
         self.generate_variable_declarations()
@@ -703,27 +708,22 @@ class CobolTranspiler:
     
     def translate_statement(self, node: LosslessNode):
         """
-        Translate individual COBOL statements to Python.
+        Translate individual COBOL statements to Python using rule engine.
         """
-        # Check if this is a StatementContext and look for statement types in children
+        # Try to apply rules first
+        result = self.rule_engine.apply_rules(node)
+        if result:
+            # Split the result into lines and add them with proper indentation
+            lines = result.split('\n')
+            for line in lines:
+                if line.strip():
+                    self.add_line(line.strip())
+            return
+        
+        # Fallback to direct translation for basic statements
         if node.rule_name == "StatementContext":
             for child in node.children:
-                if child.rule_name == "DisplayStatementContext":
-                    self.translate_display(child)
-                elif child.rule_name == "AcceptStatementContext":
-                    self.translate_accept(child)
-                elif child.rule_name == "MoveStatementContext":
-                    self.translate_move(child)
-                elif child.rule_name == "AddStatementContext":
-                    self.translate_add(child)
-                elif child.rule_name == "SubtractStatementContext":
-                    self.translate_subtract(child)
-                elif child.rule_name == "GobackStatementContext":
-                    self.translate_goback(child)
-                elif child.rule_name == "PerformStatementContext":
-                    self.translate_perform(child)
-                elif child.rule_name == "InspectStatementContext":
-                    self.translate_inspect(child)
+                self.translate_statement(child)
         elif node.rule_name == "DisplayStatementContext":
             self.translate_display(node)
         elif node.rule_name == "AcceptStatementContext":
@@ -740,29 +740,10 @@ class CobolTranspiler:
             self.translate_perform(node)
         elif node.rule_name == "InspectStatementContext":
             self.translate_inspect(node)
-        elif node.rule_name == "IfStatementContext":
-            self.translate_if_statement(node)
-        elif node.rule_name == "EvaluateStatementContext":
-            self.translate_evaluate_statement(node)
         else:
             # Try to find statement types in children
             for child in node.children:
-                if child.rule_name == "DisplayStatementContext":
-                    self.translate_display(child)
-                elif child.rule_name == "AcceptStatementContext":
-                    self.translate_accept(child)
-                elif child.rule_name == "MoveStatementContext":
-                    self.translate_move(child)
-                elif child.rule_name == "AddStatementContext":
-                    self.translate_add(child)
-                elif child.rule_name == "SubtractStatementContext":
-                    self.translate_subtract(child)
-                elif child.rule_name == "GobackStatementContext":
-                    self.translate_goback(child)
-                elif child.rule_name == "PerformStatementContext":
-                    self.translate_perform(child)
-                elif child.rule_name == "InspectStatementContext":
-                    self.translate_inspect(child)
+                self.translate_statement(child)
     
     def translate_display(self, node: LosslessNode):
         """
