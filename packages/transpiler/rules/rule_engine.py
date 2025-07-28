@@ -13,6 +13,13 @@ from .control_flow_rules import (
     PerformTimesRule,
     EvaluateRule
 )
+from .file_io_rules import (
+    FileSelectRule,
+    FileOpenRule,
+    FileReadRule,
+    FileWriteRule,
+    FileCloseRule
+)
 from ..engine.parser.cobol_lst import LosslessNode
 
 
@@ -35,10 +42,18 @@ class RuleEngine:
     
     def _register_default_rules(self):
         """Register the default transformation rules."""
+        # Control flow rules
         self.register_rule(IfStatementRule())
         self.register_rule(PerformUntilRule())
         self.register_rule(PerformTimesRule())
         self.register_rule(EvaluateRule())
+        
+        # File I/O rules
+        self.register_rule(FileSelectRule())
+        self.register_rule(FileOpenRule())
+        self.register_rule(FileReadRule())
+        self.register_rule(FileWriteRule())
+        self.register_rule(FileCloseRule())
     
     def register_rule(self, rule: BaseRule):
         """
