@@ -12,11 +12,23 @@ from .control_flow_rules import (
     PerformTimesRule,
     EvaluateRule
 )
+from .file_io_rules import (
+    FileSelectRule,
+    FileOpenRule,
+    FileReadRule,
+    FileWriteRule,
+    FileCloseRule
+)
 
 __all__ = [
     'BaseRule',
     'IfStatementRule',
     'PerformUntilRule',
     'PerformTimesRule',
-    'EvaluateRule'
+    'EvaluateRule',
+    'FileSelectRule',
+    'FileOpenRule',
+    'FileReadRule',
+    'FileWriteRule',
+    'FileCloseRule'
 ] 
