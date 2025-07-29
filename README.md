@@ -68,32 +68,79 @@ packages/transpiler/engine/
 ### Prerequisites
 
 - Python 3.10+
-- ANTLR4 runtime: `pip install antlr4-python3-runtime`
-- Jinja2: `pip install jinja2`
-- Rich (for visualization): `pip install rich`
+- Git (for cloning the repository)
 
-### 1. Clone the Repo
+### Option 1: Quick Install (Recommended)
 
 ```bash
+# Clone the repository
 git clone https://github.com/astrio-ai/legacy2modern.git
 cd legacy2modern
+
+# Run the installation script
+./install.sh
 ```
 
-### 2. Install Dependencies
+### Option 2: Manual Installation
 
 ```bash
-# Install Python dependencies
-pip install antlr4-python3-runtime jinja2 rich pytest
+# Clone the repository
+git clone https://github.com/astrio-ai/legacy2modern.git
+cd legacy2modern
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Install the CLI
+pip install -e .
 ```
 
-### 3. Run COBOL Transpilation
+### Option 3: Run Directly (No Installation)
 
 ```bash
-# Direct transpilation
-python -m packages.transpiler.engine.cobol_transpiler examples/cobol/HELLO.cobol
+# Clone the repository
+git clone https://github.com/astrio-ai/legacy2modern.git
+cd legacy2modern
 
-# Template-based transpilation
-python -m packages.transpiler.engine.ir_template_transpiler examples/cobol/HELLO.cobol
+# Install dependencies
+pip install -r requirements.txt
+
+# Run the CLI directly
+python run_cli.py
+```
+
+### Using the CLI
+
+Once installed, you can use the CLI in several ways:
+
+```bash
+# Start the interactive CLI
+legacy2modern
+
+# Or use the short command
+l2m
+
+# Run directly without installation
+python run_cli.py
+```
+
+The CLI provides an interactive interface similar to Gemini CLI where you can:
+- Transpile COBOL files to Python using natural language commands
+- Get AI-powered analysis and optimization suggestions
+- View code previews with syntax highlighting
+- Use slash commands for quick actions
+
+### Examples
+
+```bash
+# Start the CLI
+legacy2modern
+
+# In the interactive mode:
+> transpile examples/cobol/HELLO.cobol
+> /transpile examples/cobol/HELLO.cobol
+> analyze the generated Python code
+> /help
 ```
 
 ### 4. Run Tests
