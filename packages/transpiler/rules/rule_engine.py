@@ -11,7 +11,9 @@ from .control_flow_rules import (
     IfStatementRule,
     PerformUntilRule,
     PerformTimesRule,
-    EvaluateRule
+    PerformParagraphRule,
+    EvaluateRule,
+    GoBackRule
 )
 from .file_io_rules import (
     FileSelectRule,
@@ -19,6 +21,16 @@ from .file_io_rules import (
     FileReadRule,
     FileWriteRule,
     FileCloseRule
+)
+from .data_definition_rules import (
+    DataDescriptionRule,
+    WorkingStorageRule
+)
+from .arithmetic_rules import (
+    AddRule,
+    SubtractRule,
+    ComputeRule,
+    ComparisonRule
 )
 from ..engine.parser.cobol_lst import LosslessNode
 
@@ -46,7 +58,9 @@ class RuleEngine:
         self.register_rule(IfStatementRule())
         self.register_rule(PerformUntilRule())
         self.register_rule(PerformTimesRule())
+        self.register_rule(PerformParagraphRule())
         self.register_rule(EvaluateRule())
+        self.register_rule(GoBackRule())
         
         # File I/O rules
         self.register_rule(FileSelectRule())
@@ -54,6 +68,16 @@ class RuleEngine:
         self.register_rule(FileReadRule())
         self.register_rule(FileWriteRule())
         self.register_rule(FileCloseRule())
+        
+        # Data definition rules
+        self.register_rule(DataDescriptionRule())
+        self.register_rule(WorkingStorageRule())
+        
+        # Arithmetic rules
+        self.register_rule(AddRule())
+        self.register_rule(SubtractRule())
+        self.register_rule(ComputeRule())
+        self.register_rule(ComparisonRule())
     
     def register_rule(self, rule: BaseRule):
         """

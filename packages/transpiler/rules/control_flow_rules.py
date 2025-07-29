@@ -98,142 +98,206 @@ class IfStatementRule(BaseRule):
                         self.add_line(f"# {stmt}")
             
             self.indent_level -= 1
+    
+    def convert_cobol_condition(self, condition: str) -> str:
+        """Convert COBOL condition to Python condition."""
+        # Replace COBOL operators with Python operators
+        condition = condition.replace(" = ", " == ")
+        condition = condition.replace(" NOT EQUAL ", " != ")
+        condition = condition.replace(" GREATER THAN ", " > ")
+        condition = condition.replace(" LESS THAN ", " < ")
+        condition = condition.replace(" GREATER THAN OR EQUAL ", " >= ")
+        condition = condition.replace(" LESS THAN OR EQUAL ", " <= ")
         
-        return '\n'.join(self.generated_code)
+        # Convert variable names to Python naming
+        parts = condition.split()
+        python_parts = []
+        for part in parts:
+            if part not in ["==", "!=", ">", "<", ">=", "<=", "AND", "OR", "NOT"]:
+                python_parts.append(part.lower().replace('-', '_'))
+            else:
+                python_parts.append(part)
+        
+        return " ".join(python_parts)
     
     def get_priority(self) -> int:
-        """High priority for control flow rules."""
-        return 100
+        return 30
 
 
 class PerformUntilRule(BaseRule):
     """
-    Rule for transforming COBOL PERFORM UNTIL loops to Python while loops.
+    Rule for transforming COBOL PERFORM UNTIL statements to Python while loops.
     """
     
     def can_apply(self, node: LosslessNode) -> bool:
         """Check if this is a PERFORM UNTIL statement."""
         tokens = node.get_tokens()
-        token_texts = [t.text for t in tokens if hasattr(t, 'text') and t.text]
-        return 'PERFORM' in token_texts and 'UNTIL' in token_texts
+        return any(token.text == "PERFORM" for token in tokens if hasattr(token, 'text')) and \
+               any(token.text == "UNTIL" for token in tokens if hasattr(token, 'text'))
     
     def apply(self, node: LosslessNode) -> str:
         """
         Transform COBOL PERFORM UNTIL to Python while loop.
         
         COBOL:
-            PERFORM UNTIL MORE-DATA = 'NO'
-                DISPLAY 'ENTER NAME'
-                ACCEPT CUST-NO-IN
+            PERFORM UNTIL COUNTER > 5
+                DISPLAY COUNTER
+                ADD 1 TO COUNTER
             END-PERFORM
             
         Python:
-            while not (more_data == 'NO'):
-                print('ENTER NAME')
-                cust_no_in = input()
+            while counter <= 5:
+                print(counter)
+                counter += 1
         """
-        self.generated_code = []
         tokens = node.get_tokens()
-        
-        # Extract condition
         condition = None
+        loop_body = []
+        
+        # Parse PERFORM UNTIL structure
         i = 0
+        in_condition = False
+        in_body = False
         
         while i < len(tokens):
             token = tokens[i]
-            if hasattr(token, 'text') and token.text == 'UNTIL' and i + 1 < len(tokens):
-                # Build condition from next tokens
-                condition_parts = []
-                for j in range(i + 1, len(tokens)):
-                    t = tokens[j]
-                    if hasattr(t, 'text') and t.text:
-                        if t.text in ['END-PERFORM', 'PERFORM']:
-                            break
-                        condition_parts.append(t.text)
-                condition = " ".join(condition_parts)
-                break
+            if hasattr(token, 'text') and token.text:
+                if token.text == "PERFORM":
+                    i += 1
+                elif token.text == "UNTIL":
+                    in_condition = True
+                    i += 1
+                    condition_parts = []
+                    while i < len(tokens) and tokens[i].text != "END-PERFORM":
+                        if hasattr(tokens[i], 'text') and tokens[i].text:
+                            condition_parts.append(tokens[i].text)
+                        i += 1
+                    condition = " ".join(condition_parts)
+                    break
             i += 1
         
         if condition:
-            # For PERFORM UNTIL, we need to negate the condition
-            python_condition = self.convert_cobol_condition(condition)
-            self.add_line(f"while not ({python_condition}):")
+            # Invert condition for while loop
+            python_condition = self.invert_condition(condition)
+            self.add_line(f"while {python_condition}:")
             self.indent_level += 1
-            
-            # TODO: Parse and translate statements inside the loop
-            self.add_line("# TODO: Generate loop body statements")
-            
+            # TODO: Add loop body translation
             self.indent_level -= 1
-        
-        return '\n'.join(self.generated_code)
+    
+    def invert_condition(self, condition: str) -> str:
+        """Invert COBOL condition for while loop."""
+        # Simple inversion for common cases
+        if ">" in condition:
+            return condition.replace(">", "<=")
+        elif "<" in condition:
+            return condition.replace("<", ">=")
+        elif "=" in condition:
+            return condition.replace("=", "!=")
+        else:
+            return f"not ({condition})"
     
     def get_priority(self) -> int:
-        """High priority for control flow rules."""
-        return 100
+        return 25
 
 
 class PerformTimesRule(BaseRule):
     """
-    Rule for transforming COBOL PERFORM TIMES loops to Python for loops.
+    Rule for transforming COBOL PERFORM TIMES statements to Python for loops.
     """
     
     def can_apply(self, node: LosslessNode) -> bool:
         """Check if this is a PERFORM TIMES statement."""
         tokens = node.get_tokens()
-        token_texts = [t.text for t in tokens if hasattr(t, 'text') and t.text]
-        return 'PERFORM' in token_texts and 'TIMES' in token_texts
+        return any(token.text == "PERFORM" for token in tokens if hasattr(token, 'text')) and \
+               any(token.text == "TIMES" for token in tokens if hasattr(token, 'text'))
     
     def apply(self, node: LosslessNode) -> str:
         """
         Transform COBOL PERFORM TIMES to Python for loop.
         
         COBOL:
-            PERFORM A000-COUNT 10 TIMES
-                ADD 1 TO COUNTER
-            END-PERFORM
+            PERFORM A000-COUNT 3 TIMES
             
         Python:
-            for _ in range(10):
-                counter += 1
+            for _ in range(3):
+                a000_count()
         """
-        self.generated_code = []
         tokens = node.get_tokens()
-        
-        # Extract loop count and paragraph name
         paragraph_name = None
-        loop_count = None
+        times_count = None
         
+        # Parse PERFORM TIMES structure
         i = 0
         while i < len(tokens):
             token = tokens[i]
             if hasattr(token, 'text') and token.text:
-                if token.text == 'PERFORM':
-                    # Next token should be paragraph name
+                if token.text == "PERFORM":
+                    # Get paragraph name
                     if i + 1 < len(tokens):
                         paragraph_name = tokens[i + 1].text
-                elif token.text.isdigit():
-                    loop_count = token.text
-                elif token.text == 'TIMES':
+                    i += 2
+                elif token.text == "TIMES":
+                    # Get count
+                    if i - 1 >= 0:
+                        times_count = tokens[i - 1].text
                     break
             i += 1
         
-        if paragraph_name and loop_count:
+        if paragraph_name and times_count:
             python_paragraph = self.sanitize_python_name(paragraph_name)
-            self.add_line(f"for _ in range({loop_count}):")
+            self.add_line(f"for _ in range({times_count}):")
             self.indent_level += 1
             self.add_line(f"{python_paragraph}()")
             self.indent_level -= 1
-        elif loop_count:
-            self.add_line(f"for _ in range({loop_count}):")
-            self.indent_level += 1
-            self.add_line("# TODO: Generate loop body statements")
-            self.indent_level -= 1
-        
-        return '\n'.join(self.generated_code)
+    
+    def sanitize_python_name(self, cobol_name: str) -> str:
+        """Convert COBOL paragraph name to Python function name."""
+        return cobol_name.lower().replace('-', '_')
     
     def get_priority(self) -> int:
-        """High priority for control flow rules."""
-        return 100
+        return 25
+
+
+class PerformParagraphRule(BaseRule):
+    """
+    Rule for transforming COBOL PERFORM paragraph calls to Python function calls.
+    """
+    
+    def can_apply(self, node: LosslessNode) -> bool:
+        """Check if this is a PERFORM paragraph call."""
+        tokens = node.get_tokens()
+        return any(token.text == "PERFORM" for token in tokens if hasattr(token, 'text')) and \
+               not any(token.text in ["UNTIL", "TIMES"] for token in tokens if hasattr(token, 'text'))
+    
+    def apply(self, node: LosslessNode) -> str:
+        """
+        Transform COBOL PERFORM paragraph to Python function call.
+        
+        COBOL:
+            PERFORM A000-COUNT
+            
+        Python:
+            a000_count()
+        """
+        tokens = node.get_tokens()
+        paragraph_name = None
+        
+        # Find paragraph name after PERFORM
+        for i, token in enumerate(tokens):
+            if hasattr(token, 'text') and token.text == "PERFORM" and i + 1 < len(tokens):
+                paragraph_name = tokens[i + 1].text
+                break
+        
+        if paragraph_name:
+            python_name = self.sanitize_python_name(paragraph_name)
+            self.add_line(f"{python_name}()")
+    
+    def sanitize_python_name(self, cobol_name: str) -> str:
+        """Convert COBOL paragraph name to Python function name."""
+        return cobol_name.lower().replace('-', '_')
+    
+    def get_priority(self) -> int:
+        return 20
 
 
 class EvaluateRule(BaseRule):
@@ -243,9 +307,8 @@ class EvaluateRule(BaseRule):
     
     def can_apply(self, node: LosslessNode) -> bool:
         """Check if this is an EVALUATE statement."""
-        tokens = node.get_tokens()
-        token_texts = [t.text for t in tokens if hasattr(t, 'text') and t.text]
-        return 'EVALUATE' in token_texts
+        return (node.rule_name == "EvaluateStatementContext" or
+                any(token.text == "EVALUATE" for token in node.get_tokens() if hasattr(token, 'text')))
     
     def apply(self, node: LosslessNode) -> str:
         """
@@ -269,15 +332,34 @@ class EvaluateRule(BaseRule):
             else:
                 print('OTHER')
         """
-        self.generated_code = []
-        tokens = node.get_tokens()
-        
-        # TODO: Implement full EVALUATE parsing
-        self.add_line("# EVALUATE statement - convert to if/elif/else")
-        self.add_line("# TODO: Implement full EVALUATE translation")
-        
-        return '\n'.join(self.generated_code)
+        # TODO: Implement EVALUATE translation
+        self.add_line("# TODO: Implement EVALUATE translation")
     
     def get_priority(self) -> int:
-        """Medium priority for control flow rules."""
-        return 80 
+        return 15
+
+
+class GoBackRule(BaseRule):
+    """
+    Rule for transforming COBOL GOBACK to Python return.
+    """
+    
+    def can_apply(self, node: LosslessNode) -> bool:
+        """Check if this is a GOBACK statement."""
+        return (node.rule_name == "GoBackStatementContext" or
+                any(token.text == "GOBACK" for token in node.get_tokens() if hasattr(token, 'text')))
+    
+    def apply(self, node: LosslessNode) -> str:
+        """
+        Transform COBOL GOBACK to Python return.
+        
+        COBOL:
+            GOBACK
+            
+        Python:
+            return
+        """
+        self.add_line("return")
+    
+    def get_priority(self) -> int:
+        return 10 
