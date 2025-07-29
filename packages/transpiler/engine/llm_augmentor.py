@@ -116,6 +116,10 @@ class LocalProvider(LLMProvider):
     def generate_response(self, messages: List[Dict[str, str]], config: LLMConfig) -> str:
         """Generate response using local LLM."""
         import requests
+        import logging
+        
+        logger = logging.getLogger(__name__)
+        logger.info(f"Generating response with local LLM: {config.model}")
         
         # Convert to Ollama format
         prompt = ""
@@ -127,19 +131,37 @@ class LocalProvider(LLMProvider):
             elif msg["role"] == "assistant":
                 prompt += f"Assistant: {msg['content']}\n\n"
         
+        logger.info(f"Sending request to Ollama with prompt length: {len(prompt)}")
+        
         response = requests.post(
             "http://localhost:11434/api/generate",
             json={
                 "model": config.model,
                 "prompt": prompt,
                 "stream": False
-            }
+            },
+            timeout=60  # 60 second timeout
         )
         
         if response.status_code == 200:
-            return response.json()["response"].strip()
+            result = response.json()
+            if "response" in result:
+                response_text = result["response"].strip()
+                # Clean up markdown code blocks if present
+                if "```python" in response_text:
+                    # Extract code from markdown blocks
+                    import re
+                    python_blocks = re.findall(r'```python\s*\n(.*?)\n```', response_text, re.DOTALL)
+                    if python_blocks:
+                        return python_blocks[0].strip()
+                    # Fallback: remove markdown formatting
+                    response_text = re.sub(r'```python\s*\n', '', response_text)
+                    response_text = re.sub(r'\n```', '', response_text)
+                return response_text
+            else:
+                raise Exception(f"Local LLM response missing 'response' field: {result}")
         else:
-            raise Exception(f"Local LLM request failed: {response.status_code}")
+            raise Exception(f"Local LLM request failed: {response.status_code} - {response.text}")
 
 
 class ResponseCache:
@@ -294,7 +316,7 @@ Key responsibilities:
 5. Add appropriate comments and documentation
 6. Follow Python best practices and PEP 8 guidelines
 
-Provide only the Python code without explanations unless specifically requested."""
+IMPORTANT: Provide ONLY the Python code without any markdown formatting, explanations, or code blocks. Return clean, executable Python code."""
     
     def translate_edge_case(self, edge_case: Dict[str, Any]) -> Optional[str]:
         """
