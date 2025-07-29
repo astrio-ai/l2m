@@ -97,7 +97,17 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
-### Option 3: Run Directly (No Installation)
+### Option 3: Homebrew Installation (macOS)
+
+```bash
+# Install via Homebrew
+brew install legacy2modern-cli
+
+# Run the CLI
+legacy2modern
+```
+
+### Option 4: Run Directly (No Installation)
 
 ```bash
 # Clone the repository
@@ -125,6 +135,8 @@ l2m
 # Run directly without installation
 python run_cli.py
 ```
+
+**Note**: Homebrew installation provides the most convenient way to install and use the CLI on macOS.
 
 The CLI provides an interactive interface similar to Gemini CLI where you can:
 - Transpile COBOL files to Python using natural language commands
