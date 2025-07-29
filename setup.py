@@ -46,6 +46,10 @@ setup(
             "l2m=packages.cli.cli:main",
         ],
     },
+    scripts=[
+        "scripts/legacy2modern",
+        "scripts/l2m",
+    ],
     include_package_data=True,
     zip_safe=False,
     keywords="cobol, transpiler, legacy, modernization, python, cli",
