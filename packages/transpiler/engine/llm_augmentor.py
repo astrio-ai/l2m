@@ -187,11 +187,16 @@ class LLMAugmentor:
         # Set up OpenAI client for backward compatibility
         if self.config.provider == "openai" and self.config.api_key:
             openai.api_key = self.config.api_key
-        elif not self.config.api_key:
+        elif not self.config.api_key and self.config.provider != "local":
             self.logger.warning("No LLM API key provided. AI augmentation will be disabled.")
     
     def _create_provider(self) -> Optional[LLMProvider]:
         """Create the appropriate LLM provider."""
+        # For local providers, API key is not required
+        if self.config.provider == "local":
+            return LocalProvider()
+        
+        # For cloud providers, API key is required
         if not self.config.api_key:
             return None
         
@@ -210,6 +215,10 @@ class LLMAugmentor:
     
     def can_augment(self) -> bool:
         """Check if LLM augmentation is available."""
+        # For local providers, no API key is needed
+        if self.config.provider == "local":
+            return bool(self.provider)
+        # For cloud providers, API key is required
         return bool(self.config.api_key and self.provider)
     
     def _generate_cache_key(self, edge_case: Dict[str, Any]) -> str:
