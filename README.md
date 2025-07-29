@@ -21,6 +21,9 @@ Whether you're modernizing COBOL business systems, migrating legacy applications
 * 🔄 **COBOL to Python Transpilation**  
   Translate COBOL programs into modern Python code with multiple transpilation approaches.
 
+* 🖥️ **Modern CLI Interface**  
+  Beautiful, interactive command-line interface similar to Gemini CLI with natural language commands and AI-powered analysis.
+
 * 🧠 **Lossless Semantic Tree (LST) Parsing**  
   ANTLR4-based parser that retains all source code information including comments, whitespace, and semantic context.
 
@@ -30,40 +33,76 @@ Whether you're modernizing COBOL business systems, migrating legacy applications
 * 📝 **Template-Based Code Generation**  
   Jinja2-powered template system for clean, maintainable code generation.
 
+* 🤖 **AI-Powered Analysis & Optimization**  
+  LLM integration for code analysis, review, and optimization suggestions.
+
 * 🎯 **Multiple Transpilation Approaches**  
   - Direct COBOL → Python transpilation
   - IR-based transpilation with templates
+  - Hybrid transpilation with LLM augmentation
   - Extensible architecture for future languages
 
 * 🧪 **Comprehensive Testing Framework**  
   Unit tests, integration tests, and validation for all transpilation components.
 
+* 📦 **Easy Installation Options**  
+  - Homebrew installation: `brew install legacy2modern-cli`
+  - Direct installation: `pip install -e .`
+  - Run without installation: `python run_cli.py`
+
 ## 🏗️ Architecture
 
 ```
-packages/transpiler/engine/
-├── parser/
-│   └── cobol_lst.py              # COBOL LST parser & semantic analysis
-├── ir/
-│   ├── ir.py                     # IR definitions
-│   ├── cobol_to_ir.py            # COBOL → IR translator
-│   └── ir_transpiler.py          # IR-based transpiler
-├── generator/
-│   └── template_generator.py      # Jinja2 template generator
-├── templates/
-│   └── python/
-│       ├── main.py.j2            # Main Python template
-│       └── expression.py.j2      # Expression template
-├── cobol_transpiler.py           # Direct COBOL → Python transpiler
-└── ir_template_transpiler.py     # Template-based transpiler
+legacy2modern/
+├── packages/
+│   ├── transpiler/               # Core transpilation engine
+│   │   ├── engine/
+│   │   │   ├── parser/
+│   │   │   │   └── cobol_lst.py              # COBOL LST parser & semantic analysis
+│   │   │   ├── ir/
+│   │   │   │   ├── ir.py                     # IR definitions
+│   │   │   │   ├── cobol_to_ir.py            # COBOL → IR translator
+│   │   │   │   └── ir_transpiler.py          # IR-based transpiler
+│   │   │   ├── generator/
+│   │   │   │   └── template_generator.py      # Jinja2 template generator
+│   │   │   ├── templates/
+│   │   │   │   └── python/
+│   │   │   │       ├── main.py.j2            # Main Python template
+│   │   │   │       └── expression.py.j2      # Expression template
+│   │   │   ├── cobol_transpiler.py           # Direct COBOL → Python transpiler
+│   │   │   ├── hybrid_transpiler.py          # Hybrid transpiler with LLM
+│   │   │   ├── llm_augmentor.py              # LLM integration
+│   │   │   └── edge_case_detector.py         # Edge case detection
+│   │   ├── grammars/             # ANTLR grammar files
+│   │   ├── llm-helpers/          # LLM integration helpers
+│   │   └── rules/                # Transformation rules
+│   ├── cli/                      # Modern CLI interface
+│   │   └── cli.py               # Main CLI with Gemini-style design
+│   └── llm-agent/                # LLM agent components
+│       ├── agent.py              # Main LLM agent
+│       ├── code_analyzer.py      # Code analysis
+│       ├── optimizer.py          # Code optimization
+│       └── reviewer.py           # Code review
+├── examples/
+│   └── cobol/                   # Sample COBOL programs
+├── tests/                       # Test suite
+├── docs/                        # Documentation
+├── scripts/                     # CLI script wrappers
+├── Formula/                     # Homebrew formula
+├── install.sh                   # Installation script
+├── run_cli.py                   # Direct CLI runner
+└── setup.py                     # Package configuration
 ```
 
 ### **Transpilation Pipeline**
 
 1. **Parsing**: COBOL source → Lossless Semantic Tree (LST)
 2. **Semantic Analysis**: Symbol tables, type resolution, control flow
-3. **IR Translation**: LST → Language-agnostic Intermediate Representation
-4. **Code Generation**: IR → Target language (Python) via templates
+3. **Edge Case Detection**: Identify complex patterns requiring special handling
+4. **LLM Augmentation**: AI-powered analysis for complex transformations
+5. **IR Translation**: LST → Language-agnostic Intermediate Representation
+6. **Code Generation**: IR → Target language (Python) via templates
+7. **AI Analysis**: Code review, optimization suggestions, and quality assessment
 
 ## 🚀 Quickstart
 
@@ -144,6 +183,17 @@ The CLI provides an interactive interface similar to Gemini CLI where you can:
 - View code previews with syntax highlighting
 - Use slash commands for quick actions
 
+### CLI Features
+
+The Legacy2Modern CLI provides a modern, interactive experience:
+
+- 🎨 **Beautiful Interface**: Gemini-style design with custom color scheme
+- 💬 **Natural Language Commands**: Use plain English to describe what you want
+- 🔍 **AI-Powered Analysis**: Get intelligent suggestions and code reviews
+- 📊 **Code Previews**: Side-by-side comparison of source and generated code
+- ⚡ **Slash Commands**: Quick actions with `/transpile`, `/analyze`, `/help`
+- 🎯 **Interactive Mode**: Real-time transpilation and analysis
+
 ### Examples
 
 ```bash
@@ -218,12 +268,17 @@ legacy2modern/
 │   │   ├── grammars/        # ANTLR grammar files
 │   │   ├── llm-helpers/     # LLM integration helpers
 │   │   └── rules/           # Transformation rules
-│   ├── cli/                 # Command-line interface
+│   ├── cli/                 # Modern CLI interface
 │   └── llm-agent/           # LLM agent components
 ├── examples/
 │   └── cobol/              # Sample COBOL programs
 ├── tests/                  # Test suite
-└── docs/                   # Documentation
+├── docs/                   # Documentation
+├── scripts/                # CLI script wrappers
+├── Formula/                # Homebrew formula
+├── install.sh              # Installation script
+├── run_cli.py              # Direct CLI runner
+└── setup.py                # Package configuration
 ```
 
 ### **Adding New Features**
@@ -232,6 +287,8 @@ legacy2modern/
 2. **New Templates**: Create Jinja2 templates for target languages
 3. **New Rules**: Implement transformation rules in the rules directory
 4. **LLM Integration**: Extend llm-helpers for AI-powered suggestions
+5. **CLI Enhancements**: Add new commands and interactive features
+6. **Installation Methods**: Add support for new package managers
 
 ## 🧪 Testing
 
