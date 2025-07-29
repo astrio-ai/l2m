@@ -1,18 +1,46 @@
 """
-CLI Interface for LLM-Enhanced COBOL Transpiler
+Modern CLI Interface for Legacy2Modern
 
-This module provides a comprehensive command-line interface that showcases
-all the LLM integration capabilities including analysis, optimization,
-and code review.
+A beautiful, interactive command-line interface similar to Gemini CLI
+that provides an intuitive way to transpile legacy code to modern languages.
 """
 
-import argparse
-import logging
 import os
 import sys
-import json
+import asyncio
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List
+import json
+
+try:
+    import click
+except ImportError:
+    click = None
+
+try:
+    import typer
+except ImportError:
+    typer = None
+
+from rich.console import Console
+from rich.panel import Panel
+from rich.text import Text
+from rich.prompt import Prompt, Confirm
+from rich.table import Table
+from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.syntax import Syntax
+from rich.layout import Layout
+from rich.live import Live
+from rich.align import Align
+
+try:
+    from prompt_toolkit import PromptSession
+    from prompt_toolkit.completion import WordCompleter
+    from prompt_toolkit.styles import Style
+except ImportError:
+    PromptSession = None
+    WordCompleter = None
+    Style = None
 
 # Add the project root to sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
@@ -22,349 +50,359 @@ from packages.transpiler.engine.llm_augmentor import LLMConfig
 from packages.llm_agent import LLMAgent
 
 
-def setup_logging(verbose: bool = False):
-    """Set up logging configuration."""
-    level = logging.DEBUG if verbose else logging.INFO
-    logging.basicConfig(
-        level=level,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
+class Legacy2ModernCLI:
+    """Modern CLI interface for Legacy2Modern transpilation engine."""
+    
+    def __init__(self):
+        self.console = Console()
+        self.session = PromptSession() if PromptSession else None
+        self.llm_config = None
+        self.hybrid_transpiler = None
+        self.llm_agent = None
+        
+    def display_banner(self):
+        """Display the Legacy2Modern banner with pixel-art style similar to Gemini."""
+        
+        # Create a minimalist banner similar to Gemini's style
+        banner_art = """
+██╗     ███████╗ ██████╗  █████╗  ██████╗██╗   ██╗██████╗ ███╗   ███╗ ██████╗ ██████╗ ███████╗██████╗ ███╗   ██╗
+██║     ██╔════╝██╔════╝ ██╔══██╗██╔════╝╚██╗ ██╔╝╚════██╗████╗ ████║██╔═══██╗██╔══██╗██╔════╝██╔══██╗████╗  ██║
+██║     █████╗  ██║  ███╗███████║██║      ╚████╔╝  █████╔╝██╔████╔██║██║   ██║██║  ██║█████╗  ██████╔╝██╔██╗ ██║
+██║     ██╔══╝  ██║   ██║██╔══██║██║       ╚██╔╝  ██╔═══╝ ██║╚██╔╝██║██║   ██║██║  ██║██╔══╝  ██╔══██╗██║╚██╗██║
+███████╗███████╗╚██████╔╝██║  ██║╚██████╗   ██║   ███████╗██║ ╚═╝ ██║╚██████╔╝██████╔╝███████╗██║  ██║██║ ╚████║
+╚══════╝╚══════╝ ╚═════╝ ╚═╝  ╚═╝ ╚═════╝   ╚═╝   ╚══════╝╚═╝     ╚═╝ ╚═════╝ ╚═════╝ ╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝
+"""
+        
+        # Create "Powered by Astrio" text with styling - centered and bigger
+        powered_text = Text()
+        powered_text.append("Powered by ", style="white")
+        powered_text.append("Astrio", style="bold #0053D6")
+        
+        self.console.print(banner_art)
+        # Center the text using Rich's built-in centering
+        centered_text = Text("Powered by ", style="white") + Text("Astrio", style="bold #0053D6")
+        self.console.print(centered_text, justify="center")
+        self.console.print()  # Add padding under the text
+        
+    def display_tips(self):
+        """Display helpful tips for getting started."""
+        tips = [
+            "💡 Transpile COBOL files to modern Python code",
+            "💡 Use natural language to describe your transformation needs", 
+            "💡 Get AI-powered analysis and optimization suggestions",
+            "💡 Type /help for more information"
+        ]
+        
+        tip_text = "\n".join(tips)
+        panel = Panel(
+            tip_text,
+            title="[bold #0053D6]Tips for getting started:[/bold #0053D6]",
+            border_style="#0053D6",
+            padding=(1, 2),
+        )
+        self.console.print(panel)
+        
+    def initialize_components(self):
+        """Initialize LLM components."""
+        try:
+            self.llm_config = LLMConfig.from_env()
+            self.hybrid_transpiler = HybridTranspiler(self.llm_config)
+            self.llm_agent = LLMAgent(self.llm_config)
+            return True
+        except Exception as e:
+            self.console.print(f"[red]Warning: LLM components not available: {e}[/red]")
+            return False
+            
+    def get_status_info(self):
+        """Get current status information."""
+        status_items = []
+        
+        # Check if we're in a git repo
+        try:
+            import subprocess
+            result = subprocess.run(['git', 'rev-parse', '--show-toplevel'], 
+                                 capture_output=True, text=True)
+            if result.returncode == 0:
+                repo_path = Path(result.stdout.strip()).name
+                status_items.append(f"📁 {repo_path}")
+        except:
+            pass
+            
+        # Check LLM availability
+        if self.llm_config and (self.llm_config.api_key or self.llm_config.provider == "local"):
+            status_items.append(f"🤖 {self.llm_config.provider} ({self.llm_config.model})")
+        else:
+            status_items.append("🤖 no LLM (see /docs)")
 
-
-def create_llm_config() -> Optional[LLMConfig]:
-    """Create LLM configuration from environment variables."""
-    try:
-        return LLMConfig.from_env()
-    except Exception as e:
-        logging.warning(f"Failed to create LLM config: {e}")
-        return None
-
-
-def transpile_with_analysis(input_file: str, output_file: Optional[str] = None,
-                          verbose: bool = False, generate_report: bool = False) -> bool:
-    """
-    Transpile COBOL file with comprehensive LLM analysis.
-    
-    Args:
-        input_file: Path to input COBOL file
-        output_file: Path to output Python file (optional)
-        verbose: Enable verbose logging
-        generate_report: Generate detailed analysis report
+        return status_items
         
-    Returns:
-        True if successful, False otherwise
-    """
-    setup_logging(verbose)
-    logger = logging.getLogger(__name__)
-    
-    # Check if input file exists
-    if not os.path.exists(input_file):
-        logger.error(f"Input file not found: {input_file}")
-        return False
-    
-    # Create output file path if not provided
-    if output_file is None:
-        input_path = Path(input_file)
-        output_file = input_path.with_suffix('.py').name
-    
-    try:
-        # Create LLM configuration and agents
-        llm_config = create_llm_config()
-        hybrid_transpiler = HybridTranspiler(llm_config)
-        llm_agent = LLMAgent(llm_config)
+    def display_status(self):
+        """Display status information at the bottom."""
+        status_items = self.get_status_info()
+        status_text = " • ".join(status_items)
         
-        logger.info(f"Starting transpilation: {input_file} -> {output_file}")
+        self.console.print(f"\n[dim]{status_text}[/dim]")
         
-        # Read source code
-        with open(input_file, 'r') as f:
-            source_code = f.read()
+    def transpile_file(self, input_file: str, output_file: Optional[str] = None) -> bool:
+        """Transpile a COBOL file to Python."""
+        try:
+            if not os.path.exists(input_file):
+                self.console.print(f"[red]Error: File not found: {input_file}[/red]")
+                return False
+                
+            # Create output file path if not provided
+            if output_file is None:
+                input_path = Path(input_file)
+                output_file = input_path.with_suffix('.py').name
+                
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                console=self.console
+            ) as progress:
+                
+                task = progress.add_task("Transpiling COBOL to Python...", total=None)
+                
+                # Read source code
+                with open(input_file, 'r') as f:
+                    source_code = f.read()
+                    
+                # Transpile
+                target_code = self.hybrid_transpiler.transpile_source(source_code, input_file)
+                
+                # Write output
+                with open(output_file, 'w') as f:
+                    f.write(target_code)
+                    
+                progress.update(task, description="✅ Transpilation completed!")
+                
+            # Display results
+            self.console.print(f"\n[#0053D6]✅ Successfully transpiled: {input_file} → {output_file}[/#0053D6]")
+            
+            # Show code preview
+            self.show_code_preview(source_code, target_code)
+            
+            return True
+            
+        except Exception as e:
+            self.console.print(f"[#FF6B6B]Error during transpilation: {e}[/#FF6B6B]")
+            return False
+            
+    def show_code_preview(self, source_code: str, target_code: str):
+        """Show a preview of the source and target code."""
+        layout = Layout()
         
-        # Step 1: Transpile the code
-        logger.info("Step 1: Transpiling COBOL to Python...")
-        target_code = hybrid_transpiler.transpile_source(source_code, input_file)
+        # Create source code panel
+        source_syntax = Syntax(source_code, "cobol", theme="monokai", line_numbers=True)
+        source_panel = Panel(source_syntax, title="[bold #0053D6]Source COBOL[/bold #0053D6]", width=60)
         
-        # Write output file
-        with open(output_file, 'w') as f:
-            f.write(target_code)
+        # Create target code panel  
+        target_syntax = Syntax(target_code, "python", theme="monokai", line_numbers=True)
+        target_panel = Panel(target_syntax, title="[bold #0053D6]Generated Python[/bold #0053D6]", width=60)
         
-        logger.info(f"Transpilation completed: {output_file}")
+        # Display side by side
+        self.console.print("\n[bold]Code Preview:[/bold]")
+        self.console.print(Panel.fit(
+            f"{source_panel}\n{target_panel}",
+            title="[bold]Transpilation Result[/bold]",
+            border_style="#0053D6"
+        ))
         
-        # Step 2: Analyze the transformation
-        logger.info("Step 2: Analyzing code transformation...")
-        analysis_result = llm_agent.analyze_code(source_code, target_code, "cobol-python")
+    def analyze_code(self, source_code: str, target_code: str):
+        """Analyze the transpiled code."""
+        if not self.llm_agent:
+            self.console.print("[#FFA500]LLM analysis not available[/#FFA500]")
+            return
+            
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=self.console
+        ) as progress:
+            
+            task = progress.add_task("Analyzing code transformation...", total=None)
+            
+            # Perform analysis
+            analysis_result = self.llm_agent.analyze_code(source_code, target_code, "cobol-python")
+            review_result = self.llm_agent.review_code(target_code, "python")
+            optimization_result = self.llm_agent.optimize_code(target_code, "python")
+            
+            progress.update(task, description="✅ Analysis completed!")
+            
+        # Display analysis results
+        self.display_analysis_results(analysis_result, review_result, optimization_result)
         
-        # Step 3: Review the generated code
-        logger.info("Step 3: Reviewing generated code...")
-        review_result = llm_agent.review_code(target_code, "python")
+    def display_analysis_results(self, analysis_result, review_result, optimization_result):
+        """Display analysis results in a formatted table."""
+        table = Table(title="[bold]Code Analysis Results[/bold]")
+        table.add_column("Metric", style="#0053D6")
+        table.add_column("Value", style="#0053D6")
         
-        # Step 4: Optimize the code
-        logger.info("Step 4: Optimizing generated code...")
-        optimization_result = llm_agent.optimize_code(target_code, "python")
+        table.add_row("Complexity Score", f"{analysis_result.complexity_score:.2f}")
+        table.add_row("Maintainability Score", f"{analysis_result.maintainability_score:.2f}")
+        table.add_row("Review Confidence", f"{review_result.confidence:.2f}")
+        table.add_row("Optimization Confidence", f"{optimization_result.confidence:.2f}")
         
-        # Step 5: Generate documentation
-        logger.info("Step 5: Generating documentation...")
-        documentation = llm_agent.generate_documentation(target_code, "python")
+        self.console.print(table)
         
-        # Print results
-        print_results(analysis_result, review_result, optimization_result, documentation)
-        
-        # Generate comprehensive report if requested
-        if generate_report:
-            generate_comprehensive_report(
-                input_file, output_file, source_code, target_code,
-                analysis_result, review_result, optimization_result,
-                documentation, hybrid_transpiler, llm_agent
-            )
-        
-        return True
-        
-    except Exception as e:
-        logger.error(f"Enhanced transpilation failed: {e}")
-        return False
-
-
-def print_results(analysis_result, review_result, optimization_result, documentation):
-    """Print analysis results in a formatted way."""
-    print("\n" + "="*60)
-    print("ENHANCED TRANSPILATION RESULTS")
-    print("="*60)
-    
-    # Analysis Results
-    print("\n📊 CODE ANALYSIS:")
-    print(f"  Complexity Score: {analysis_result.complexity_score:.2f}")
-    print(f"  Maintainability Score: {analysis_result.maintainability_score:.2f}")
-    print(f"  Confidence: {analysis_result.confidence:.2f}")
-    
-    if analysis_result.performance_issues:
-        print("  Performance Issues:")
-        for issue in analysis_result.performance_issues:
-            print(f"    - {issue}")
-    
-    if analysis_result.suggestions:
-        print("  Suggestions:")
-        for suggestion in analysis_result.suggestions:
-            print(f"    - {suggestion}")
-    
-    # Review Results
-    print(f"\n🔍 CODE REVIEW (Severity: {review_result.severity.upper()}):")
-    print(f"  Confidence: {review_result.confidence:.2f}")
-    
-    if review_result.issues:
-        print("  Issues Found:")
-        for issue in review_result.issues:
-            print(f"    - {issue}")
-    
-    if review_result.suggestions:
-        print("  Improvement Suggestions:")
-        for suggestion in review_result.suggestions:
-            print(f"    - {suggestion}")
-    
-    # Optimization Results
-    print(f"\n⚡ OPTIMIZATION RESULTS:")
-    print(f"  Confidence: {optimization_result.confidence:.2f}")
-    
-    if optimization_result.improvements:
-        print("  Improvements Applied:")
-        for improvement in optimization_result.improvements:
-            print(f"    - {improvement}")
-    
-    if optimization_result.performance_gains:
-        print("  Performance Gains:")
-        for metric, gain in optimization_result.performance_gains.items():
-            print(f"    - {metric}: {gain}")
-    
-    # Documentation
-    print(f"\n📚 GENERATED DOCUMENTATION:")
-    print("  (See documentation section in report)")
-
-
-def generate_comprehensive_report(input_file: str, output_file: str, source_code: str,
-                               target_code: str, analysis_result, review_result,
-                               optimization_result, documentation, hybrid_transpiler,
-                               llm_agent):
-    """Generate a comprehensive analysis report."""
-    report_file = f"{Path(output_file).stem}_comprehensive_report.md"
-    
-    with open(report_file, 'w') as f:
-        f.write("# Enhanced COBOL to Python Transpilation Report\n\n")
-        
-        # Basic Information
-        f.write("## Basic Information\n")
-        f.write(f"- **Input File**: {input_file}\n")
-        f.write(f"- **Output File**: {output_file}\n")
-        f.write(f"- **Transpilation Date**: {Path(input_file).stat().st_mtime}\n\n")
-        
-        # Source Code
-        f.write("## Source COBOL Code\n")
-        f.write("```cobol\n")
-        f.write(source_code)
-        f.write("\n```\n\n")
-        
-        # Target Code
-        f.write("## Generated Python Code\n")
-        f.write("```python\n")
-        f.write(target_code)
-        f.write("\n```\n\n")
-        
-        # Analysis Results
-        f.write("## Code Analysis\n")
-        f.write(f"- **Complexity Score**: {analysis_result.complexity_score:.2f}\n")
-        f.write(f"- **Maintainability Score**: {analysis_result.maintainability_score:.2f}\n")
-        f.write(f"- **Confidence**: {analysis_result.confidence:.2f}\n\n")
-        
-        if analysis_result.performance_issues:
-            f.write("### Performance Issues\n")
-            for issue in analysis_result.performance_issues:
-                f.write(f"- {issue}\n")
-            f.write("\n")
-        
+        # Show suggestions if any
         if analysis_result.suggestions:
-            f.write("### Suggestions\n")
+            self.console.print("\n[bold #FFA500]Suggestions:[/bold #FFA500]")
             for suggestion in analysis_result.suggestions:
-                f.write(f"- {suggestion}\n")
-            f.write("\n")
+                self.console.print(f"  • {suggestion}")
+                
+    def interactive_mode(self):
+        """Run in interactive mode with natural language commands."""
+        self.console.print("\n[bold]Interactive Mode[/bold]")
+        self.console.print("Type your commands or questions. Type /help for available commands.")
         
-        # Review Results
-        f.write("## Code Review\n")
-        f.write(f"- **Overall Severity**: {review_result.severity.upper()}\n")
-        f.write(f"- **Confidence**: {review_result.confidence:.2f}\n\n")
+        # Command completions
+        completions = WordCompleter([
+            '/help', '/transpile', '/analyze', '/optimize', '/exit', '/quit',
+            'transpile', 'analyze', 'optimize', 'help', 'exit', 'quit'
+        ]) if WordCompleter else None
         
-        if review_result.issues:
-            f.write("### Issues Found\n")
-            for issue in review_result.issues:
-                f.write(f"- {issue}\n")
-            f.write("\n")
+        while True:
+            try:
+                # Get user input
+                if self.session:
+                    user_input = self.session.prompt(
+                        "> ",
+                        completer=completions
+                    ).strip()
+                else:
+                    user_input = input("> ").strip()
+                
+                if not user_input:
+                    continue
+                    
+                # Handle commands
+                if user_input.startswith('/'):
+                    self.handle_command(user_input[1:])
+                else:
+                    self.handle_natural_language(user_input)
+                    
+            except KeyboardInterrupt:
+                self.console.print("\n[#FFA500]Use /exit to quit[/#FFA500]")
+            except EOFError:
+                break
+                
+    def handle_command(self, command: str):
+        """Handle slash commands."""
+        parts = command.split()
+        cmd = parts[0].lower()
         
-        if review_result.suggestions:
-            f.write("### Improvement Suggestions\n")
-            for suggestion in review_result.suggestions:
-                f.write(f"- {suggestion}\n")
-            f.write("\n")
+        if cmd == 'help':
+            self.show_help()
+        elif cmd == 'transpile':
+            if len(parts) < 2:
+                self.console.print("[red]Usage: /transpile <filename>[/red]")
+            else:
+                self.transpile_file(parts[1])
+        elif cmd == 'analyze':
+            if len(parts) < 2:
+                self.console.print("[red]Usage: /analyze <filename>[/red]")
+            else:
+                self.analyze_file(parts[1])
+        elif cmd == 'exit':
+            self.console.print("[#0053D6]Goodbye![/#0053D6]")
+            sys.exit(0)
+        elif cmd == 'quit':
+            self.console.print("[#0053D6]Goodbye![/#0053D6]")
+            sys.exit(0)
+        else:
+            self.console.print(f"[#FF6B6B]Unknown command: {cmd}[/#FF6B6B]")
+            
+    def handle_natural_language(self, query: str):
+        """Handle natural language queries."""
+        # Simple keyword-based parsing for now
+        query_lower = query.lower()
         
-        # Optimization Results
-        f.write("## Code Optimization\n")
-        f.write(f"- **Confidence**: {optimization_result.confidence:.2f}\n\n")
+        if 'transpile' in query_lower or 'convert' in query_lower:
+            # Extract filename from query
+            words = query.split()
+            for word in words:
+                if word.endswith('.cobol') or word.endswith('.cob'):
+                    self.transpile_file(word)
+                    return
+            self.console.print("[#FFA500]Please specify a COBOL file to transpile[/#FFA500]")
+            
+        elif 'analyze' in query_lower or 'review' in query_lower:
+            self.console.print("[#FFA500]Please use /analyze <filename> to analyze a file[/#FFA500]")
+            
+        elif 'help' in query_lower:
+            self.show_help()
+            
+        else:
+            self.console.print("[#FFA500]I'm not sure how to help with that. Try /help for available commands.[/#FFA500]")
+            
+    def show_help(self):
+        """Show help information."""
+        help_text = """
+[bold]Available Commands:[/bold]
+
+[bold blue]Basic Commands:[/bold blue]
+  /transpile <file>    - Transpile a COBOL file to Python
+  /analyze <file>      - Analyze and review transpiled code
+  /help                - Show this help message
+  /exit, /quit         - Exit the CLI
+
+[bold blue]Natural Language:[/bold blue]
+  "transpile HELLO.cobol"     - Transpile a specific file
+  "analyze my code"           - Analyze the last transpiled code
+  "help"                      - Show help
+
+[bold blue]Examples:[/bold blue]
+  > transpile examples/cobol/HELLO.cobol
+  > /transpile examples/cobol/HELLO.cobol
+  > analyze the generated Python code
+        """
         
-        if optimization_result.improvements:
-            f.write("### Improvements Applied\n")
-            for improvement in optimization_result.improvements:
-                f.write(f"- {improvement}\n")
-            f.write("\n")
+        self.console.print(Panel(help_text, title="[bold]Help[/bold]", border_style="#0053D6"))
         
-        if optimization_result.performance_gains:
-            f.write("### Performance Gains\n")
-            for metric, gain in optimization_result.performance_gains.items():
-                f.write(f"- **{metric}**: {gain}\n")
-            f.write("\n")
-        
-        # Documentation
-        f.write("## Generated Documentation\n")
-        f.write(documentation)
-        f.write("\n\n")
-        
-        # Statistics
-        f.write("## Transpilation Statistics\n")
-        stats = hybrid_transpiler.get_translation_stats()
-        f.write(f"- **Total Edge Cases**: {stats['total_edge_cases']}\n")
-        f.write(f"- **AI Translations**: {stats['ai_translations']}\n")
-        f.write(f"- **LLM Available**: {stats['llm_available']}\n\n")
-        
-        # Agent Capabilities
-        f.write("## LLM Agent Capabilities\n")
-        capabilities = llm_agent.get_agent_capabilities()
-        f.write(f"- **LLM Available**: {capabilities['llm_available']}\n")
-        f.write(f"- **Provider**: {capabilities['provider']}\n")
-        f.write(f"- **Model**: {capabilities['model']}\n")
-        f.write(f"- **Cache Enabled**: {capabilities['cache_enabled']}\n")
-        f.write("- **Capabilities**:\n")
-        for capability in capabilities['capabilities']:
-            f.write(f"  - {capability}\n")
-    
-    print(f"\n📄 Comprehensive report generated: {report_file}")
+    def analyze_file(self, filename: str):
+        """Analyze a specific file."""
+        if not os.path.exists(filename):
+            self.console.print(f"[#FF6B6B]File not found: {filename}[/#FF6B6B]")
+            return
+            
+        # Check if it's a COBOL file
+        if filename.endswith(('.cobol', '.cob')):
+            self.console.print("[#FFA500]Please transpile the COBOL file first, then analyze the generated Python file[/#FFA500]")
+            return
+            
+        # Check if it's a Python file
+        if filename.endswith('.py'):
+            with open(filename, 'r') as f:
+                code = f.read()
+                
+            if self.llm_agent:
+                self.console.print(f"[#0053D6]Analyzing {filename}...[/#0053D6]")
+                review_result = self.llm_agent.review_code(code, "python")
+                optimization_result = self.llm_agent.optimize_code(code, "python")
+                self.display_analysis_results(None, review_result, optimization_result)
+            else:
+                self.console.print("[#FFA500]LLM analysis not available[/#FFA500]")
+        else:
+            self.console.print("[#FFA500]Please specify a Python file to analyze[/#FFA500]")
 
 
 def main():
     """Main CLI entry point."""
-    parser = argparse.ArgumentParser(
-        description="Enhanced COBOL to Python Transpiler with LLM Analysis",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  python cli.py input.cobol
-python cli.py input.cobol -o output.py
-python cli.py input.cobol --verbose --report
-python cli.py input.cobol --analyze-only
-        """
-    )
+    cli = Legacy2ModernCLI()
     
-    parser.add_argument(
-        'input_file',
-        help='Input COBOL file to transpile'
-    )
+    # Display banner and tips
+    cli.display_banner()
+    cli.display_tips()
     
-    parser.add_argument(
-        '-o', '--output',
-        help='Output Python file (default: input_file.py)'
-    )
+    # Initialize components
+    llm_available = cli.initialize_components()
     
-    parser.add_argument(
-        '-v', '--verbose',
-        action='store_true',
-        help='Enable verbose logging'
-    )
+    # Display status
+    cli.display_status()
     
-    parser.add_argument(
-        '-r', '--report',
-        action='store_true',
-        help='Generate comprehensive analysis report'
-    )
-    
-    parser.add_argument(
-        '--analyze-only',
-        action='store_true',
-        help='Only analyze existing Python file (skip transpilation)'
-    )
-    
-    parser.add_argument(
-        '--check-llm',
-        action='store_true',
-        help='Check LLM configuration and capabilities'
-    )
-    
-    args = parser.parse_args()
-    
-    # Check LLM configuration if requested
-    if args.check_llm:
-        llm_config = create_llm_config()
-        if llm_config and (llm_config.api_key or llm_config.provider == "local"):
-            print("✅ LLM configuration is valid")
-            print(f"   Provider: {llm_config.provider}")
-            print(f"   Model: {llm_config.model}")
-            print(f"   Temperature: {llm_config.temperature}")
-            print(f"   Cache Enabled: {llm_config.cache_enabled}")
-            print(f"   Retry Attempts: {llm_config.retry_attempts}")
-            
-            # Test agent capabilities
-            try:
-                llm_agent = LLMAgent(llm_config)
-                capabilities = llm_agent.get_agent_capabilities()
-                print(f"   Available Capabilities: {', '.join(capabilities['capabilities'])}")
-            except Exception as e:
-                print(f"   ❌ Agent initialization failed: {e}")
-        else:
-            print("❌ LLM configuration is missing or invalid")
-            print("   Please set LLM_API_KEY, LLM_MODEL, and other environment variables")
-        return
-    
-    # Perform enhanced transpilation
-    success = transpile_with_analysis(
-        input_file=args.input_file,
-        output_file=args.output,
-        verbose=args.verbose,
-        generate_report=args.report
-    )
-    
-    sys.exit(0 if success else 1)
+    # Start interactive mode
+    cli.interactive_mode()
 
 
 if __name__ == "__main__":
