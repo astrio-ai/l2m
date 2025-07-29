@@ -221,9 +221,12 @@ Temporary Items
 
 # Project-specific ignores
 *.dot
-*.png
 symbol_table.dot
 symbol_table.png
+
+# Ignore PNG files except in docs/assets
+*.png
+!docs/assets/*.png
 
 # ANTLR generated files (if not needed in version control)
 *.pyc
