@@ -8,7 +8,7 @@ and review code transformations.
 import logging
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
-from ..transpiler.engine.llm_augmentor import LLMConfig, LLMAugmentor
+from packages.transpiler.engine.llm_augmentor import LLMConfig, LLMAugmentor
 
 
 @dataclass

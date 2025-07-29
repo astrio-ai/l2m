@@ -336,7 +336,7 @@ python cli.py input.cobol --analyze-only
     # Check LLM configuration if requested
     if args.check_llm:
         llm_config = create_llm_config()
-        if llm_config and llm_config.api_key:
+        if llm_config and (llm_config.api_key or llm_config.provider == "local"):
             print("✅ LLM configuration is valid")
             print(f"   Provider: {llm_config.provider}")
             print(f"   Model: {llm_config.model}")
