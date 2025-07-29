@@ -8,7 +8,7 @@ including issue detection, improvement suggestions, and automated fixes.
 import logging
 import json
 from typing import Dict, Any, List, Optional
-from ..transpiler.engine.llm_augmentor import LLMAugmentor
+from packages.transpiler.engine.llm_augmentor import LLMAugmentor
 from .agent import ReviewResult
 
 
