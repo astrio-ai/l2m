@@ -8,6 +8,8 @@
 [![Contributing Guide](https://img.shields.io/badge/Contributing-Guide-informational)](https://github.com/openrewrite/.github/blob/main/CONTRIBUTING.md)
 </div>
 
+<img width="1080" height="640" alt="Legacy2Modern CLI" src="https://github.com/user-attachments/assets/4fac234b-45e5-4c48-aadb-9dbc6d0851d7" />
+
 Welcome to **Legacy2Modern**, an open-source engine for transforming legacy source code into modern, maintainable software.
 
 Legacy2Modern specializes in **intelligent transpilation** of legacy languages (starting with COBOL) into modern languages like Python. It combines the precision of AST-based parsing with the flexibility of template-driven code generation, optionally augmented by Large Language Models (LLMs).
