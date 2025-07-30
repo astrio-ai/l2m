@@ -1,0 +1,14 @@
+cff-version: 1.0.0
+message: "If you use this software, please cite it as below."
+authors:
+  - family-names: "Lwin"
+    given-names: "Nolan"
+    email: "naingoolwin.astrio@gmail.com"
+    website: "https://astrio.build"
+    affiliation: "Astrio"
+title: "Legacy2Modern CLI"
+version: "0.1.0"
+date-released: 2025-07-30
+url: "https://github.com/astrio-ai/legacy2modern"
+repository-code: "https://github.com/astrio-ai/legacy2modern"
+license: "Apache-2.0"
