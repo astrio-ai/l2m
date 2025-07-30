@@ -149,12 +149,12 @@ class Legacy2ModernCLI:
             if not os.path.exists(input_file):
                 self.console.print(f"[red]Error: File not found: {input_file}[/red]")
                 return False
-                
+            
             # Create output file path if not provided
             if output_file is None:
                 input_path = Path(input_file)
                 output_file = input_path.with_suffix('.py').name
-                
+            
             with Progress(
                 SpinnerColumn(),
                 TextColumn("[progress.description]{task.description}"),
@@ -166,14 +166,14 @@ class Legacy2ModernCLI:
                 # Read source code
                 with open(input_file, 'r') as f:
                     source_code = f.read()
-                    
+                
                 # Transpile
                 target_code = self.hybrid_transpiler.transpile_source(source_code, input_file)
                 
                 # Write output
                 with open(output_file, 'w') as f:
                     f.write(target_code)
-                    
+                
                 progress.update(task, description="✅ Transpilation completed!")
                 
             # Display results
@@ -187,7 +187,7 @@ class Legacy2ModernCLI:
         except Exception as e:
             self.console.print(f"[#FF6B6B]Error during transpilation: {e}[/#FF6B6B]")
             return False
-            
+
     def show_code_preview(self, source_code: str, target_code: str):
         """Show a preview of the source and target code."""
         layout = Layout()
