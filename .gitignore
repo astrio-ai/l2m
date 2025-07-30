@@ -230,4 +230,21 @@ symbol_table.png
 
 # ANTLR generated files (if not needed in version control)
 *.pyc
-*.pyo 
+*.pyo
+
+# Generated Python files from transpilation (specific patterns)
+examples/**/*.py
+*.transpiled.py
+*.generated.py
+*_output.py
+*_result.py
+
+# Root-level generated files (common COBOL program names)
+HELLO.py
+PERFORM_TEST.py
+*.cobol.py
+
+# Environment backup files
+.env.backup
+*.env.backup
+.env.*.backup 
