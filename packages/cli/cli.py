@@ -109,7 +109,7 @@ class Legacy2ModernCLI:
             self.hybrid_transpiler = HybridTranspiler(self.llm_config)
             self.llm_agent = LLMAgent(self.llm_config)
             return True
-        except Exception as e:
+    except Exception as e:
             self.console.print(f"[red]Warning: LLM components not available: {e}[/red]")
             return False
             
@@ -146,15 +146,15 @@ class Legacy2ModernCLI:
     def transpile_file(self, input_file: str, output_file: Optional[str] = None) -> bool:
         """Transpile a COBOL file to Python."""
         try:
-            if not os.path.exists(input_file):
+    if not os.path.exists(input_file):
                 self.console.print(f"[red]Error: File not found: {input_file}[/red]")
-                return False
-                
-            # Create output file path if not provided
-            if output_file is None:
-                input_path = Path(input_file)
-                output_file = input_path.with_suffix('.py').name
-                
+        return False
+    
+    # Create output file path if not provided
+    if output_file is None:
+        input_path = Path(input_file)
+        output_file = input_path.with_suffix('.py').name
+    
             with Progress(
                 SpinnerColumn(),
                 TextColumn("[progress.description]{task.description}"),
@@ -162,18 +162,18 @@ class Legacy2ModernCLI:
             ) as progress:
                 
                 task = progress.add_task("Transpiling COBOL to Python...", total=None)
-                
-                # Read source code
-                with open(input_file, 'r') as f:
-                    source_code = f.read()
-                    
+        
+        # Read source code
+        with open(input_file, 'r') as f:
+            source_code = f.read()
+        
                 # Transpile
                 target_code = self.hybrid_transpiler.transpile_source(source_code, input_file)
-                
+        
                 # Write output
-                with open(output_file, 'w') as f:
-                    f.write(target_code)
-                    
+        with open(output_file, 'w') as f:
+            f.write(target_code)
+        
                 progress.update(task, description="✅ Transpilation completed!")
                 
             # Display results
@@ -181,13 +181,13 @@ class Legacy2ModernCLI:
             
             # Show code preview
             self.show_code_preview(source_code, target_code)
-            
-            return True
-            
-        except Exception as e:
+        
+        return True
+        
+    except Exception as e:
             self.console.print(f"[#FF6B6B]Error during transpilation: {e}[/#FF6B6B]")
-            return False
-            
+        return False
+
     def show_code_preview(self, source_code: str, target_code: str):
         """Show a preview of the source and target code."""
         layout = Layout()
