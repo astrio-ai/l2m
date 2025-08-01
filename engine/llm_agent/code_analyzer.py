@@ -9,7 +9,7 @@ import logging
 import json
 from typing import Dict, Any, List, Optional
 from engine.modernizers.cobol_system.transpilers.llm_augmentor import LLMAugmentor
-from .agent import AnalysisResult
+from .results import AnalysisResult
 
 
 class CodeAnalyzer:

@@ -110,7 +110,7 @@ class Legacy2ModernCLI:
         try:
             self.llm_config = LLMConfig.from_env()
             self.hybrid_transpiler = HybridTranspiler(self.llm_config)
-            self.website_transpiler = WebsiteTranspiler(self.llm_config)
+            self.website_transpiler = WebsiteTranspiler()
             self.llm_agent = LLMAgent(self.llm_config)
             return True
         except Exception as e:
