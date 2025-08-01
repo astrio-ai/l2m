@@ -51,6 +51,8 @@ class ReactTemplateGenerator:
             self._generate_tailwind_config(output_path)
             self._generate_postcss_config(output_path)
             self._generate_vite_config(output_path)
+            self._generate_tsconfig(output_path)
+            self._generate_tsconfig_node(output_path)
             
             # Generate source files
             self._generate_src_files(output_path, transformed_data)
@@ -96,8 +98,9 @@ class ReactTemplateGenerator:
             "scripts": {
                 "dev": "vite",
                 "build": "vite build",
-                "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
-                "preview": "vite preview"
+                "lint": "eslint . --ext js,jsx,ts,tsx --report-unused-disable-directives --max-warnings 0",
+                "preview": "vite preview",
+                "type-check": "tsc --noEmit"
             },
             "dependencies": {
                 "react": "^18.2.0",
@@ -106,6 +109,8 @@ class ReactTemplateGenerator:
             "devDependencies": {
                 "@types/react": "^18.2.43",
                 "@types/react-dom": "^18.2.17",
+                "@typescript-eslint/eslint-plugin": "^6.13.2",
+                "@typescript-eslint/parser": "^6.13.2",
                 "@vitejs/plugin-react": "^4.2.1",
                 "autoprefixer": "^10.4.16",
                 "eslint": "^8.55.0",
@@ -114,6 +119,7 @@ class ReactTemplateGenerator:
                 "eslint-plugin-react-refresh": "^0.4.5",
                 "postcss": "^8.4.32",
                 "tailwindcss": "^3.3.6",
+                "typescript": "^5.2.2",
                 "vite": "^5.0.8"
             }
         }
@@ -186,8 +192,55 @@ export default defineConfig({
   },
 })"""
         
-        with open(output_path / 'vite.config.js', 'w') as f:
+        with open(output_path / 'vite.config.ts', 'w') as f:
             f.write(vite_config)
+    
+    def _generate_tsconfig(self, output_path: Path):
+        """Generate TypeScript configuration."""
+        tsconfig = """{
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["src"],
+  "references": [{ "path": "./tsconfig.node.json" }]
+}"""
+        
+        with open(output_path / 'tsconfig.json', 'w') as f:
+            f.write(tsconfig)
+    
+    def _generate_tsconfig_node(self, output_path: Path):
+        """Generate TypeScript configuration for Node.js files."""
+        tsconfig_node = """{
+  "compilerOptions": {
+    "composite": true,
+    "skipLibCheck": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowSyntheticDefaultImports": true
+  },
+  "include": ["vite.config.ts"]
+}"""
+        
+        with open(output_path / 'tsconfig.node.json', 'w') as f:
+            f.write(tsconfig_node)
     
     def _generate_src_files(self, output_path: Path, transformed_data: Dict[str, Any]):
         """Generate source files including components and pages."""
@@ -218,7 +271,7 @@ export default defineConfig({
 import Navigation from './components/Navigation';
 import HomePage from './pages/HomePage';
 
-function App() {
+const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation />
@@ -227,27 +280,27 @@ function App() {
       </main>
     </div>
   );
-}
+};
 
 export default App;"""
         
-        with open(output_path / 'src' / 'App.jsx', 'w') as f:
+        with open(output_path / 'src' / 'App.tsx', 'w') as f:
             f.write(app_code)
     
     def _generate_main_index(self, output_path: Path):
         """Generate the main index file."""
         index_code = """import React from 'react'
 import ReactDOM from 'react-dom/client'
-import App from './App.jsx'
+import App from './App.tsx'
 import './styles/index.css'
 
-ReactDOM.createRoot(document.getElementById('root')).render(
+ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />
   </React.StrictMode>,
 )"""
         
-        with open(output_path / 'src' / 'main.jsx', 'w') as f:
+        with open(output_path / 'src' / 'main.tsx', 'w') as f:
             f.write(index_code)
     
     def _generate_css_file(self, output_path: Path):
@@ -292,7 +345,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         if not component_code:
             component_code = f"""import React from 'react';
 
-const {component_name} = () => {{
+const {component_name}: React.FC = () => {{
   return (
     <div className="p-4">
       <h2 className="text-2xl font-bold mb-4">{component_name}</h2>
@@ -303,7 +356,7 @@ const {component_name} = () => {{
 
 export default {component_name};"""
         
-        with open(output_path / 'src' / 'components' / f'{component_name}.jsx', 'w') as f:
+        with open(output_path / 'src' / 'components' / f'{component_name}.tsx', 'w') as f:
             f.write(component_code)
     
     def _generate_page_file(self, output_path: Path, page: Dict[str, Any]):
@@ -315,7 +368,7 @@ export default {component_name};"""
         if not page_code:
             page_code = f"""import React from 'react';
 
-const {page_name} = () => {{
+const {page_name}: React.FC = () => {{
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-4xl font-bold text-gray-900 mb-8">{page_name}</h1>
@@ -328,7 +381,7 @@ const {page_name} = () => {{
 
 export default {page_name};"""
         
-        with open(output_path / 'src' / 'pages' / f'{page_name}.jsx', 'w') as f:
+        with open(output_path / 'src' / 'pages' / f'{page_name}.tsx', 'w') as f:
             f.write(page_code)
     
     def _generate_public_files(self, output_path: Path):
@@ -360,6 +413,7 @@ This project was generated from a legacy HTML website using the Legacy2Modern CL
 ## Features
 
 - ✅ React 18 with modern hooks
+- ✅ TypeScript for type safety
 - ✅ Tailwind CSS for styling
 - ✅ Vite for fast development
 - ✅ Responsive design

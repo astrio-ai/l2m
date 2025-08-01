@@ -261,7 +261,7 @@ class StaticSiteTranspiler:
         """Generate default navigation component."""
         return """import React from 'react';
 
-function Navigation() {
+const Navigation: React.FC = () => {
   return (
     <nav className="bg-white shadow-lg">
       <div className="max-w-7xl mx-auto px-4">
@@ -278,7 +278,7 @@ function Navigation() {
       </div>
     </nav>
   );
-}
+};
 
 export default Navigation;"""
     
@@ -286,7 +286,7 @@ export default Navigation;"""
         """Generate default footer component."""
         return """import React from 'react';
 
-function Footer() {
+const Footer: React.FC = () => {
   return (
     <footer className="bg-gray-800 text-white py-8">
       <div className="max-w-7xl mx-auto px-4">
@@ -296,7 +296,7 @@ function Footer() {
       </div>
     </footer>
   );
-}
+};
 
 export default Footer;"""
     
@@ -304,7 +304,7 @@ export default Footer;"""
         """Generate default homepage component."""
         return """import React from 'react';
 
-function HomePage() {
+const HomePage: React.FC = () => {
   return (
     <div className="min-h-screen">
       <section className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-20">
@@ -340,7 +340,7 @@ function HomePage() {
       </section>
     </div>
   );
-}
+};
 
 export default HomePage;"""
     

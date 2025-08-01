@@ -603,25 +603,25 @@ class Legacy2ModernCLI:
 [bold]Available Commands:[/bold]
 
 [bold blue]COBOL Transpilation:[/bold blue]
-  /transpile <file>    - Transpile a COBOL file to Python
-  /analyze <file>      - Analyze and review transpiled code
+  /transpile <file>               - Transpile a COBOL file to Python
+  /analyze <file>                 - Analyze and review transpiled code
 
 [bold blue]Website Modernization:[/bold blue]
-  /modernize <file> <output> [framework]  - Modernize legacy website
-  /analyze-website <file>                  - Analyze legacy website
-  /open-ide <project> [ide]               - Open project in IDE
-  /start-dev <project> [framework]        - Start development server
-  /frameworks                              - List supported frameworks
+  /modernize <file> <output> [framework]     - Modernize legacy website
+  /analyze-website <file>         - Analyze legacy website
+  /open-ide <project> [ide]            - Open project in IDE
+  /start-dev <project> [framework]           - Start development server
+  /frameworks                     - List supported frameworks
 
 [bold blue]General Commands:[/bold blue]
-  /help                - Show this help message
-  /exit, /quit         - Exit the CLI
+  /help                           - Show this help message
+  /exit, /quit                    - Exit the CLI
 
 [bold blue]Natural Language:[/bold blue]
-  "transpile HELLO.cobol"     - Transpile a specific COBOL file
-  "modernize my-website.html" - Modernize a website
-  "analyze my code"           - Analyze the last transpiled code
-  "help"                      - Show help
+  "transpile HELLO.cobol"         - Transpile a specific COBOL file
+  "modernize my-website.html"     - Modernize a website
+  "analyze my code"               - Analyze the last transpiled code
+  "help"                          - Show help
 
 [bold blue]Examples:[/bold blue]
   > transpile examples/cobol/HELLO.cobol
