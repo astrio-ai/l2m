@@ -14,6 +14,10 @@ openai>=1.0.0
 anthropic>=0.7.0
 requests>=2.31.0
 
+# Website modernizer dependencies
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
+
 # Optional: For better logging
 colorlog>=6.0.0
 
