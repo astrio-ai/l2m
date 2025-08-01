@@ -10,13 +10,13 @@ import json
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 
-from .parser.html.html_parser import HTMLParser
-from .parser.html.html_analyzer import HTMLAnalyzer
-from .transformers.bootstrap_rules import BootstrapRules
-from .transformers.jquery_rules import JQueryRules
-from .templates.react.react_generator import ReactTemplateGenerator
-from .templates.astro.astro_generator import AstroTemplateGenerator
-from .templates.nextjs.nextjs_generator import NextJSTemplateGenerator
+from ..parser.html.html_parser import HTMLParser
+from ..parser.html.html_analyzer import HTMLAnalyzer
+from ..rules.bootstrap_rules import BootstrapRules
+from ..rules.jquery_rules import JQueryRules
+from ..templates.react.react_generator import ReactTemplateGenerator
+from ..templates.astro.astro_generator import AstroTemplateGenerator
+from ..templates.nextjs.nextjs_generator import NextJSTemplateGenerator
 
 
 class StaticSiteTranspiler:
