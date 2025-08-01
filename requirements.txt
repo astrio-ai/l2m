@@ -1,0 +1,25 @@
+# Core dependencies
+pytest>=8.0.0
+python-dotenv>=1.0.0
+
+# CLI and UI dependencies
+click>=8.1.0
+rich>=13.0.0
+typer>=0.9.0
+prompt_toolkit>=3.0.0
+pygments>=2.15.0
+
+# LLM integration
+openai>=1.0.0
+anthropic>=0.7.0
+requests>=2.31.0
+
+# Website modernizer dependencies
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
+
+# Optional: For better logging
+colorlog>=6.0.0
+
+# Optional: For local LLM support (Ollama)
+# ollama>=0.1.0  # Uncomment if using local Ollama models 

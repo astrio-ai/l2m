@@ -1,0 +1,30 @@
+name: static_site
+input:
+  - *.html
+  - *.css
+  - *.js
+  - *.php
+output:
+  type: modern_web_app
+  stack: react + tailwind + vite
+  alternatives:
+    - nextjs + tailwind
+    - astro + tailwind
+description: >
+  Converts legacy static websites built with HTML, CSS, Bootstrap, and jQuery
+  into modern web applications using React, Next.js, or Astro with Tailwind CSS.
+  Supports responsive design, component-based architecture, and modern build tools.
+
+features:
+  - HTML to JSX conversion
+  - Bootstrap to Tailwind CSS migration
+  - jQuery to React hooks transformation
+  - Responsive design preservation
+  - Component extraction and organization
+  - Modern build system integration
+
+examples:
+  - Bootstrap 3/4 → Tailwind CSS
+  - jQuery DOM manipulation → React state management
+  - PHP server-side rendering → Static site generation
+  - Legacy HTML → Component-based architecture 

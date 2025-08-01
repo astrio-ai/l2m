@@ -227,4 +227,40 @@ symbol_table.png
 
 # ANTLR generated files (if not needed in version control)
 *.pyc
-*.pyo 
+*.pyo
+
+# Generated Python files from transpilation (specific patterns)
+examples/**/*.py
+*.transpiled.py
+*.generated.py
+*_output.py
+*_result.py
+
+# Root-level generated files (common COBOL program names)
+HELLO.py
+PERFORM_TEST.py
+*.cobol.py
+
+# Environment backup files
+.env.backup
+*.env.backup
+.env.*.backup
+
+# Output directories (generated files from transpilation)
+output/
+test_output/
+
+# Generated Python files from transpilation
+output/modernized-python/*.py
+output/modernized-astro/
+output/modernized-react/
+output/modernized-nextjs/
+
+# Test output files
+test_output/*.py
+test_output/*.js
+test_output/*.jsx
+test_output/*.tsx
+
+# Utility scripts (optional)
+clean_output.py
