@@ -4,6 +4,9 @@ HTML Parser for legacy website analysis.
 
 import os
 import zipfile
+import tempfile
+import subprocess
+import shutil
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 from bs4 import BeautifulSoup
@@ -64,16 +67,21 @@ class HTMLParser:
     
     def parse_input(self, input_path: str) -> Dict[str, Any]:
         """
-        Parse input file or ZIP archive.
+        Parse input file, ZIP archive, or git repository.
         
         Args:
-            input_path: Path to HTML file or ZIP archive
+            input_path: Path to HTML file, ZIP archive, or git repository URL
             
         Returns:
             Dictionary containing parsed website structure
         """
         input_path = Path(input_path)
         
+        # Handle git repository URLs
+        if str(input_path).startswith(('http://', 'https://', 'git://')):
+            return self._parse_git_repository(str(input_path))
+        
+        # Handle local paths
         if not input_path.exists():
             raise FileNotFoundError(f"Input file not found: {input_path}")
         
@@ -81,6 +89,8 @@ class HTMLParser:
             return self._parse_zip_archive(input_path)
         elif input_path.suffix.lower() in ['.html', '.htm']:
             return self._parse_single_file(input_path)
+        elif input_path.is_dir():
+            return self._parse_directory(input_path)
         else:
             raise ValueError(f"Unsupported file type: {input_path.suffix}")
     
@@ -125,6 +135,69 @@ class HTMLParser:
                     result['assets']['images'].append(str(file_path))
                 elif file_path.suffix.lower() in ['.woff', '.woff2', '.ttf', '.eot']:
                     result['assets']['fonts'].append(str(file_path))
+        
+        return result
+    
+    def _parse_git_repository(self, repo_url: str) -> Dict[str, Any]:
+        """Parse git repository containing website files."""
+        temp_dir = tempfile.mkdtemp()
+        try:
+            # Clone the repository
+            print(f"🔗 Cloning repository: {repo_url}")
+            subprocess.run(['git', 'clone', repo_url, temp_dir], check=True, capture_output=True)
+            
+            # Parse the cloned directory
+            return self._parse_directory(Path(temp_dir))
+        except subprocess.CalledProcessError as e:
+            raise RuntimeError(f"Failed to clone repository: {e}")
+        finally:
+            # Clean up temporary directory
+            shutil.rmtree(temp_dir, ignore_errors=True)
+    
+    def _parse_directory(self, dir_path: Path) -> Dict[str, Any]:
+        """Parse directory containing website files."""
+        result = {
+            'type': 'directory',
+            'files': [],
+            'structure': {},
+            'frameworks': {},
+            'assets': {
+                'css': [],
+                'js': [],
+                'images': [],
+                'fonts': []
+            }
+        }
+        
+        # Walk through the directory
+        for root, dirs, files in os.walk(dir_path):
+            for file in files:
+                file_path = Path(root) / file
+                relative_path = file_path.relative_to(dir_path)
+                
+                if file_path.suffix.lower() in ['.html', '.htm']:
+                    with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                        content = f.read()
+                    parsed_file = self._parse_html_content(content, str(relative_path))
+                    result['files'].append(parsed_file)
+                    
+                    # Update frameworks detection
+                    for framework, detection in parsed_file.get('frameworks', {}).items():
+                        if framework not in result['frameworks']:
+                            result['frameworks'][framework] = detection
+                        else:
+                            result['frameworks'][framework]['detected'] = (
+                                result['frameworks'][framework]['detected'] or detection['detected']
+                            )
+                
+                elif file_path.suffix.lower() in ['.css']:
+                    result['assets']['css'].append(str(relative_path))
+                elif file_path.suffix.lower() in ['.js']:
+                    result['assets']['js'].append(str(relative_path))
+                elif file_path.suffix.lower() in ['.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp']:
+                    result['assets']['images'].append(str(relative_path))
+                elif file_path.suffix.lower() in ['.woff', '.woff2', '.ttf', '.eot']:
+                    result['assets']['fonts'].append(str(relative_path))
         
         return result
     

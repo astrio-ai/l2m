@@ -7,6 +7,8 @@ Supports React, Next.js, and Astro with Tailwind CSS.
 
 import os
 import json
+import subprocess
+import platform
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 
@@ -144,6 +146,31 @@ class StaticSiteTranspiler:
             jquery_transformed = self.jquery_rules.transform_jquery_to_react(parsed_data)
             transformed_data.update(jquery_transformed)
         
+        # Generate components and pages from parsed data
+        print("  🔄 Generating React components and pages...")
+        components = []
+        pages = []
+        
+        for file_data in parsed_data.get('files', []):
+            # Generate components from HTML structure
+            file_components = self._generate_page_components(file_data)
+            components.extend(file_components)
+            
+            # Generate pages from file data
+            page = self._generate_page_from_file(file_data)
+            if page:
+                pages.append(page)
+        
+        # Add default components if none generated
+        if not components:
+            components = self._generate_default_components()
+        
+        if not pages:
+            pages = self._generate_default_pages()
+        
+        transformed_data['components'] = components
+        transformed_data['pages'] = pages
+        
         return transformed_data
     
     def _generate_page_components(self, file_data: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -190,6 +217,132 @@ class StaticSiteTranspiler:
             sections.append(current_section.strip())
         
         return sections if sections else [content]
+    
+    def _generate_page_from_file(self, file_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate a page from file data."""
+        structure = file_data.get('structure', {})
+        
+        page = {
+            'name': 'HomePage',
+            'title': structure.get('title', 'Modernized Website'),
+            'content': self._generate_page_content(structure),
+            'type': 'page'
+        }
+        
+        return page
+    
+    def _generate_default_components(self) -> List[Dict[str, Any]]:
+        """Generate default components if none are created from the website."""
+        return [
+            {
+                'name': 'Navigation',
+                'content': self._generate_default_navigation(),
+                'type': 'component'
+            },
+            {
+                'name': 'Footer',
+                'content': self._generate_default_footer(),
+                'type': 'component'
+            }
+        ]
+    
+    def _generate_default_pages(self) -> List[Dict[str, Any]]:
+        """Generate default pages if none are created from the website."""
+        return [
+            {
+                'name': 'HomePage',
+                'title': 'Modernized Website',
+                'content': self._generate_default_homepage(),
+                'type': 'page'
+            }
+        ]
+    
+    def _generate_default_navigation(self) -> str:
+        """Generate default navigation component."""
+        return """import React from 'react';
+
+function Navigation() {
+  return (
+    <nav className="bg-white shadow-lg">
+      <div className="max-w-7xl mx-auto px-4">
+        <div className="flex justify-between h-16">
+          <div className="flex items-center">
+            <h1 className="text-xl font-bold text-gray-800">Modernized Website</h1>
+          </div>
+          <div className="flex items-center space-x-4">
+            <a href="#home" className="text-gray-600 hover:text-gray-900">Home</a>
+            <a href="#services" className="text-gray-600 hover:text-gray-900">Services</a>
+            <a href="#contact" className="text-gray-600 hover:text-gray-900">Contact</a>
+          </div>
+        </div>
+      </div>
+    </nav>
+  );
+}
+
+export default Navigation;"""
+    
+    def _generate_default_footer(self) -> str:
+        """Generate default footer component."""
+        return """import React from 'react';
+
+function Footer() {
+  return (
+    <footer className="bg-gray-800 text-white py-8">
+      <div className="max-w-7xl mx-auto px-4">
+        <div className="text-center">
+          <p>&copy; 2024 Modernized Website. All rights reserved.</p>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+export default Footer;"""
+    
+    def _generate_default_homepage(self) -> str:
+        """Generate default homepage component."""
+        return """import React from 'react';
+
+function HomePage() {
+  return (
+    <div className="min-h-screen">
+      <section className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-20">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="text-center">
+            <h1 className="text-4xl font-bold mb-4">Welcome to Our Modernized Website</h1>
+            <p className="text-xl mb-8">Your legacy website has been successfully modernized!</p>
+            <button className="bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
+              Get Started
+            </button>
+          </div>
+        </div>
+      </section>
+      
+      <section className="py-16">
+        <div className="max-w-7xl mx-auto px-4">
+          <h2 className="text-3xl font-bold text-center mb-12">Features</h2>
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="text-center">
+              <h3 className="text-xl font-semibold mb-4">Modern React</h3>
+              <p className="text-gray-600">Built with the latest React features and best practices.</p>
+            </div>
+            <div className="text-center">
+              <h3 className="text-xl font-semibold mb-4">Tailwind CSS</h3>
+              <p className="text-gray-600">Beautiful, responsive design with utility-first CSS.</p>
+            </div>
+            <div className="text-center">
+              <h3 className="text-xl font-semibold mb-4">Fast Performance</h3>
+              <p className="text-gray-600">Optimized for speed and modern web standards.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+export default HomePage;"""
     
     def _generate_page_content(self, structure: Dict[str, Any]) -> str:
         """
@@ -273,4 +426,226 @@ class StaticSiteTranspiler:
             return {
                 'valid': False,
                 'error': str(e)
-            } 
+            }
+    
+    def open_in_ide(self, project_path: str, ide: str = 'auto') -> bool:
+        """
+        Open the generated project in the specified IDE.
+        
+        Args:
+            project_path: Path to the generated project
+            ide: IDE to use ('auto', 'vscode', 'webstorm', 'sublime', 'atom')
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            project_path = Path(project_path)
+            if not project_path.exists():
+                print(f"❌ Project path does not exist: {project_path}")
+                return False
+            
+            if ide == 'auto':
+                ide = self._detect_default_ide()
+            
+            if ide == 'vscode':
+                return self._open_in_vscode(project_path)
+            elif ide == 'webstorm':
+                return self._open_in_webstorm(project_path)
+            elif ide == 'sublime':
+                return self._open_in_sublime(project_path)
+            elif ide == 'atom':
+                return self._open_in_atom(project_path)
+            else:
+                print(f"❌ Unsupported IDE: {ide}")
+                return False
+                
+        except Exception as e:
+            print(f"❌ Error opening IDE: {e}")
+            return False
+    
+    def _detect_default_ide(self) -> str:
+        """Detect the default IDE based on system and available applications."""
+        system = platform.system().lower()
+        
+        # Check for common IDEs
+        ide_commands = {
+            'vscode': ['code', 'code-insiders'],
+            'webstorm': ['webstorm', 'wstorm'],
+            'sublime': ['subl'],
+            'atom': ['atom']
+        }
+        
+        # macOS specific paths
+        if system == 'darwin':
+            macos_apps = {
+                'vscode': [
+                    '/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code',
+                    '/Applications/Visual Studio Code.app/Contents/MacOS/Electron'
+                ],
+                'webstorm': [
+                    '/Applications/WebStorm.app/Contents/MacOS/webstorm',
+                    '/Applications/WebStorm.app/Contents/MacOS/WebStorm'
+                ],
+                'sublime': [
+                    '/Applications/Sublime Text.app/Contents/SharedSupport/bin/subl',
+                    '/Applications/Sublime Text.app/Contents/MacOS/Sublime Text'
+                ],
+                'atom': [
+                    '/Applications/Atom.app/Contents/MacOS/Atom'
+                ]
+            }
+            
+            # Check macOS apps first
+            for ide, paths in macos_apps.items():
+                for path in paths:
+                    if os.path.exists(path):
+                        return ide
+        
+        # Check for commands in PATH
+        for ide, commands in ide_commands.items():
+            for command in commands:
+                try:
+                    subprocess.run([command, '--version'], 
+                                 capture_output=True, check=True)
+                    return ide
+                except (subprocess.CalledProcessError, FileNotFoundError):
+                    continue
+        
+        # Default to VS Code
+        return 'vscode'
+    
+    def _open_in_vscode(self, project_path: Path) -> bool:
+        """Open project in VS Code."""
+        # Try different VS Code commands
+        vscode_commands = [
+            'code',
+            '/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code',
+            '/Applications/Visual Studio Code.app/Contents/MacOS/Electron'
+        ]
+        
+        for command in vscode_commands:
+            try:
+                subprocess.run([command, str(project_path)], check=True)
+                print(f"✅ Opened project in VS Code: {project_path}")
+                return True
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                continue
+        
+        print("❌ VS Code not found. Please install VS Code or use a different IDE.")
+        return False
+    
+    def _open_in_webstorm(self, project_path: Path) -> bool:
+        """Open project in WebStorm."""
+        # Try different WebStorm commands
+        webstorm_commands = [
+            'webstorm',
+            'wstorm',
+            '/Applications/WebStorm.app/Contents/MacOS/webstorm',
+            '/Applications/WebStorm.app/Contents/MacOS/WebStorm'
+        ]
+        
+        for command in webstorm_commands:
+            try:
+                subprocess.run([command, str(project_path)], check=True)
+                print(f"✅ Opened project in WebStorm: {project_path}")
+                return True
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                continue
+        
+        print("❌ WebStorm not found. Please install WebStorm or use a different IDE.")
+        return False
+    
+    def _open_in_sublime(self, project_path: Path) -> bool:
+        """Open project in Sublime Text."""
+        # Try different Sublime Text commands
+        sublime_commands = [
+            'subl',
+            '/Applications/Sublime Text.app/Contents/SharedSupport/bin/subl',
+            '/Applications/Sublime Text.app/Contents/MacOS/Sublime Text'
+        ]
+        
+        for command in sublime_commands:
+            try:
+                subprocess.run([command, str(project_path)], check=True)
+                print(f"✅ Opened project in Sublime Text: {project_path}")
+                return True
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                continue
+        
+        print("❌ Sublime Text not found. Please install Sublime Text or use a different IDE.")
+        return False
+    
+    def _open_in_atom(self, project_path: Path) -> bool:
+        """Open project in Atom."""
+        try:
+            subprocess.run(['atom', str(project_path)], check=True)
+            print(f"✅ Opened project in Atom: {project_path}")
+            return True
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            print("❌ Atom not found. Please install Atom or use a different IDE.")
+            return False
+    
+    def start_dev_server(self, project_path: str, framework: str = 'react') -> bool:
+        """
+        Start the development server for the generated project.
+        
+        Args:
+            project_path: Path to the generated project
+            framework: Framework used ('react', 'nextjs', 'astro')
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            project_path = Path(project_path)
+            if not project_path.exists():
+                print(f"❌ Project path does not exist: {project_path}")
+                return False
+            
+            # Change to project directory
+            os.chdir(project_path)
+            
+            if framework == 'react':
+                return self._start_react_dev_server()
+            elif framework == 'nextjs':
+                return self._start_nextjs_dev_server()
+            elif framework == 'astro':
+                return self._start_astro_dev_server()
+            else:
+                print(f"❌ Unsupported framework: {framework}")
+                return False
+                
+        except Exception as e:
+            print(f"❌ Error starting dev server: {e}")
+            return False
+    
+    def _start_react_dev_server(self) -> bool:
+        """Start React development server."""
+        try:
+            print("🚀 Starting React development server...")
+            subprocess.run(['npm', 'start'], check=True)
+            return True
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            print("❌ Failed to start React dev server. Make sure npm is installed.")
+            return False
+    
+    def _start_nextjs_dev_server(self) -> bool:
+        """Start Next.js development server."""
+        try:
+            print("🚀 Starting Next.js development server...")
+            subprocess.run(['npm', 'run', 'dev'], check=True)
+            return True
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            print("❌ Failed to start Next.js dev server. Make sure npm is installed.")
+            return False
+    
+    def _start_astro_dev_server(self) -> bool:
+        """Start Astro development server."""
+        try:
+            print("🚀 Starting Astro development server...")
+            subprocess.run(['npm', 'run', 'dev'], check=True)
+            return True
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            print("❌ Failed to start Astro dev server. Make sure npm is installed.")
+            return False 

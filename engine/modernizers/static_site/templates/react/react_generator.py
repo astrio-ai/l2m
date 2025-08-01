@@ -287,7 +287,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         """Generate a component file."""
         print(f"DEBUG: Generating component: {component}")  # Debug line
         component_name = component.get('name', 'Component')
-        component_code = component.get('code', '')
+        component_code = component.get('content', component.get('code', ''))
         
         if not component_code:
             component_code = f"""import React from 'react';

@@ -46,7 +46,7 @@ except ImportError:
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 from engine.modernizers.cobol_system.transpilers.hybrid_transpiler import HybridTranspiler
-from engine.modernizers.static_site.static_site_transpiler import StaticSiteTranspiler as WebsiteTranspiler
+from engine.modernizers.static_site.transpilers.static_site_transpiler import StaticSiteTranspiler as WebsiteTranspiler
 from engine.modernizers.cobol_system.transpilers.llm_augmentor import LLMConfig
 from engine.llm_agent.agent import LLMAgent
 
@@ -110,7 +110,7 @@ class Legacy2ModernCLI:
         try:
             self.llm_config = LLMConfig.from_env()
             self.hybrid_transpiler = HybridTranspiler(self.llm_config)
-            self.website_transpiler = WebsiteTranspiler(self.llm_config)
+            self.website_transpiler = WebsiteTranspiler()
             self.llm_agent = LLMAgent(self.llm_config)
             return True
         except Exception as e:
@@ -330,6 +330,74 @@ class Legacy2ModernCLI:
         self.console.print(f"• Deploy to Vercel: [cyan]vercel[/cyan]")
         self.console.print(f"• Deploy to GitHub Pages: [cyan]npm run build && gh-pages -d dist[/cyan]")
         
+        # Offer to open in IDE
+        self.console.print(f"\n[bold #0053D6]Quick Actions:[/bold #0053D6]")
+        self.console.print(f"💻 Type '/open-ide {output_dir}' to open in your default IDE")
+        self.console.print(f"🚀 Type '/start-dev {output_dir}' to start development server")
+    
+    def open_project_in_ide(self, project_path: str, ide: str = 'auto') -> bool:
+        """Open project in IDE."""
+        try:
+            if not os.path.exists(project_path):
+                self.console.print(f"[red]Error: Project path does not exist: {project_path}[/red]")
+                return False
+            
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                console=self.console
+            ) as progress:
+                
+                task = progress.add_task("Opening project in IDE...", total=None)
+                
+                # Open in IDE
+                success = self.website_transpiler.open_in_ide(project_path, ide)
+                
+                if success:
+                    progress.update(task, description="✅ Project opened in IDE!")
+                    self.console.print(f"[#0053D6]✅ Opened project in IDE: {project_path}[/#0053D6]")
+                    return True
+                else:
+                    progress.update(task, description="❌ Failed to open in IDE!")
+                    self.console.print(f"[#FF6B6B]Error: Could not open project in IDE[/#FF6B6B]")
+                    return False
+                    
+        except Exception as e:
+            self.console.print(f"[#FF6B6B]Error opening project in IDE: {e}[/#FF6B6B]")
+            return False
+    
+    def start_dev_server(self, project_path: str, framework: str = 'react') -> bool:
+        """Start development server for the project."""
+        try:
+            if not os.path.exists(project_path):
+                self.console.print(f"[red]Error: Project path does not exist: {project_path}[/red]")
+                return False
+            
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                console=self.console
+            ) as progress:
+                
+                task = progress.add_task(f"Starting {framework.upper()} development server...", total=None)
+                
+                # Start dev server
+                success = self.website_transpiler.start_dev_server(project_path, framework)
+                
+                if success:
+                    progress.update(task, description="✅ Development server started!")
+                    self.console.print(f"[#0053D6]✅ Started {framework.upper()} development server[/#0053D6]")
+                    self.console.print(f"[#0053D6]🌐 View at: http://localhost:3000[/#0053D6]")
+                    return True
+                else:
+                    progress.update(task, description="❌ Failed to start dev server!")
+                    self.console.print(f"[#FF6B6B]Error: Could not start development server[/#FF6B6B]")
+                    return False
+                    
+        except Exception as e:
+            self.console.print(f"[#FF6B6B]Error starting development server: {e}[/#FF6B6B]")
+            return False
+        
     def show_code_preview(self, source_code: str, target_code: str):
         """Show a preview of the source and target code."""
         layout = Layout()
@@ -458,6 +526,20 @@ class Legacy2ModernCLI:
                 self.console.print("[red]Usage: /analyze-website <filename>[/red]")
             else:
                 self.analyze_website(parts[1])
+        elif cmd == 'open-ide':
+            if len(parts) < 2:
+                self.console.print("[red]Usage: /open-ide <project_path> [ide][/red]")
+                self.console.print("[red]IDEs: auto, vscode, webstorm, sublime, atom[/red]")
+            else:
+                ide = parts[2] if len(parts) > 2 else 'auto'
+                self.open_project_in_ide(parts[1], ide)
+        elif cmd == 'start-dev':
+            if len(parts) < 2:
+                self.console.print("[red]Usage: /start-dev <project_path> [framework][/red]")
+                self.console.print("[red]Frameworks: react, nextjs, astro[/red]")
+            else:
+                framework = parts[2] if len(parts) > 2 else 'react'
+                self.start_dev_server(parts[1], framework)
         elif cmd == 'frameworks':
             self.console.print("[bold cyan]Supported Frameworks:[/bold cyan]")
             self.console.print("• [green]react[/green] - React with Vite and Tailwind CSS")
@@ -527,6 +609,8 @@ class Legacy2ModernCLI:
 [bold blue]Website Modernization:[/bold blue]
   /modernize <file> <output> [framework]  - Modernize legacy website
   /analyze-website <file>                  - Analyze legacy website
+  /open-ide <project> [ide]               - Open project in IDE
+  /start-dev <project> [framework]        - Start development server
   /frameworks                              - List supported frameworks
 
 [bold blue]General Commands:[/bold blue]
@@ -542,9 +626,11 @@ class Legacy2ModernCLI:
 [bold blue]Examples:[/bold blue]
   > transpile examples/cobol/HELLO.cobol
   > /transpile examples/cobol/HELLO.cobol
-  > modernize legacy-site.html output/react react
-  > /modernize legacy-site.html output/astro astro
+  > modernize legacy-site.html output/modernized-site react
+  > /modernize legacy-site.html output/modernized-site astro
   > analyze-website legacy-site.html
+  > /open-ide output/react vscode
+  > /start-dev output/nextjs nextjs
   > analyze the generated Python code
 
 [bold blue]Supported Frameworks:[/bold blue]
