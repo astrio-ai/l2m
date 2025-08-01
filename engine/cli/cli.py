@@ -110,7 +110,7 @@ class Legacy2ModernCLI:
         try:
             self.llm_config = LLMConfig.from_env()
             self.hybrid_transpiler = HybridTranspiler(self.llm_config)
-            self.website_transpiler = WebsiteTranspiler(self.llm_config)
+            self.website_transpiler = WebsiteTranspiler()
             self.llm_agent = LLMAgent(self.llm_config)
             return True
         except Exception as e:
@@ -157,7 +157,11 @@ class Legacy2ModernCLI:
             # Create output file path if not provided
             if output_file is None:
                 input_path = Path(input_file)
-                output_file = input_path.with_suffix('.py').name
+                # Create output directory
+                output_dir = Path("output/modernized-python")
+                output_dir.mkdir(parents=True, exist_ok=True)
+                # Set output file path
+                output_file = output_dir / input_path.with_suffix('.py').name
             
             with Progress(
                 SpinnerColumn(),
@@ -492,7 +496,7 @@ class Legacy2ModernCLI:
             html_files = [word for word in words if word.endswith(('.html', '.htm'))]
             if html_files:
                 input_file = html_files[0]
-                output_dir = f"output/{input_file.replace('.html', '').replace('.htm', '')}"
+                output_dir = f"output/modernized-{input_file.replace('.html', '').replace('.htm', '')}"
                 self.transpile_website(input_file, output_dir)
                 return
             self.console.print("[#FFA500]Please specify an HTML file to modernize[/#FFA500]")
