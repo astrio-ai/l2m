@@ -10,7 +10,7 @@ import sys
 # Add the project root to Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-from engine.modernizers.cobol_system.transpilers.cobol_transpiler import CobolTranspiler
+from engine.modernizers.cobol_system.transpilers.transpiler import CobolTranspiler
 from engine.modernizers.cobol_system.transpilers.hybrid_transpiler import HybridTranspiler
 
 def test_transpiler():

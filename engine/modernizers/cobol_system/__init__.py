@@ -5,7 +5,7 @@ Converts legacy COBOL systems into modern Python applications.
 Supports Python with SQLAlchemy, FastAPI, Django, and Flask.
 """
 
-from .transpilers.cobol_transpiler import CobolTranspiler
+from .transpilers.transpiler import CobolTranspiler
 
 # Alias for backward compatibility
 CobolSystemModernizer = CobolTranspiler

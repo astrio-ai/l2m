@@ -7,7 +7,7 @@ to handle both simple and complex COBOL constructs.
 
 import logging
 from typing import Dict, Any, List, Optional
-from .cobol_transpiler import CobolTranspiler
+from .transpiler import CobolTranspiler
 from .edge_case_detector import EdgeCaseDetector
 from .llm_augmentor import LLMAugmentor, LLMConfig
 

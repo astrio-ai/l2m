@@ -4,6 +4,9 @@ HTML Parser for legacy website analysis.
 
 import os
 import zipfile
+import tempfile
+import subprocess
+import shutil
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 from bs4 import BeautifulSoup
@@ -64,16 +67,21 @@ class HTMLParser:
     
     def parse_input(self, input_path: str) -> Dict[str, Any]:
         """
-        Parse input file or ZIP archive.
+        Parse input file, ZIP archive, or git repository.
         
         Args:
-            input_path: Path to HTML file or ZIP archive
+            input_path: Path to HTML file, ZIP archive, or git repository URL
             
         Returns:
             Dictionary containing parsed website structure
         """
         input_path = Path(input_path)
         
+        # Handle git repository URLs
+        if str(input_path).startswith(('http://', 'https://', 'git://')):
+            return self._parse_git_repository(str(input_path))
+        
+        # Handle local paths
         if not input_path.exists():
             raise FileNotFoundError(f"Input file not found: {input_path}")
         
@@ -81,6 +89,8 @@ class HTMLParser:
             return self._parse_zip_archive(input_path)
         elif input_path.suffix.lower() in ['.html', '.htm']:
             return self._parse_single_file(input_path)
+        elif input_path.is_dir():
+            return self._parse_directory(input_path)
         else:
             raise ValueError(f"Unsupported file type: {input_path.suffix}")
     
@@ -125,6 +135,69 @@ class HTMLParser:
                     result['assets']['images'].append(str(file_path))
                 elif file_path.suffix.lower() in ['.woff', '.woff2', '.ttf', '.eot']:
                     result['assets']['fonts'].append(str(file_path))
+        
+        return result
+    
+    def _parse_git_repository(self, repo_url: str) -> Dict[str, Any]:
+        """Parse git repository containing website files."""
+        temp_dir = tempfile.mkdtemp()
+        try:
+            # Clone the repository
+            print(f"🔗 Cloning repository: {repo_url}")
+            subprocess.run(['git', 'clone', repo_url, temp_dir], check=True, capture_output=True)
+            
+            # Parse the cloned directory
+            return self._parse_directory(Path(temp_dir))
+        except subprocess.CalledProcessError as e:
+            raise RuntimeError(f"Failed to clone repository: {e}")
+        finally:
+            # Clean up temporary directory
+            shutil.rmtree(temp_dir, ignore_errors=True)
+    
+    def _parse_directory(self, dir_path: Path) -> Dict[str, Any]:
+        """Parse directory containing website files."""
+        result = {
+            'type': 'directory',
+            'files': [],
+            'structure': {},
+            'frameworks': {},
+            'assets': {
+                'css': [],
+                'js': [],
+                'images': [],
+                'fonts': []
+            }
+        }
+        
+        # Walk through the directory
+        for root, dirs, files in os.walk(dir_path):
+            for file in files:
+                file_path = Path(root) / file
+                relative_path = file_path.relative_to(dir_path)
+                
+                if file_path.suffix.lower() in ['.html', '.htm']:
+                    with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                        content = f.read()
+                    parsed_file = self._parse_html_content(content, str(relative_path))
+                    result['files'].append(parsed_file)
+                    
+                    # Update frameworks detection
+                    for framework, detection in parsed_file.get('frameworks', {}).items():
+                        if framework not in result['frameworks']:
+                            result['frameworks'][framework] = detection
+                        else:
+                            result['frameworks'][framework]['detected'] = (
+                                result['frameworks'][framework]['detected'] or detection['detected']
+                            )
+                
+                elif file_path.suffix.lower() in ['.css']:
+                    result['assets']['css'].append(str(relative_path))
+                elif file_path.suffix.lower() in ['.js']:
+                    result['assets']['js'].append(str(relative_path))
+                elif file_path.suffix.lower() in ['.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp']:
+                    result['assets']['images'].append(str(relative_path))
+                elif file_path.suffix.lower() in ['.woff', '.woff2', '.ttf', '.eot']:
+                    result['assets']['fonts'].append(str(relative_path))
         
         return result
     
@@ -191,14 +264,106 @@ class HTMLParser:
                 })
             structure['navigation'].append(nav_items)
         
-        # Extract sections
-        for section in soup.find_all(['section', 'div'], class_=re.compile(r'section|content|main')):
-            structure['sections'].append({
+        # Extract sections with better identification
+        print(f"DEBUG: HTML Parser - Found {len(soup.find_all(['section', 'div']))} potential sections")
+        
+        # Find main sections only (not nested ones)
+        main_sections = []
+        for section in soup.find_all(['section', 'div']):
+            # Skip if it's just a container div
+            if section.name == 'div' and not section.get('id') and not section.get('class'):
+                continue
+                
+            # Skip if this section is nested inside another section
+            parent_section = section.find_parent(['section', 'div'])
+            if parent_section and parent_section.name in ['section', 'div']:
+                continue
+                
+            main_sections.append(section)
+        
+        print(f"DEBUG: HTML Parser - Found {len(main_sections)} main sections")
+        
+        for section in main_sections:
+                
+            section_id = section.get('id', '')
+            section_classes = section.get('class', [])
+            
+            # Identify section type based on id, classes, or content
+            section_type = 'general'
+            if section_id in ['services', 'contact', 'about', 'home', 'hero']:
+                section_type = section_id
+            elif any(cls in ['services', 'contact', 'about', 'hero'] for cls in section_classes):
+                section_type = next((cls for cls in section_classes if cls in ['services', 'contact', 'about', 'hero']), 'general')
+            elif section.find('h2') and any(keyword in section.find('h2').get_text().lower() for keyword in ['service', 'contact', 'about']):
+                section_type = 'services' if 'service' in section.find('h2').get_text().lower() else 'contact' if 'contact' in section.find('h2').get_text().lower() else 'about'
+            
+            # Extract title from h1, h2, h3
+            title_elem = section.find(['h1', 'h2', 'h3'])
+            section_title = title_elem.get_text(strip=True) if title_elem else ''
+            
+            # Skip sections that are just containers or have no meaningful content
+            if not section_id and not section_title and len(section.get_text(strip=True)) < 50:
+                print(f"DEBUG: HTML Parser - Skipping section with no meaningful content")
+                continue
+            
+            # Extract section content more intelligently
+            section_content = {
                 'tag': section.name,
-                'classes': section.get('class', []),
-                'id': section.get('id', ''),
-                'content': section.get_text(strip=True)[:200] + '...' if len(section.get_text(strip=True)) > 200 else section.get_text(strip=True)
-            })
+                'classes': section_classes,
+                'id': section_id,
+                'type': section_type,
+                'title': section_title,
+                'content': '',
+                'cards': [],
+                'form': None
+            }
+            
+            # Extract cards for services section
+            if section_type == 'services':
+                cards = section.find_all(['div', 'article'], class_=re.compile(r'card|feature|service'))
+                for card in cards:
+                    card_title = card.find(['h3', 'h4', 'h5'])
+                    card_text = card.find(['p', 'div'])
+                    card_button = card.find('button')
+                    
+                    card_data = {
+                        'title': card_title.get_text(strip=True) if card_title else '',
+                        'text': card_text.get_text(strip=True) if card_text else '',
+                        'button_text': card_button.get_text(strip=True) if card_button else '',
+                        'button_class': ' '.join(card_button.get('class', [])) if card_button else ''
+                    }
+                    section_content['cards'].append(card_data)
+            
+            # Extract form for contact section
+            if section_type == 'contact':
+                form = section.find('form')
+                if form:
+                    form_data = {
+                        'action': form.get('action', ''),
+                        'method': form.get('method', 'get'),
+                        'inputs': []
+                    }
+                    for input_elem in form.find_all(['input', 'textarea', 'select']):
+                        input_data = {
+                            'type': input_elem.get('type', input_elem.name),
+                            'name': input_elem.get('name', ''),
+                            'placeholder': input_elem.get('placeholder', ''),
+                            'required': input_elem.get('required') is not None,
+                            'label': ''
+                        }
+                        # Try to find associated label
+                        if input_elem.get('id'):
+                            label = form.find('label', attrs={'for': input_elem.get('id')})
+                            if label:
+                                input_data['label'] = label.get_text(strip=True)
+                        section_content['form'] = form_data
+                        form_data['inputs'].append(input_data)
+            
+            # Extract general content
+            section_content['content'] = section.get_text(strip=True)
+            
+            print(f"DEBUG: HTML Parser - Added section: {section_content['type']} - {section_content['title']}")
+            structure['sections'].append(section_content)
         
         # Extract forms
         for form in soup.find_all('form'):

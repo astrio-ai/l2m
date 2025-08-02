@@ -5,7 +5,7 @@ Converts legacy static websites (HTML, CSS, Bootstrap, jQuery) into modern web a
 Supports React, Next.js, and Astro with Tailwind CSS.
 """
 
-from .static_site_transpiler import StaticSiteTranspiler
+from .transpilers.transpiler import StaticSiteTranspiler
 
 # Alias for backward compatibility
 StaticSiteModernizer = StaticSiteTranspiler
