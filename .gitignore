@@ -267,3 +267,7 @@ test_output/*.tsx
 
 # Utility scripts (optional)
 clean_output.py
+
+# Parser output files
+parser_output.json
+*.parser_output.json
