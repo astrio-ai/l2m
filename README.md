@@ -12,14 +12,17 @@
 
 Welcome to **Legacy2Modern (L2M)**, an open-source engine for transforming legacy source code into modern, maintainable software.
 
-L2M specializes in **intelligent transpilation** of legacy languages (starting with COBOL) into modern languages like Python. It combines the precision of AST-based parsing with the flexibility of template-driven code generation, optionally augmented by Large Language Models (LLMs).
+L2M specializes in **intelligent transpilation** of legacy languages (starting with COBOL) and **website modernization** into modern frameworks. It combines the precision of AST-based parsing with the flexibility of template-driven code generation, optionally augmented by Large Language Models (LLMs).
 
-Whether you're modernizing COBOL business systems, migrating legacy applications to the cloud, or transforming decades-old enterprise code — L2M is built to help you do it **safely**, **accurately**, and **transparently**.
+Whether you're modernizing COBOL business systems, migrating legacy websites to React/Next.js/Astro, or transforming decades-old enterprise code — L2M is built to help you do it **safely**, **accurately**, and **transparently**.
 
 ## ✨ Features
 
 * 🔄 **COBOL to Python Transpilation**  
   Translate COBOL programs into modern Python code with multiple transpilation approaches.
+
+* 🌐 **Legacy Website Modernization**  
+  Transform HTML + Bootstrap + jQuery + PHP websites into modern React, Next.js, or Astro applications.
 
 * 🖥️ **Modern CLI Interface**  
   Beautiful, interactive command-line interface with natural language commands and AI-powered analysis.
@@ -34,12 +37,13 @@ Whether you're modernizing COBOL business systems, migrating legacy applications
   Jinja2-powered template system for clean, maintainable code generation.
 
 * 🤖 **AI-Powered Analysis & Optimization**  
-  LLM integration for code analysis, review, and optimization suggestions.
+  LLM integration for code analysis, review, and optimization suggestions with multi-provider support.
 
 * 🎯 **Multiple Transpilation Approaches**  
   - Direct COBOL → Python transpilation
   - IR-based transpilation with templates
   - Hybrid transpilation with LLM augmentation
+  - Static site modernization with framework selection
   - Extensible architecture for future languages
 
 * 🧪 **Comprehensive Testing Framework**  
@@ -133,6 +137,7 @@ legacy2modern
 # In the interactive mode:
 > transpile examples/cobol/HELLO.cobol
 > /transpile examples/cobol/HELLO.cobol
+> modernize examples/website/legacy-site.html
 > analyze the generated Python code
 > /help
 ```
@@ -144,28 +149,30 @@ legacy2modern
 pytest tests/
 
 # Run specific test
-pytest tests/test_cobol_lst.py
+pytest tests/cobol_system/test_basic_transpilation.py
 ```
 
-## 📋 Supported COBOL Constructs
+## 📋 Supported Languages & Frameworks
 
-### **Data Division**
+### **COBOL to Python**
 - Variable declarations with PIC clauses
 - Level numbers (01, 05, 77)
 - Type inference (PIC X → str, PIC 9 → int/float)
+- Control flow statements (PERFORM, IF-THEN-ELSE)
+- File I/O operations
+- Arithmetic operations
 
-### **Procedure Division**
-- `DISPLAY` → `print()`
-- `ACCEPT` → `input()`
-- `MOVE` → Python assignment (`=`)
-- `ADD`/`SUBTRACT` → Python arithmetic (`+=`, `-=`)
-- `PERFORM UNTIL` → `while` loops
-- `INSPECT` → String operations
-- `GOBACK` → `return`
+### **Legacy Websites to Modern Frameworks**
+- **React**: Component-based architecture with hooks
+- **Next.js**: Full-stack React framework with SSR
+- **Astro**: Content-focused static site generator
+- **Bootstrap → Tailwind CSS**: Modern utility-first CSS
+- **jQuery → React Hooks**: State management and DOM manipulation
+- **PHP → API Routes**: Server-side logic conversion
 
-### **Example Transformation**
+### **Example Transformations**
 
-**Input (COBOL):**
+**COBOL to Python:**
 ```cobol
        IDENTIFICATION DIVISION.
        PROGRAM-ID. HELLO.
@@ -174,7 +181,7 @@ pytest tests/test_cobol_lst.py
            GOBACK.
 ```
 
-**Output (Python):**
+**Output:**
 ```python
 # Generated Python code from main
 
@@ -186,26 +193,53 @@ if __name__ == '__main__':
     main()
 ```
 
+**Legacy HTML to React:**
+```html
+<div class="container">
+  <h1>Welcome</h1>
+  <button onclick="showAlert()">Click me</button>
+</div>
+```
+
+**Output:**
+```jsx
+import React, { useState } from 'react';
+
+function App() {
+  const showAlert = () => {
+    alert('Hello!');
+  };
+
+  return (
+    <div className="container">
+      <h1>Welcome</h1>
+      <button onClick={showAlert}>Click me</button>
+    </div>
+  );
+}
+
+export default App;
+```
+
 ## 🔧 Development
 
 ### **Project Structure**
 
 ```
 legacy2modern/
-├── packages/
-│   ├── transpiler/          # Core transpilation engine
-│   │   ├── engine/          # Transpilation components
-│   │   ├── grammars/        # ANTLR grammar files
-│   │   ├── llm-helpers/     # LLM integration helpers
-│   │   └── rules/           # Transformation rules
-│   ├── cli/                 # Modern CLI interface
-│   └── llm-agent/           # LLM agent components
+├── engine/                    # Core engine components
+│   ├── agents/               # LLM agent system
+│   ├── cli/                  # Modern CLI interface
+│   └── modernizers/          # Language-specific modernizers
+│       ├── cobol_system/     # COBOL transpilation
+│       └── static_site/      # Website modernization
 ├── examples/
-│   └── cobol/               # Sample COBOL programs
+│   ├── cobol/               # Sample COBOL programs
+│   └── website/             # Sample legacy websites
 ├── tests/                   # Test suite
 ├── docs/                    # Documentation
 ├── scripts/                 # CLI script wrappers
-├── Formula/                 # Homebrew formula
+├── output/                  # Generated output files
 ├── install.sh               # Installation script
 ├── run_cli.py               # Direct CLI runner
 └── setup.py                 # Package configuration
@@ -215,10 +249,10 @@ legacy2modern/
 
 1. **New Language Support**: Add grammar files and IR translators
 2. **New Templates**: Create Jinja2 templates for target languages
-3. **New Rules**: Implement transformation rules in the rules directory
-4. **LLM Integration**: Extend llm-helpers for AI-powered suggestions
+3. **New Rules**: Implement transformation rules in the modernizers directory
+4. **LLM Integration**: Extend agents for AI-powered suggestions
 5. **CLI Enhancements**: Add new commands and interactive features
-6. **Installation Methods**: Add support for new package managers
+6. **Framework Support**: Add new target frameworks for website modernization
 
 ## 🧪 Testing
 
@@ -227,10 +261,10 @@ legacy2modern/
 pytest
 
 # Run specific test file
-pytest tests/test_cobol_lst.py
+pytest tests/cobol_system/test_basic_transpilation.py
 
 # Run with coverage
-pytest --cov=packages/transpiler
+pytest --cov=engine
 ```
 
 ## 📄 License
@@ -245,6 +279,7 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for setup instructions, coding guidelin
 * Create templates for other target languages (JavaScript, C++)
 * Improve error handling and reporting
 * Add more comprehensive test cases
+* Add support for more website frameworks
 
 ## 💬 Community & Support
 * 📢 Follow our project updates on [X](https://x.com/nolan-lwin)

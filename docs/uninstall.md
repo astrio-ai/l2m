@@ -90,6 +90,14 @@ find . -name "__pycache__" -type d -exec rm -rf {} +
 pip cache purge
 ```
 
+### Remove Output Files
+
+```bash
+# Remove generated output files
+rm -rf output/
+rm -f parser_output.json
+```
+
 ## 🔍 Verification
 
 After uninstalling, verify that the CLI is completely removed:
@@ -99,66 +107,65 @@ After uninstalling, verify that the CLI is completely removed:
 which legacy2modern
 which l2m
 
-# Try to run the commands (should fail)
-legacy2modern --help
-l2m --help
-
-# Check pip for any remaining packages
-pip list | grep -i legacy
+# Check if Python can still import the package
+python -c "import engine; print('Package still installed')" 2>/dev/null || echo "Package removed successfully"
 ```
 
 ## 🚨 Troubleshooting
 
 ### If Commands Still Work
 
-If the commands still work after uninstalling:
+If the `legacy2modern` command still works after uninstalling:
 
-```bash
-# Check where the commands are located
-which legacy2modern
-which l2m
+1. **Check PATH**: The script might still be in your PATH
+   ```bash
+   echo $PATH
+   which legacy2modern
+   which l2m
+   ```
 
-# Check your PATH
-echo $PATH
+2. **Remove from PATH**: Remove any remaining references
+   ```bash
+   # Check your shell configuration files
+   grep -r "legacy2modern" ~/.bashrc ~/.zshrc ~/.bash_profile ~/.zprofile 2>/dev/null
+   ```
 
-# Remove from PATH if needed
-# Edit your shell profile (.bashrc, .zshrc, etc.)
-```
+### If Package Still Importable
 
-### If Dependencies Remain
+If Python can still import the package:
 
-```bash
-# Force remove all related packages
-pip uninstall -y legacy2modern-cli rich click typer prompt_toolkit pygments
+1. **Check pip list**: Verify the package is actually uninstalled
+   ```bash
+   pip list | grep legacy
+   ```
 
-# Check for any remaining files
-find /usr/local -name "*legacy*" 2>/dev/null
-find ~/.local -name "*legacy*" 2>/dev/null
-```
+2. **Check site-packages**: Look for remaining files
+   ```bash
+   python -c "import site; print(site.getsitepackages())"
+   ```
 
-### If Homebrew Issues
+3. **Force removal**: If necessary, manually remove files
+   ```bash
+   # Find and remove any remaining files
+   find /usr/local/lib/python* -name "*legacy*" -delete
+   find ~/.local/lib/python* -name "*legacy*" -delete
+   ```
 
-```bash
-# Clean up Homebrew
-brew cleanup
+## 📝 Complete Cleanup Checklist
 
-# Check for any orphaned files
-brew doctor
-```
+After uninstalling, ensure you've removed:
 
-## 📝 Complete Removal Checklist
+- [ ] CLI executable (`legacy2modern`)
+- [ ] Python package (`legacy2modern-cli`)
+- [ ] Configuration files (`~/.config/legacy2modern/`)
+- [ ] Cache files (`__pycache__`, `*.pyc`)
+- [ ] Output files (`output/`, `parser_output.json`)
+- [ ] Environment variables (if set manually)
+- [ ] PATH modifications (if added manually)
 
-- [ ] Uninstalled via Homebrew or pip
-- [ ] Removed CLI commands from PATH
-- [ ] Cleaned up Python dependencies
-- [ ] Removed configuration files
-- [ ] Cleared cache files
-- [ ] Verified commands no longer work
-- [ ] Checked for orphaned files
+## 🔄 Reinstallation
 
-## 🔄 Reinstall
-
-If you want to reinstall later:
+If you want to reinstall after uninstalling:
 
 ```bash
 # Homebrew (recommended)
