@@ -227,12 +227,12 @@ export default App;
 
 ```
 legacy2modern/
-├── engine/                  # Core engine components
-│   ├── agents/              # LLM agent system
-│   ├── cli/                 # Modern CLI interface
-│   └── modernizers/         # Language-specific modernizers
-│       ├── cobol_system/    # COBOL transpilation
-│       └── static_site/     # Website modernization
+├── engine/                    # Core engine components
+│   ├── agents/               # LLM agent system
+│   ├── cli/                  # Modern CLI interface
+│   └── modernizers/          # Language-specific modernizers
+│       ├── cobol_system/     # COBOL transpilation
+│       └── static_site/      # Website modernization
 ├── examples/
 │   ├── cobol/               # Sample COBOL programs
 │   └── website/             # Sample legacy websites
