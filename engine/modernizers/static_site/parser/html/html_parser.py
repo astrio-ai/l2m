@@ -264,14 +264,106 @@ class HTMLParser:
                 })
             structure['navigation'].append(nav_items)
         
-        # Extract sections
-        for section in soup.find_all(['section', 'div'], class_=re.compile(r'section|content|main')):
-            structure['sections'].append({
+        # Extract sections with better identification
+        print(f"DEBUG: HTML Parser - Found {len(soup.find_all(['section', 'div']))} potential sections")
+        
+        # Find main sections only (not nested ones)
+        main_sections = []
+        for section in soup.find_all(['section', 'div']):
+            # Skip if it's just a container div
+            if section.name == 'div' and not section.get('id') and not section.get('class'):
+                continue
+                
+            # Skip if this section is nested inside another section
+            parent_section = section.find_parent(['section', 'div'])
+            if parent_section and parent_section.name in ['section', 'div']:
+                continue
+                
+            main_sections.append(section)
+        
+        print(f"DEBUG: HTML Parser - Found {len(main_sections)} main sections")
+        
+        for section in main_sections:
+                
+            section_id = section.get('id', '')
+            section_classes = section.get('class', [])
+            
+            # Identify section type based on id, classes, or content
+            section_type = 'general'
+            if section_id in ['services', 'contact', 'about', 'home', 'hero']:
+                section_type = section_id
+            elif any(cls in ['services', 'contact', 'about', 'hero'] for cls in section_classes):
+                section_type = next((cls for cls in section_classes if cls in ['services', 'contact', 'about', 'hero']), 'general')
+            elif section.find('h2') and any(keyword in section.find('h2').get_text().lower() for keyword in ['service', 'contact', 'about']):
+                section_type = 'services' if 'service' in section.find('h2').get_text().lower() else 'contact' if 'contact' in section.find('h2').get_text().lower() else 'about'
+            
+            # Extract title from h1, h2, h3
+            title_elem = section.find(['h1', 'h2', 'h3'])
+            section_title = title_elem.get_text(strip=True) if title_elem else ''
+            
+            # Skip sections that are just containers or have no meaningful content
+            if not section_id and not section_title and len(section.get_text(strip=True)) < 50:
+                print(f"DEBUG: HTML Parser - Skipping section with no meaningful content")
+                continue
+            
+            # Extract section content more intelligently
+            section_content = {
                 'tag': section.name,
-                'classes': section.get('class', []),
-                'id': section.get('id', ''),
-                'content': section.get_text(strip=True)[:200] + '...' if len(section.get_text(strip=True)) > 200 else section.get_text(strip=True)
-            })
+                'classes': section_classes,
+                'id': section_id,
+                'type': section_type,
+                'title': section_title,
+                'content': '',
+                'cards': [],
+                'form': None
+            }
+            
+            # Extract cards for services section
+            if section_type == 'services':
+                cards = section.find_all(['div', 'article'], class_=re.compile(r'card|feature|service'))
+                for card in cards:
+                    card_title = card.find(['h3', 'h4', 'h5'])
+                    card_text = card.find(['p', 'div'])
+                    card_button = card.find('button')
+                    
+                    card_data = {
+                        'title': card_title.get_text(strip=True) if card_title else '',
+                        'text': card_text.get_text(strip=True) if card_text else '',
+                        'button_text': card_button.get_text(strip=True) if card_button else '',
+                        'button_class': ' '.join(card_button.get('class', [])) if card_button else ''
+                    }
+                    section_content['cards'].append(card_data)
+            
+            # Extract form for contact section
+            if section_type == 'contact':
+                form = section.find('form')
+                if form:
+                    form_data = {
+                        'action': form.get('action', ''),
+                        'method': form.get('method', 'get'),
+                        'inputs': []
+                    }
+                    for input_elem in form.find_all(['input', 'textarea', 'select']):
+                        input_data = {
+                            'type': input_elem.get('type', input_elem.name),
+                            'name': input_elem.get('name', ''),
+                            'placeholder': input_elem.get('placeholder', ''),
+                            'required': input_elem.get('required') is not None,
+                            'label': ''
+                        }
+                        # Try to find associated label
+                        if input_elem.get('id'):
+                            label = form.find('label', attrs={'for': input_elem.get('id')})
+                            if label:
+                                input_data['label'] = label.get_text(strip=True)
+                        section_content['form'] = form_data
+                        form_data['inputs'].append(input_data)
+            
+            # Extract general content
+            section_content['content'] = section.get_text(strip=True)
+            
+            print(f"DEBUG: HTML Parser - Added section: {section_content['type']} - {section_content['title']}")
+            structure['sections'].append(section_content)
         
         # Extract forms
         for form in soup.find_all('form'):

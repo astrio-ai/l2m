@@ -190,6 +190,9 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: true,
   },
+  resolve: {
+    extensions: ['.js', '.jsx', '.ts', '.tsx']
+  },
 })"""
         
         with open(output_path / 'vite.config.ts', 'w') as f:
@@ -397,7 +400,7 @@ export default {page_name};"""
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>"""
         

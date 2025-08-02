@@ -5,6 +5,7 @@ This module contains transpilers for converting legacy static websites
 to modern frameworks like React, Next.js, and Astro.
 """
 
-from .static_site_transpiler import StaticSiteTranspiler
+from .transpiler import StaticSiteTranspiler
+from .agent import WebsiteAgent, WebsiteAnalysis
 
-__all__ = ['StaticSiteTranspiler'] 
+__all__ = ['StaticSiteTranspiler', 'WebsiteAgent', 'WebsiteAnalysis'] 
