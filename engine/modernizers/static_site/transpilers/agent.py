@@ -13,7 +13,7 @@ from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
 from pathlib import Path
 
-from engine.llm_agent.agent import LLMAgent, LLMConfig, LLMProvider
+from engine.agents.agent import LLMAgent, LLMConfig, LLMProvider
 from engine.modernizers.static_site.parser.html.html_parser import HTMLParser
 from engine.modernizers.static_site.parser.html.html_analyzer import HTMLAnalyzer
 from engine.modernizers.static_site.transpilers.llm_augmentor import StaticSiteLLMAugmentor, StaticSiteLLMConfig

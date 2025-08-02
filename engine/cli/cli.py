@@ -49,7 +49,7 @@ from engine.modernizers.cobol_system.transpilers.hybrid_transpiler import Hybrid
 from engine.modernizers.static_site.transpilers.transpiler import StaticSiteTranspiler as WebsiteTranspiler
 from engine.modernizers.static_site.transpilers.agent import WebsiteAgent
 from engine.modernizers.cobol_system.transpilers.llm_augmentor import LLMConfig
-from engine.llm_agent.agent import LLMAgent
+from engine.agents.agent import LLMAgent
 
 
 class Legacy2ModernCLI:
