@@ -7,39 +7,11 @@ and review code transformations.
 
 import logging
 from typing import Dict, Any, List, Optional
-from dataclasses import dataclass
 from engine.modernizers.cobol_system.transpilers.llm_augmentor import LLMConfig, LLMAugmentor
-
-
-@dataclass
-class AnalysisResult:
-    """Result of code analysis."""
-    complexity_score: float
-    maintainability_score: float
-    performance_issues: List[str]
-    security_concerns: List[str]
-    suggestions: List[str]
-    confidence: float
-
-
-@dataclass
-class OptimizationResult:
-    """Result of code optimization."""
-    original_code: str
-    optimized_code: str
-    improvements: List[str]
-    performance_gains: Dict[str, float]
-    confidence: float
-
-
-@dataclass
-class ReviewResult:
-    """Result of code review."""
-    issues: List[str]
-    suggestions: List[str]
-    severity: str  # low, medium, high, critical
-    confidence: float
-    automated_fixes: List[str]
+from .results import AnalysisResult, OptimizationResult, ReviewResult
+from .code_analyzer import CodeAnalyzer
+from .optimizer import CodeOptimizer
+from .reviewer import CodeReviewer
 
 
 class LLMAgent:
