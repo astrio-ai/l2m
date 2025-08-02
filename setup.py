@@ -42,8 +42,8 @@ setup(
     install_requires=read_requirements(),
     entry_points={
         "console_scripts": [
-            "legacy2modern=packages.cli.cli:main",
-            "l2m=packages.cli.cli:main",
+            "legacy2modern=engine.cli.cli:main",
+            "l2m=engine.cli.cli:main",
         ],
     },
     scripts=[
