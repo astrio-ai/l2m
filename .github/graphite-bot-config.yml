@@ -1,0 +1,62 @@
+# Graphite Bot Configuration
+# This file configures the Graphite bot for automated code reviews
+
+bot:
+  name: "legacy2modern-cli-bot"
+  enabled: true
+  
+# Code review settings
+review:
+  # Automatically review all pull requests
+  auto_review: true
+  
+  # Review patterns to include
+  include_patterns:
+    - "engine/**/*.py"
+    - "tests/**/*.py"
+    - "*.py"
+    - "*.js"
+    - "*.ts"
+    - "*.tsx"
+    - "*.jsx"
+  
+  # Files to exclude from review
+  exclude_patterns:
+    - "**/node_modules/**"
+    - "**/__pycache__/**"
+    - "**/*.pyc"
+    - "output/**"
+    - ".venv/**"
+    - "*.egg-info/**"
+  
+  # Review criteria
+  criteria:
+    - "code_quality"
+    - "security"
+    - "performance"
+    - "maintainability"
+    - "documentation"
+
+# Notification settings
+notifications:
+  # Comment on pull requests with review results
+  comment_on_pr: true
+  
+  # Create review comments for specific issues
+  inline_comments: true
+  
+  # Block merges if critical issues are found
+  block_on_critical: false
+
+# Integration settings
+integrations:
+  # GitHub integration
+  github:
+    enabled: true
+    # Repository-specific settings
+    repository: "legacy2modern-cli"
+    
+  # Slack integration (optional)
+  slack:
+    enabled: false
+    # webhook_url: "YOUR_SLACK_WEBHOOK_URL" 
