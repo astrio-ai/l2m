@@ -4,6 +4,9 @@
 bot:
   name: "legacy2modern-cli-bot"
   enabled: true
+  # Allow bot to make commits and appear as contributor
+  allow_commits: true
+  contributor_visibility: true
   
 # Code review settings
 review:
@@ -37,6 +40,20 @@ review:
     - "maintainability"
     - "documentation"
 
+# Auto-fix settings (enables bot commits)
+auto_fix:
+  enabled: true
+  # Allow bot to automatically fix minor issues
+  auto_commit_fixes: true
+  # Commit message prefix for bot commits
+  commit_prefix: "bot: "
+  # Types of fixes the bot can make
+  allowed_fixes:
+    - "formatting"
+    - "typos"
+    - "simple_refactoring"
+    - "documentation_updates"
+
 # Notification settings
 notifications:
   # Comment on pull requests with review results
@@ -55,6 +72,8 @@ integrations:
     enabled: true
     # Repository-specific settings
     repository: "legacy2modern-cli"
+    # Allow bot to appear in contributor graph
+    show_as_contributor: true
     
   # Slack integration (optional)
   slack:
