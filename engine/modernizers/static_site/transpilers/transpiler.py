@@ -151,6 +151,12 @@ class StaticSiteTranspiler:
         components = []
         pages = []
         
+        # Start with components from bootstrap transformation
+        if analysis.get('bootstrap_detected', False):
+            bootstrap_components = transformed_data.get('components', [])
+            components.extend(bootstrap_components)
+            print(f"DEBUG: Added {len(bootstrap_components)} components from bootstrap transformation")
+        
         print(f"DEBUG: Found {len(parsed_data.get('files', []))} files in parsed_data")
         for i, file_data in enumerate(parsed_data.get('files', [])):
             print(f"DEBUG: Processing file {i}: {file_data.get('name', 'unknown')}")
@@ -175,6 +181,17 @@ class StaticSiteTranspiler:
         if not components:
             print("DEBUG: No components generated, using defaults")
             components = self._generate_default_components()
+        
+        # Ensure Navigation component is always present since App.tsx imports it
+        navigation_exists = any(comp.get('name') == 'Navigation' for comp in components)
+        if not navigation_exists:
+            print("DEBUG: Navigation component not found, adding default Navigation")
+            navigation_component = {
+                'name': 'Navigation',
+                'content': self._generate_default_navigation(),
+                'type': 'component'
+            }
+            components.append(navigation_component)
         
         if not pages:
             print("DEBUG: No pages generated, using defaults")
