@@ -283,7 +283,7 @@ import Navigation from '../components/Navigation.astro';
     def _generate_component_file(self, output_path: Path, component: Dict[str, Any]):
         """Generate a component file."""
         component_name = component.get('name', 'Component')
-        component_code = component.get('code', '')
+        component_code = component.get('content', component.get('code', ''))
         
         if not component_code:
             component_code = f"""---
