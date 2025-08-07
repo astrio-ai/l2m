@@ -7,7 +7,7 @@ that the rule engine cannot handle, enabling AI-assisted transformation.
 
 import logging
 from typing import Dict, Any, List, Optional, Set
-from ..parser.cobol_lst import LosslessNode
+from ..parsers.cobol_lst import LosslessNode
 
 
 class EdgeCaseDetector:

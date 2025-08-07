@@ -10,7 +10,7 @@ from .ir import (
     IROperation, IRLiteral, IRIdentifier, IRLoop, IRInput, IROutput,
     IRReturn, IROperator
 )
-from ..parser.cobol_lst import LosslessNode, CobolSemanticAnalyzer
+from ..parsers.cobol_lst import LosslessNode, CobolSemanticAnalyzer
 
 class CobolToIRTranslator:
     """

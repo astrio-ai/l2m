@@ -84,7 +84,7 @@ class HybridTranspiler:
         Returns:
             List of detected edge cases
         """
-        from ..parser.cobol_lst import parse_cobol_source
+        from ..parsers.cobol_lst import parse_cobol_source
         
         # Parse COBOL into LST
         lst, tokens = parse_cobol_source(cobol_source)
