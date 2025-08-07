@@ -32,7 +32,7 @@ from .arithmetic_rules import (
     ComputeRule,
     ComparisonRule
 )
-from ..parser.cobol_lst import LosslessNode
+from ..parsers.cobol_lst import LosslessNode
 
 
 class RuleEngine:

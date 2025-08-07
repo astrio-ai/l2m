@@ -6,7 +6,7 @@ This module provides the base class for all transformation rules.
 
 from abc import ABC, abstractmethod
 from typing import Dict, Any, List, Optional
-from ..parser.cobol_lst import LosslessNode
+from ..parsers.cobol_lst import LosslessNode
 
 
 class BaseRule(ABC):
