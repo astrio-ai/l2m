@@ -8,7 +8,7 @@ following the flow: COBOL → LST → IR → Jinja2 Template → Python
 import os
 import sys
 from typing import Dict, List, Optional, Any
-from ..parser.cobol_lst import parse_cobol_source, CobolSemanticAnalyzer, LosslessNode
+from ..parsers.cobol_lst import parse_cobol_source, CobolSemanticAnalyzer, LosslessNode
 from ..ir.cobol_to_ir import CobolToIRTranslator
 from ..generators.template_generator import TemplateGenerator
 from ..generators.python_generator import IRToPythonGenerator

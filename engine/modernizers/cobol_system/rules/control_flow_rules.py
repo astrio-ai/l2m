@@ -7,7 +7,7 @@ to Python equivalents.
 
 from typing import Dict, Any, List, Optional
 from .base_rule import BaseRule
-from ..parser.cobol_lst import LosslessNode
+from ..parsers.cobol_lst import LosslessNode
 
 
 class IfStatementRule(BaseRule):
