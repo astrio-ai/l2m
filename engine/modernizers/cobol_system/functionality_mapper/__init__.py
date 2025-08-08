@@ -1,8 +1,8 @@
 """
-COBOL System Modernizer
+COBOL Functionality Mapper Package
 
-This package provides COBOL to Python modernization capabilities,
-including parsing, transpilation, and functionality mapping.
+This package provides COBOL-specific functionality mapping capabilities
+for COBOL to Python modernization.
 """
 
 from .functionality_mapper import (
@@ -12,7 +12,7 @@ from .functionality_mapper import (
 
 __all__ = [
     'COBOLFunctionalityMapper',
-    'COBOLFieldMapping', 
+    'COBOLFieldMapping',
     'COBOLProgramMapping',
     'COBOLDataType'
 ] 
