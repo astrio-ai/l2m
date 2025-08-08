@@ -1,8 +1,8 @@
 """
-Static Site Modernizer
+Website Functionality Mapper Package
 
-This package provides website modernization capabilities,
-including HTML parsing, framework conversion, and functionality mapping.
+This package provides website-specific functionality mapping capabilities
+for legacy website modernization.
 """
 
 from .functionality_mapper import (
