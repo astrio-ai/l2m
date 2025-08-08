@@ -3,7 +3,7 @@ LLM Agent Package
 
 This package provides advanced AI capabilities for the legacy2modern transpiler,
 including intelligent code analysis, optimization suggestions, and automated
-code review.
+code review for software modernization.
 """
 
 from .agent import LLMAgent
