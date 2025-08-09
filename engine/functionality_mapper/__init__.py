@@ -7,7 +7,9 @@ extended by domain-specific modernizers (COBOL, websites, etc.).
 
 from .base_mapper import (
     FunctionalityMapper, FunctionalityMapping, FunctionalityType,
-    InputOutputMapping, BusinessLogicMapping, EquivalenceLevel
+    InputOutputMapping, BusinessLogicMapping, EquivalenceLevel,
+    ValidationStrategy, TestType, TestCase, ValidationResult, TestResult,
+    ValidationEngine, TestEngine
 )
 
 __version__ = "1.0.0"
@@ -19,5 +21,12 @@ __all__ = [
     'FunctionalityType',
     'InputOutputMapping',
     'BusinessLogicMapping',
-    'EquivalenceLevel'
+    'EquivalenceLevel',
+    'ValidationStrategy',
+    'TestType',
+    'TestCase',
+    'ValidationResult',
+    'TestResult',
+    'ValidationEngine',
+    'TestEngine'
 ] 
