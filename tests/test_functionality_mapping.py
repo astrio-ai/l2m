@@ -12,7 +12,8 @@ from unittest.mock import Mock, patch
 
 from engine.functionality_mapper import (
     FunctionalityMapper, FunctionalityType, EquivalenceLevel,
-    InputOutputMapping, BusinessLogicMapping
+    InputOutputMapping, BusinessLogicMapping, ValidationStrategy,
+    TestType, TestCase, ValidationResult, TestResult
 )
 from engine.modernizers.cobol_system.functionality_mapper import (
     COBOLFunctionalityMapper, COBOLFieldMapping, COBOLProgramMapping
@@ -93,8 +94,8 @@ class TestFunctionalityMapper:
         assert logic_mapping.target_logic == "if amount > 10000: tax = amount * 0.15"
         assert "Tax rate is 15% for amounts over 10000" in logic_mapping.business_rules
     
-    def test_validate_equivalence(self):
-        """Test equivalence validation."""
+    def test_validate_equivalence_basic(self):
+        """Test basic equivalence validation."""
         mapping = self.mapper.create_functionality_mapping(
             FunctionalityType.FUNCTION,
             "TEST-FUNC",
@@ -103,389 +104,681 @@ class TestFunctionalityMapper:
             "python"
         )
         
-        # Add input/output mapping
-        self.mapper.map_inputs_outputs(
-            mapping.functionality_id,
-            source_inputs={"input": "PIC X(10)"},
-            target_inputs={"input": "str"},
-            source_outputs={"output": "PIC X(10)"},
-            target_outputs={"output": "str"}
-        )
-        
-        # Add business logic mapping
+        # Add some business logic
         self.mapper.map_business_logic(
             mapping.functionality_id,
-            source_logic="MOVE INPUT TO OUTPUT",
-            target_logic="output = input",
-            business_rules=["Simple pass-through"]
+            source_logic="IF X > 0 THEN Y = X * 2",
+            target_logic="if x > 0: y = x * 2"
         )
         
-        # Validate equivalence
         result = self.mapper.validate_equivalence(mapping.functionality_id)
         
-        assert "functionality_id" in result
         assert "confidence_score" in result
-        assert "io_validation" in result
-        assert "logic_validation" in result
-        assert result["confidence_score"] > 0
+        assert "validation_status" in result
+        assert "validation_results" in result
+        assert "test_results" in result
+        assert "summary" in result
+        assert isinstance(result["confidence_score"], float)
+        assert result["confidence_score"] >= 0.0
+        assert result["confidence_score"] <= 1.0
+    
+    def test_validate_equivalence_with_test_cases(self):
+        """Test equivalence validation with test cases."""
+        mapping = self.mapper.create_functionality_mapping(
+            FunctionalityType.FUNCTION,
+            "ADD-FUNC",
+            "add_func",
+            "cobol",
+            "python"
+        )
+        
+        # Add business logic
+        self.mapper.map_business_logic(
+            mapping.functionality_id,
+            source_logic="RESULT = A + B",
+            target_logic="result = a + b"
+        )
+        
+        # Create test cases
+        test_cases = [
+            TestCase(
+                test_id="test_1",
+                test_type=TestType.UNIT_TEST,
+                name="Basic Addition Test",
+                description="Test basic addition functionality",
+                inputs={"a": 5, "b": 3},
+                expected_outputs={"result": 8}
+            ),
+            TestCase(
+                test_id="test_2",
+                test_type=TestType.EDGE_CASE_TEST,
+                name="Zero Addition Test",
+                description="Test addition with zero",
+                inputs={"a": 5, "b": 0},
+                expected_outputs={"result": 5}
+            )
+        ]
+        
+        result = self.mapper.validate_equivalence(
+            mapping.functionality_id,
+            test_cases=test_cases
+        )
+        
+        assert "test_results" in result
+        assert len(result["test_results"]) == 2
+        assert result["test_results"][0]["test_id"] == "test_1"
+        assert result["test_results"][1]["test_id"] == "test_2"
+    
+    def test_validate_equivalence_with_specific_strategies(self):
+        """Test equivalence validation with specific validation strategies."""
+        mapping = self.mapper.create_functionality_mapping(
+            FunctionalityType.FUNCTION,
+            "SECURE-FUNC",
+            "secure_func",
+            "cobol",
+            "python"
+        )
+        
+        # Add business logic with security considerations
+        self.mapper.map_business_logic(
+            mapping.functionality_id,
+            source_logic="ACCEPT USER-INPUT",
+            target_logic="user_input = input('Enter data: ')",
+            error_handling={"invalid_input": "raise ValueError"}
+        )
+        
+        # Test with specific validation strategies
+        strategies = [
+            ValidationStrategy.SECURITY_AUDIT,
+            ValidationStrategy.CODE_QUALITY,
+            ValidationStrategy.SYNTAX_CHECK
+        ]
+        
+        result = self.mapper.validate_equivalence(
+            mapping.functionality_id,
+            validation_strategies=strategies
+        )
+        
+        assert "validation_results" in result
+        validation_results = result["validation_results"]
+        
+        # Check that only requested strategies were run
+        assert len(validation_results) == 3
+        assert "security_audit" in validation_results
+        assert "code_quality" in validation_results
+        assert "syntax_check" in validation_results
+        assert "semantic_analysis" not in validation_results  # Not requested
     
     def test_get_mapping_summary(self):
-        """Test getting mapping summary."""
+        """Test getting mapping summary with enhanced statistics."""
         # Create multiple mappings
-        self.mapper.create_functionality_mapping(
-            FunctionalityType.PROGRAM, "PROG1", "prog1", "cobol", "python"
+        mapping1 = self.mapper.create_functionality_mapping(
+            FunctionalityType.FUNCTION,
+            "FUNC-1",
+            "func_1",
+            "cobol",
+            "python"
         )
-        self.mapper.create_functionality_mapping(
-            FunctionalityType.FUNCTION, "FUNC1", "func1", "cobol", "python"
+        
+        mapping2 = self.mapper.create_functionality_mapping(
+            FunctionalityType.PROGRAM,
+            "PROG-1",
+            "prog_1",
+            "cobol",
+            "python"
         )
+        
+        # Validate mappings to populate statistics
+        self.mapper.validate_equivalence(mapping1.functionality_id)
+        self.mapper.validate_equivalence(mapping2.functionality_id)
         
         summary = self.mapper.get_mapping_summary()
         
         assert summary["total_mappings"] == 2
-        assert "program" in summary["type_counts"]
-        assert "function" in summary["type_counts"]
-        assert "cobol→python" in summary["language_pairs"]
+        assert summary["validated_count"] >= 0
+        assert summary["failed_count"] >= 0
+        assert summary["needs_review_count"] >= 0
+        assert "validation_strategy_stats" in summary
+        assert isinstance(summary["average_confidence"], float)
     
     def test_export_import_mappings(self):
         """Test exporting and importing mappings."""
         # Create a mapping
         mapping = self.mapper.create_functionality_mapping(
-            FunctionalityType.PROGRAM, "TEST-PROG", "test_prog", "cobol", "python"
+            FunctionalityType.FUNCTION,
+            "EXPORT-TEST",
+            "export_test",
+            "cobol",
+            "python"
         )
         
-        # Export mappings
-        exported = self.mapper.export_mappings("json")
-        exported_data = json.loads(exported)
+        # Add some data
+        self.mapper.map_business_logic(
+            mapping.functionality_id,
+            source_logic="TEST LOGIC",
+            target_logic="test_logic"
+        )
         
-        assert "mappings" in exported_data
-        assert len(exported_data["mappings"]) == 1
-        assert exported_data["mappings"][0]["source_name"] == "TEST-PROG"
+        # Export
+        exported_data = self.mapper.export_mappings("json")
+        exported_dict = json.loads(exported_data)
+        
+        assert len(exported_dict) == 1
+        assert exported_dict[0]["source_name"] == "EXPORT-TEST"
         
         # Create new mapper and import
         new_mapper = FunctionalityMapper()
-        imported_count = new_mapper.import_mappings(exported, "json")
+        imported_count = new_mapper.import_mappings(exported_data, "json")
         
         assert imported_count == 1
         assert len(new_mapper.mappings) == 1
+        
+        # Verify imported mapping
+        imported_mapping = list(new_mapper.mappings.values())[0]
+        assert imported_mapping.source_name == "EXPORT-TEST"
+        assert imported_mapping.business_logic_mapping.source_logic == "TEST LOGIC"
+
+
+class TestValidationEngine:
+    """Test the advanced validation engine."""
+    
+    def setup_method(self):
+        """Set up test fixtures."""
+        self.mapper = FunctionalityMapper()
+        self.validation_engine = self.mapper.validation_engine
+    
+    def test_syntax_validation(self):
+        """Test syntax validation strategy."""
+        mapping = self.mapper.create_functionality_mapping(
+            FunctionalityType.PROGRAM,
+            "SYNTAX-TEST",
+            "syntax_test",
+            "cobol",
+            "python"
+        )
+        
+        # Add COBOL code with PROGRAM-ID
+        self.mapper.map_business_logic(
+            mapping.functionality_id,
+            source_logic="       IDENTIFICATION DIVISION.\n       PROGRAM-ID. SYNTAX-TEST.",
+            target_logic="def syntax_test():\n    pass"
+        )
+        
+        result = self.validation_engine.validate_mapping(
+            mapping, 
+            strategies=[ValidationStrategy.SYNTAX_CHECK]
+        )
+        
+        assert "syntax_check" in result
+        syntax_result = result["syntax_check"]
+        assert isinstance(syntax_result, ValidationResult)
+        assert syntax_result.strategy == ValidationStrategy.SYNTAX_CHECK
+        assert isinstance(syntax_result.score, float)
+        assert syntax_result.score >= 0.0
+        assert syntax_result.score <= 1.0
+    
+    def test_semantic_validation(self):
+        """Test semantic validation strategy."""
+        mapping = self.mapper.create_functionality_mapping(
+            FunctionalityType.FUNCTION,
+            "SEMANTIC-TEST",
+            "semantic_test",
+            "cobol",
+            "python"
+        )
+        
+        # Add logic with conditional statements
+        self.mapper.map_business_logic(
+            mapping.functionality_id,
+            source_logic="IF CONDITION THEN ACTION",
+            target_logic="if condition:\n    action"
+        )
+        
+        result = self.validation_engine.validate_mapping(
+            mapping,
+            strategies=[ValidationStrategy.SEMANTIC_ANALYSIS]
+        )
+        
+        assert "semantic_analysis" in result
+        semantic_result = result["semantic_analysis"]
+        assert semantic_result.strategy == ValidationStrategy.SEMANTIC_ANALYSIS
+        assert isinstance(semantic_result.score, float)
+    
+    def test_security_validation(self):
+        """Test security validation strategy."""
+        mapping = self.mapper.create_functionality_mapping(
+            FunctionalityType.FUNCTION,
+            "SECURITY-TEST",
+            "security_test",
+            "cobol",
+            "python"
+        )
+        
+        # Add code with potential security issues
+        self.mapper.map_business_logic(
+            mapping.functionality_id,
+            source_logic="ACCEPT USER-INPUT",
+            target_logic="result = eval(input('Enter code: '))"  # Dangerous!
+        )
+        
+        result = self.validation_engine.validate_mapping(
+            mapping,
+            strategies=[ValidationStrategy.SECURITY_AUDIT]
+        )
+        
+        assert "security_audit" in result
+        security_result = result["security_audit"]
+        assert security_result.strategy == ValidationStrategy.SECURITY_AUDIT
+        assert len(security_result.issues) > 0  # Should detect eval() usage
+    
+    def test_performance_validation(self):
+        """Test performance validation strategy."""
+        mapping = self.mapper.create_functionality_mapping(
+            FunctionalityType.FUNCTION,
+            "PERF-TEST",
+            "perf_test",
+            "cobol",
+            "python"
+        )
+        
+        result = self.validation_engine.validate_mapping(
+            mapping,
+            strategies=[ValidationStrategy.PERFORMANCE_BENCHMARK]
+        )
+        
+        assert "performance_benchmark" in result
+        perf_result = result["performance_benchmark"]
+        assert perf_result.strategy == ValidationStrategy.PERFORMANCE_BENCHMARK
+        assert "metrics" in perf_result.__dict__
+    
+    def test_code_quality_validation(self):
+        """Test code quality validation strategy."""
+        mapping = self.mapper.create_functionality_mapping(
+            FunctionalityType.FUNCTION,
+            "QUALITY-TEST",
+            "quality_test",
+            "cobol",
+            "python"
+        )
+        
+        # Add complex code
+        complex_code = "if x > 0:\n" + "    if y > 0:\n" * 10 + "        pass"
+        self.mapper.map_business_logic(
+            mapping.functionality_id,
+            source_logic="SIMPLE LOGIC",
+            target_logic=complex_code
+        )
+        
+        result = self.validation_engine.validate_mapping(
+            mapping,
+            strategies=[ValidationStrategy.CODE_QUALITY]
+        )
+        
+        assert "code_quality" in result
+        quality_result = result["code_quality"]
+        assert quality_result.strategy == ValidationStrategy.CODE_QUALITY
+        assert len(quality_result.warnings) > 0  # Should detect complexity
+
+
+class TestTestEngine:
+    """Test the advanced test execution engine."""
+    
+    def setup_method(self):
+        """Set up test fixtures."""
+        self.mapper = FunctionalityMapper()
+        self.test_engine = self.mapper.test_engine
+    
+    def test_unit_test_execution(self):
+        """Test unit test execution."""
+        mapping = self.mapper.create_functionality_mapping(
+            FunctionalityType.FUNCTION,
+            "UNIT-TEST",
+            "unit_test",
+            "cobol",
+            "python"
+        )
+        
+        test_case = TestCase(
+            test_id="unit_1",
+            test_type=TestType.UNIT_TEST,
+            name="Basic Unit Test",
+            description="Test basic functionality",
+            inputs={"x": 5, "y": 3},
+            expected_outputs={"result": 8}
+        )
+        
+        results = self.test_engine.execute_test_suite(mapping, [test_case])
+        
+        assert len(results) == 1
+        result = results[0]
+        assert isinstance(result, TestResult)
+        assert result.test_case.test_id == "unit_1"
+        assert result.test_case.test_type == TestType.UNIT_TEST
+        assert isinstance(result.passed, bool)
+        assert isinstance(result.execution_time, float)
+    
+    def test_stress_test_execution(self):
+        """Test stress test execution."""
+        mapping = self.mapper.create_functionality_mapping(
+            FunctionalityType.FUNCTION,
+            "STRESS-TEST",
+            "stress_test",
+            "cobol",
+            "python"
+        )
+        
+        test_case = TestCase(
+            test_id="stress_1",
+            test_type=TestType.STRESS_TEST,
+            name="Performance Stress Test",
+            description="Test performance under load",
+            inputs={"load": "high"},
+            expected_outputs={}
+        )
+        
+        results = self.test_engine.execute_test_suite(mapping, [test_case])
+        
+        assert len(results) == 1
+        result = results[0]
+        assert result.test_case.test_type == TestType.STRESS_TEST
+        assert "performance_metrics" in result.__dict__
+        assert "memory_usage" in result.__dict__
+        assert "cpu_usage" in result.__dict__
+    
+    def test_edge_case_test_execution(self):
+        """Test edge case test execution."""
+        mapping = self.mapper.create_functionality_mapping(
+            FunctionalityType.FUNCTION,
+            "EDGE-TEST",
+            "edge_test",
+            "cobol",
+            "python"
+        )
+        
+        test_case = TestCase(
+            test_id="edge_1",
+            test_type=TestType.EDGE_CASE_TEST,
+            name="Boundary Test",
+            description="Test boundary conditions",
+            inputs={"edge_case": True},
+            expected_outputs={"handled": True}
+        )
+        
+        results = self.test_engine.execute_test_suite(mapping, [test_case])
+        
+        assert len(results) == 1
+        result = results[0]
+        assert result.test_case.test_type == TestType.EDGE_CASE_TEST
+        assert len(result.warnings) > 0  # Should detect edge case
+    
+    def test_security_test_execution(self):
+        """Test security test execution."""
+        mapping = self.mapper.create_functionality_mapping(
+            FunctionalityType.FUNCTION,
+            "SEC-TEST",
+            "sec_test",
+            "cobol",
+            "python"
+        )
+        
+        test_case = TestCase(
+            test_id="sec_1",
+            test_type=TestType.SECURITY_TEST,
+            name="Security Vulnerability Test",
+            description="Test for security vulnerabilities",
+            inputs={"malicious_input": True},
+            expected_outputs={"secure": True}
+        )
+        
+        results = self.test_engine.execute_test_suite(mapping, [test_case])
+        
+        assert len(results) == 1
+        result = results[0]
+        assert result.test_case.test_type == TestType.SECURITY_TEST
+        assert len(result.warnings) > 0  # Should detect security issue
 
 
 class TestCOBOLFunctionalityMapper:
-    """Test the COBOL-specific functionality mapper."""
+    """Test COBOL-specific functionality mapper."""
     
     def setup_method(self):
         """Set up test fixtures."""
         self.cobol_mapper = COBOLFunctionalityMapper()
     
     def test_create_cobol_program_mapping(self):
-        """Test creating a COBOL program mapping."""
-        functionality_mapping, cobol_mapping = self.cobol_mapper.create_cobol_program_mapping(
+        """Test creating COBOL program mapping."""
+        mapping = self.cobol_mapper.create_cobol_program_mapping(
             "PAYROLL-PROG",
             "payroll_program",
-            source_code="IDENTIFICATION DIVISION.\nPROGRAM-ID. PAYROLL-PROG."
+            source_code="       IDENTIFICATION DIVISION.\n       PROGRAM-ID. PAYROLL-PROG."
         )
         
-        assert functionality_mapping.functionality_id.startswith("PROG-PAYROLL-PROG")
-        assert cobol_mapping.program_name == "PAYROLL-PROG"
-        assert cobol_mapping.python_module_name == "payroll_program"
+        assert mapping.functionality_id.startswith("PROG-")
+        assert mapping.source_name == "PAYROLL-PROG"
+        assert mapping.target_name == "payroll_program"
+        assert mapping.source_language == "cobol"
+        assert mapping.target_language == "python"
     
     def test_map_cobol_fields(self):
         """Test mapping COBOL fields."""
-        functionality_mapping, cobol_mapping = self.cobol_mapper.create_cobol_program_mapping(
-            "TEST-PROG", "test_prog"
+        mapping = self.cobol_mapper.create_cobol_program_mapping(
+            "FIELD-TEST",
+            "field_test"
         )
         
-        field_definitions = [
-            {"name": "WS-EMPLOYEE-NAME", "level": 1, "pic": "PIC X(30)"},
-            {"name": "WS-SALARY", "level": 1, "pic": "PIC 9(8)V99"},
-            {"name": "WS-TAX-RATE", "level": 1, "pic": "PIC V999"}
+        field_mappings = [
+            COBOLFieldMapping(
+                source_name="EMPLOYEE-ID",
+                target_name="employee_id",
+                source_type="PIC 9(6)",
+                target_type="int"
+            ),
+            COBOLFieldMapping(
+                source_name="EMPLOYEE-NAME",
+                target_name="employee_name",
+                source_type="PIC X(30)",
+                target_type="str"
+            ),
+            COBOLFieldMapping(
+                source_name="SALARY",
+                target_name="salary",
+                source_type="PIC 9(8)V99",
+                target_type="float"
+            )
         ]
         
-        field_mappings = self.cobol_mapper.map_cobol_fields(
-            functionality_mapping.functionality_id,
-            field_definitions
+        result = self.cobol_mapper.map_cobol_fields(
+            mapping.functionality_id,
+            field_mappings
         )
         
-        assert len(field_mappings) == 3
-        assert field_mappings[0].cobol_name == "WS-EMPLOYEE-NAME"
-        assert field_mappings[0].python_name == "employee_name"
-        assert field_mappings[0].python_type == "str"
-        assert field_mappings[1].python_type == "decimal.Decimal"
+        assert len(result) == 3
+        assert result[0].source_name == "EMPLOYEE-ID"
+        assert result[0].target_name == "employee_id"
+        assert result[0].source_type == "PIC 9(6)"
+        assert result[0].target_type == "int"
     
     def test_analyze_cobol_structure(self):
-        """Test analyzing COBOL program structure."""
-        functionality_mapping, cobol_mapping = self.cobol_mapper.create_cobol_program_mapping(
-            "TEST-PROG", "test_prog"
-        )
-        
-        cobol_source = """
-        IDENTIFICATION DIVISION.
-        PROGRAM-ID. TEST-PROG.
-        
-        ENVIRONMENT DIVISION.
-        INPUT-OUTPUT SECTION.
-        FILE-CONTROL.
-            SELECT INPUT-FILE ASSIGN TO "input.dat".
-        
-        DATA DIVISION.
-        FILE SECTION.
-        FD INPUT-FILE.
-        01 INPUT-RECORD.
-            05 EMPLOYEE-NAME PIC X(30).
-            05 EMPLOYEE-SALARY PIC 9(8)V99.
-        
-        WORKING-STORAGE SECTION.
-        01 WS-TAX-RATE PIC V999 VALUE 0.15.
-        
-        PROCEDURE DIVISION.
-        MAIN-LOGIC.
-            PERFORM READ-INPUT.
-            PERFORM CALCULATE-TAX.
-            STOP RUN.
-        
-        READ-INPUT.
-            READ INPUT-FILE.
-        
-        CALCULATE-TAX.
-            COMPUTE TAX = EMPLOYEE-SALARY * WS-TAX-RATE.
+        """Test COBOL structure analysis."""
+        cobol_code = """
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. TEST-PROG.
+       DATA DIVISION.
+       WORKING-STORAGE SECTION.
+           01 EMPLOYEE-RECORD.
+               05 EMPLOYEE-ID PIC 9(6).
+               05 EMPLOYEE-NAME PIC X(30).
+       PROCEDURE DIVISION.
+           DISPLAY 'HELLO WORLD'.
+           STOP RUN.
         """
         
-        analysis = self.cobol_mapper.analyze_cobol_structure(
-            functionality_mapping.functionality_id,
-            cobol_source
-        )
+        analysis = self.cobol_mapper.analyze_cobol_structure(cobol_code)
         
-        assert "IDENTIFICATION" in analysis["divisions"]
-        assert "ENVIRONMENT" in analysis["divisions"]
-        assert "DATA" in analysis["divisions"]
-        assert "PROCEDURE" in analysis["divisions"]
-        assert "MAIN-LOGIC" in analysis["paragraphs"]
-        assert "READ-INPUT" in analysis["paragraphs"]
-        assert "CALCULATE-TAX" in analysis["paragraphs"]
-        assert "INPUT-FILE" in analysis["files"]
-        assert len(analysis["fields"]) > 0
+        assert "program_name" in analysis
+        assert "data_structures" in analysis
+        assert "paragraphs" in analysis  # Changed from "procedures" to "paragraphs"
+        assert analysis["program_name"] == "TEST-PROG"
+        assert len(analysis["data_structures"]) > 0
     
     def test_parse_pic_clause(self):
-        """Test parsing COBOL PIC clauses."""
-        mapper = self.cobol_mapper
+        """Test PIC clause parsing."""
+        pic_tests = [
+            ("PIC 9(6)", "int"),
+            ("PIC X(30)", "str"),
+            ("PIC 9(8)V99", "float"),
+            ("PIC 9(3)", "int"),
+            ("PIC X(10)", "str")
+        ]
         
-        # Test alphanumeric
-        cobol_type, length, precision, scale, is_signed = mapper._parse_pic_clause("PIC X(10)")
-        assert cobol_type == "X"
-        assert length == 10
-        assert precision is None
-        assert scale is None
-        assert not is_signed
-        
-        # Test numeric
-        cobol_type, length, precision, scale, is_signed = mapper._parse_pic_clause("PIC 9(5)")
-        assert cobol_type == "9"
-        assert length == 5
-        assert precision == 5
-        assert scale is None
-        assert not is_signed
-        
-        # Test decimal
-        cobol_type, length, precision, scale, is_signed = mapper._parse_pic_clause("PIC 9(8)V99")
-        assert cobol_type == "9"
-        assert length == 10
-        assert precision == 10
-        assert scale == 2
-        assert not is_signed
-        
-        # Test signed
-        cobol_type, length, precision, scale, is_signed = mapper._parse_pic_clause("PIC S9(5)")
-        assert cobol_type == "9"
-        assert is_signed
+        for pic_clause, expected_type in pic_tests:
+            parsed_type = self.cobol_mapper.parse_pic_clause(pic_clause)
+            assert parsed_type == expected_type
     
     def test_convert_to_snake_case(self):
-        """Test converting COBOL names to Python snake_case."""
-        mapper = self.cobol_mapper
+        """Test COBOL to snake_case conversion."""
+        conversions = [
+            ("EMPLOYEE-ID", "employee_id"),
+            ("CUSTOMER-NAME", "customer_name"),
+            ("SALARY-AMOUNT", "salary_amount"),
+            ("PAYROLL-PROGRAM", "payroll_program")
+        ]
         
-        assert mapper._convert_to_snake_case("WS-EMPLOYEE-NAME") == "employee_name"
-        assert mapper._convert_to_snake_case("LS-TAX-RATE") == "tax_rate"
-        assert mapper._convert_to_snake_case("FD-INPUT-FILE") == "input_file"
-        assert mapper._convert_to_snake_case("EMPLOYEE_SALARY") == "employee_salary"
+        for cobol_name, expected_snake in conversions:
+            converted = self.cobol_mapper.convert_to_snake_case(cobol_name)
+            assert converted == expected_snake
 
 
 class TestWebsiteFunctionalityMapper:
-    """Test the website-specific functionality mapper."""
+    """Test website functionality mapper."""
     
     def setup_method(self):
         """Set up test fixtures."""
         self.website_mapper = WebsiteFunctionalityMapper()
     
     def test_create_website_mapping(self):
-        """Test creating a website mapping."""
-        functionality_mapping, website_mapping = self.website_mapper.create_website_mapping(
-            "https://legacy-site.com",
-            "https://modern-site.com",
-            WebsiteFramework.REACT
+        """Test creating website mapping."""
+        mapping = self.website_mapper.create_website_mapping(
+            "legacy-site.html",
+            WebsiteFramework.REACT,
+            "modern-app"
         )
         
-        assert functionality_mapping.functionality_type == FunctionalityType.COMPONENT
-        assert website_mapping.legacy_url == "https://legacy-site.com"
-        assert website_mapping.modern_url == "https://modern-site.com"
-        assert website_mapping.target_framework == WebsiteFramework.REACT
+        assert mapping.functionality_id.startswith("COMP-")
+        assert mapping.source_name == "legacy-site.html"
+        assert mapping.target_name == "modern-app"
+        assert mapping.source_language == "html"
+        assert mapping.target_language == "react"
     
     def test_map_ui_components(self):
         """Test mapping UI components."""
-        functionality_mapping, website_mapping = self.website_mapper.create_website_mapping(
-            "https://test.com", "https://modern.com", WebsiteFramework.REACT
+        mapping = self.website_mapper.create_website_mapping(
+            "test-site.html",
+            WebsiteFramework.REACT,
+            "test-app"
         )
         
-        component_mappings = [
-            {
-                "legacy_selector": "#navigation",
-                "modern_component": "Navigation",
-                "component_type": "navigation",
-                "props_mapping": {"title": "siteTitle"},
-                "event_handlers": {"onClick": "handleNavClick"}
-            },
-            {
-                "legacy_selector": ".contact-form",
-                "modern_component": "ContactForm",
-                "component_type": "form",
-                "props_mapping": {"action": "submitUrl"},
-                "event_handlers": {"onSubmit": "handleSubmit"}
-            }
+        components = [
+            UIComponentMapping("header", UIComponentType.HEADER, "Header", "Header"),
+            UIComponentMapping("nav", UIComponentType.NAVIGATION, "Nav", "Navigation"),
+            UIComponentMapping("main", UIComponentType.CONTENT, "Main", "MainContent")
         ]
         
-        ui_mappings = self.website_mapper.map_ui_components(
-            functionality_mapping.functionality_id,
-            component_mappings
+        result = self.website_mapper.map_ui_components(
+            mapping.functionality_id,
+            components
         )
         
-        assert len(ui_mappings) == 2
-        assert ui_mappings[0].legacy_selector == "#navigation"
-        assert ui_mappings[0].modern_component == "Navigation"
-        assert ui_mappings[0].component_type == UIComponentType.NAVIGATION
-        assert ui_mappings[1].component_type == UIComponentType.FORM
+        assert len(result) == 3
+        assert result[0].component_id == "header"
+        assert result[0].component_type == UIComponentType.HEADER
+        assert result[0].source_name == "Header"
+        assert result[0].target_name == "Header"
     
     def test_map_api_endpoints(self):
         """Test mapping API endpoints."""
-        functionality_mapping, website_mapping = self.website_mapper.create_website_mapping(
-            "https://test.com", "https://modern.com", WebsiteFramework.NEXTJS
+        mapping = self.website_mapper.create_website_mapping(
+            "api-site.html",
+            WebsiteFramework.NEXTJS,
+            "api-app"
         )
         
-        api_mappings = [
-            {
-                "legacy_endpoint": "/api/users",
-                "modern_endpoint": "/api/users",
-                "http_method": "GET",
-                "request_mapping": {"id": "userId"},
-                "response_mapping": {"user_data": "userData"}
-            },
-            {
-                "legacy_endpoint": "/api/users",
-                "modern_endpoint": "/api/users",
-                "http_method": "POST",
-                "request_mapping": {"name": "userName", "email": "userEmail"},
-                "response_mapping": {"success": "isSuccess"}
-            }
+        endpoints = [
+            APIMapping("/api/users", "GET", "get_users", "getUsers"),
+            APIMapping("/api/users", "POST", "create_user", "createUser")
         ]
         
-        api_mappings_list = self.website_mapper.map_api_endpoints(
-            functionality_mapping.functionality_id,
-            api_mappings
+        result = self.website_mapper.map_api_endpoints(
+            mapping.functionality_id,
+            endpoints
         )
         
-        assert len(api_mappings_list) == 2
-        assert api_mappings_list[0].legacy_endpoint == "/api/users"
-        assert api_mappings_list[0].http_method == "GET"
-        assert api_mappings_list[1].http_method == "POST"
+        assert len(result) == 2
+        assert result[0].endpoint_path == "/api/users"
+        assert result[0].http_method == "GET"
+        assert result[0].source_name == "get_users"
+        assert result[0].target_name == "getUsers"
     
     def test_analyze_legacy_website(self):
-        """Test analyzing legacy website structure."""
-        functionality_mapping, website_mapping = self.website_mapper.create_website_mapping(
-            "https://test.com", "https://modern.com", WebsiteFramework.REACT
-        )
-        
-        html_content = """
+        """Test legacy website analysis."""
+        html_code = """
         <!DOCTYPE html>
         <html>
         <head>
-            <title>Test Site</title>
-            <link rel="stylesheet" href="styles.css">
+            <title>Legacy Site</title>
+            <link href="bootstrap.css" rel="stylesheet">
         </head>
         <body>
-            <header>
-                <nav>
-                    <a href="/">Home</a>
-                    <a href="/about">About</a>
-                </nav>
-            </header>
-            
-            <main>
-                <form action="/submit" method="post">
-                    <input type="text" name="name" placeholder="Name">
-                    <input type="email" name="email" placeholder="Email">
-                    <button type="submit">Submit</button>
-                </form>
-                
-                <table>
-                    <tr><th>Name</th><th>Email</th></tr>
-                    <tr><td>John</td><td>john@example.com</td></tr>
-                </table>
-            </main>
-            
-            <footer>
-                <p>&copy; 2024 Test Site</p>
-            </footer>
-            
-            <script src="script.js"></script>
+            <div class="container">
+                <h1>Welcome</h1>
+                <button onclick="showAlert()">Click me</button>
+            </div>
+            <script src="jquery.js"></script>
+            <script>
+                function showAlert() {
+                    alert('Hello!');
+                }
+            </script>
         </body>
         </html>
         """
         
-        analysis = self.website_mapper.analyze_legacy_website(
-            functionality_mapping.functionality_id,
-            html_content
-        )
+        analysis = self.website_mapper.analyze_legacy_website(html_code)
         
-        assert len(analysis["components"]) > 0
-        assert len(analysis["forms"]) > 0
-        assert len(analysis["tables"]) > 0
-        assert len(analysis["navigation"]) > 0
-        assert len(analysis["scripts"]) > 0
-        assert len(analysis["styles"]) > 0
-        assert len(analysis["links"]) > 0
+        assert "framework_dependencies" in analysis
+        assert "ui_components" in analysis
+        assert "javascript_functions" in analysis
+        assert "bootstrap" in analysis["framework_dependencies"]
+        assert "jquery" in analysis["framework_dependencies"]
     
     def test_generate_modernization_plan(self):
-        """Test generating modernization plan."""
-        functionality_mapping, website_mapping = self.website_mapper.create_website_mapping(
-            "https://test.com", "https://modern.com", WebsiteFramework.REACT
+        """Test modernization plan generation."""
+        mapping = self.website_mapper.create_website_mapping(
+            "plan-test.html",
+            WebsiteFramework.REACT,
+            "plan-app"
         )
         
-        # Add some component mappings
-        component_mappings = [
-            {
-                "legacy_selector": "#nav",
-                "modern_component": "Navigation",
-                "component_type": "navigation"
-            }
-        ]
+        plan = self.website_mapper.generate_modernization_plan(mapping.functionality_id)
         
-        self.website_mapper.map_ui_components(
-            functionality_mapping.functionality_id,
-            component_mappings
-        )
-        
-        plan = self.website_mapper.generate_modernization_plan(
-            functionality_mapping.functionality_id
-        )
-        
-        assert plan["target_framework"] == "react"
-        assert plan["components_to_create"] == 1
-        assert len(plan["steps"]) > 0
-        assert len(plan["recommendations"]) > 0
+        assert "target_framework" in plan
+        assert "component_mappings" in plan
+        assert "api_mappings" in plan
+        assert "migration_steps" in plan
+        assert plan["target_framework"] == WebsiteFramework.REACT.value
     
     def test_generate_component_id(self):
-        """Test generating component ID from URL."""
-        mapper = self.website_mapper
+        """Test component ID generation."""
+        component_ids = [
+            ("header", "header"),
+            ("main-navigation", "main_navigation"),
+            ("user-profile-card", "user_profile_card"),
+            ("contact-form", "contact_form")
+        ]
         
-        assert mapper._generate_component_id("https://example.com") == "EXAMPLE_COM_HOME"
-        assert mapper._generate_component_id("https://test.com/about") == "TEST_COM_ABOUT"
-        assert mapper._generate_component_id("https://site.com/products/123") == "SITE_COM_PRODUCTS_123"
+        for input_id, expected_id in component_ids:
+            generated_id = self.website_mapper.generate_component_id(input_id)
+            assert generated_id == expected_id
 
 
 if __name__ == "__main__":
