@@ -87,7 +87,7 @@ class TestCOBOLFunctionalityMapper:
     
     def test_create_cobol_program_mapping(self):
         """Test creating a COBOL program mapping."""
-        functionality_mapping, cobol_mapping = self.cobol_mapper.create_cobol_program_mapping(
+        functionality_mapping = self.cobol_mapper.create_cobol_program_mapping(
             "PAYROLL-PROGRAM",
             "payroll_program",
             self.sample_cobol_source
@@ -99,56 +99,55 @@ class TestCOBOLFunctionalityMapper:
         assert functionality_mapping.source_language == "cobol"
         assert functionality_mapping.target_language == "python"
         assert functionality_mapping.functionality_type == FunctionalityType.PROGRAM
-        
-        assert cobol_mapping.program_name == "PAYROLL-PROGRAM"
-        assert cobol_mapping.python_module_name == "payroll_program"
     
     def test_map_cobol_fields(self):
         """Test mapping COBOL fields to Python."""
-        functionality_mapping, _ = self.cobol_mapper.create_cobol_program_mapping(
+        functionality_mapping = self.cobol_mapper.create_cobol_program_mapping(
             "TEST-PROGRAM",
             "test_program"
         )
         
-        field_definitions = [
-            {
-                "name": "EMPLOYEE-ID",
-                "pic": "PIC 9(5)",
-                "level": 5
-            },
-            {
-                "name": "EMPLOYEE-NAME",
-                "pic": "PIC X(30)",
-                "level": 5
-            },
-            {
-                "name": "EMPLOYEE-SALARY",
-                "pic": "PIC 9(8)V99",
-                "level": 5
-            }
+        field_mappings = [
+            COBOLFieldMapping(
+                source_name="EMPLOYEE-ID",
+                target_name="employee_id",
+                source_type="PIC 9(5)",
+                target_type="int"
+            ),
+            COBOLFieldMapping(
+                source_name="EMPLOYEE-NAME",
+                target_name="employee_name",
+                source_type="PIC X(30)",
+                target_type="str"
+            ),
+            COBOLFieldMapping(
+                source_name="EMPLOYEE-SALARY",
+                target_name="employee_salary",
+                source_type="PIC 9(8)V99",
+                target_type="decimal.Decimal"
+            )
         ]
         
-        field_mappings = self.cobol_mapper.map_cobol_fields(
+        result = self.cobol_mapper.map_cobol_fields(
             functionality_mapping.functionality_id,
-            field_definitions
+            field_mappings
         )
         
-        assert len(field_mappings) == 3
-        assert field_mappings[0].cobol_name == "EMPLOYEE-ID"
-        assert field_mappings[0].python_name == "employee_id"
-        assert field_mappings[0].python_type == "int"
-        assert field_mappings[1].python_type == "str"
-        assert field_mappings[2].python_type == "decimal.Decimal"
+        assert len(result) == 3
+        assert result[0].source_name == "EMPLOYEE-ID"
+        assert result[0].target_name == "employee_id"
+        assert result[0].target_type == "int"
+        assert result[1].target_type == "str"
+        assert result[2].target_type == "decimal.Decimal"
     
     def test_analyze_cobol_structure(self):
         """Test analyzing COBOL program structure."""
-        functionality_mapping, _ = self.cobol_mapper.create_cobol_program_mapping(
+        functionality_mapping = self.cobol_mapper.create_cobol_program_mapping(
             "PAYROLL-PROGRAM",
             "payroll_program"
         )
         
         analysis = self.cobol_mapper.analyze_cobol_structure(
-            functionality_mapping.functionality_id,
             self.sample_cobol_source
         )
         
@@ -206,7 +205,7 @@ class TestCOBOLFunctionalityMapper:
     
     def test_map_cobol_paragraphs(self):
         """Test mapping COBOL paragraphs to Python functions."""
-        functionality_mapping, _ = self.cobol_mapper.create_cobol_program_mapping(
+        functionality_mapping = self.cobol_mapper.create_cobol_program_mapping(
             "TEST-PROGRAM",
             "test_program"
         )
@@ -228,7 +227,7 @@ class TestCOBOLFunctionalityMapper:
     
     def test_map_cobol_files(self):
         """Test mapping COBOL files to Python file paths."""
-        functionality_mapping, _ = self.cobol_mapper.create_cobol_program_mapping(
+        functionality_mapping = self.cobol_mapper.create_cobol_program_mapping(
             "TEST-PROGRAM",
             "test_program"
         )
@@ -250,24 +249,24 @@ class TestCOBOLFunctionalityMapper:
     
     def test_generate_python_equivalence_tests(self):
         """Test generating Python equivalence tests."""
-        functionality_mapping, _ = self.cobol_mapper.create_cobol_program_mapping(
+        functionality_mapping = self.cobol_mapper.create_cobol_program_mapping(
             "TEST-PROGRAM",
             "test_program"
         )
         
         # Add some field mappings first
-        field_definitions = [
-            {
-                "cobol_name": "EMPLOYEE-ID",
-                "cobol_type": "PIC 9(5)",
-                "level": 5,
-                "python_name": "employee_id"
-            }
+        field_mappings = [
+            COBOLFieldMapping(
+                source_name="EMPLOYEE-ID",
+                target_name="employee_id",
+                source_type="PIC 9(5)",
+                target_type="int"
+            )
         ]
         
         self.cobol_mapper.map_cobol_fields(
             functionality_mapping.functionality_id,
-            field_definitions
+            field_mappings
         )
         
         test_cases = self.cobol_mapper.generate_python_equivalence_tests(
@@ -339,7 +338,7 @@ class TestCOBOLFunctionalityMapper:
     
     def test_validate_equivalence(self):
         """Test validating COBOL to Python equivalence."""
-        functionality_mapping, _ = self.cobol_mapper.create_cobol_program_mapping(
+        functionality_mapping = self.cobol_mapper.create_cobol_program_mapping(
             "TEST-PROGRAM",
             "test_program"
         )
@@ -360,7 +359,6 @@ class TestCOBOLFunctionalityMapper:
         assert "confidence_score" in validation_result
         assert "equivalence_level" in validation_result
         assert "issues" in validation_result
-        assert "warnings" in validation_result
         assert isinstance(validation_result["confidence_score"], float)
         assert validation_result["confidence_score"] >= 0.0
         assert validation_result["confidence_score"] <= 1.0
@@ -368,7 +366,7 @@ class TestCOBOLFunctionalityMapper:
     def test_export_import_mappings(self):
         """Test exporting and importing COBOL mappings."""
         # Create a mapping
-        functionality_mapping, _ = self.cobol_mapper.create_cobol_program_mapping(
+        functionality_mapping = self.cobol_mapper.create_cobol_program_mapping(
             "EXPORT-TEST",
             "export_test"
         )

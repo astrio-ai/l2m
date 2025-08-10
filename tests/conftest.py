@@ -27,14 +27,14 @@ def sample_cobol_files():
 @pytest.fixture
 def mock_lossless_node():
     """Fixture providing a mock LosslessNode."""
-    from packages.transpiler.engine.parser.cobol_lst import LosslessNode
+    from engine.modernizers.cobol_system.parsers.cobol_lst import LosslessNode
     return Mock(spec=LosslessNode)
 
 
 @pytest.fixture
 def mock_token():
     """Fixture providing a mock Token."""
-    from packages.transpiler.engine.parser.cobol_lst import Token
+    from engine.modernizers.cobol_system.parsers.cobol_lst import Token
     return Mock(spec=Token)
 
 
@@ -116,12 +116,12 @@ def test_variables():
 @pytest.fixture
 def mock_rule_engine():
     """Fixture providing a mock rule engine."""
-    from packages.transpiler.rules.rule_engine import RuleEngine
+    from engine.modernizers.cobol_system.rules.rule_engine import RuleEngine
     return Mock(spec=RuleEngine)
 
 
 @pytest.fixture
 def mock_base_rule():
     """Fixture providing a mock base rule."""
-    from packages.transpiler.rules.base_rule import BaseRule
+    from engine.modernizers.cobol_system.rules.base_rule import BaseRule
     return Mock(spec=BaseRule) 

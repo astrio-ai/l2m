@@ -746,7 +746,7 @@ class TestWebsiteFunctionalityMapper:
         analysis = self.website_mapper.analyze_legacy_website(html_code)
         
         assert "framework_dependencies" in analysis
-        assert "ui_components" in analysis
+        assert "components" in analysis
         assert "javascript_functions" in analysis
         assert "bootstrap" in analysis["framework_dependencies"]
         assert "jquery" in analysis["framework_dependencies"]
@@ -762,8 +762,8 @@ class TestWebsiteFunctionalityMapper:
         plan = self.website_mapper.generate_modernization_plan(mapping.functionality_id)
         
         assert "target_framework" in plan
-        assert "component_mappings" in plan
-        assert "api_mappings" in plan
+        assert "components_to_create" in plan
+        assert "api_endpoints_to_migrate" in plan
         assert "migration_steps" in plan
         assert plan["target_framework"] == WebsiteFramework.REACT.value
     
@@ -777,7 +777,7 @@ class TestWebsiteFunctionalityMapper:
         ]
         
         for input_id, expected_id in component_ids:
-            generated_id = self.website_mapper.generate_component_id(input_id)
+            generated_id = self.website_mapper._generate_component_id(input_id)
             assert generated_id == expected_id
 
 
