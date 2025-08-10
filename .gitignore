@@ -182,6 +182,7 @@ cython_debug/
 
 # Private API (FastAPI)
 api/
+tests/api/
 
 # macOS
 .DS_Store
