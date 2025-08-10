@@ -33,12 +33,12 @@ class COBOLDataType(Enum):
 @dataclass
 class COBOLFieldMapping:
     """Mapping of a COBOL field to Python."""
-    cobol_name: str
-    python_name: str
-    cobol_type: str  # PIC clause
-    python_type: str
-    level_number: int
-    length: int
+    source_name: str  # COBOL field name
+    target_name: str  # Python field name
+    source_type: str  # PIC clause
+    target_type: str  # Python type
+    level_number: int = 1
+    length: int = 0
     precision: Optional[int] = None
     scale: Optional[int] = None
     is_signed: bool = False
@@ -79,7 +79,7 @@ class COBOLFunctionalityMapper(FunctionalityMapper):
         program_name: str,
         python_module_name: str,
         source_code: Optional[str] = None
-    ) -> Tuple[FunctionalityMapping, COBOLProgramMapping]:
+    ) -> FunctionalityMapping:
         """
         Create a mapping for a COBOL program to Python.
         
@@ -89,7 +89,7 @@ class COBOLFunctionalityMapper(FunctionalityMapper):
             source_code: COBOL source code (optional)
             
         Returns:
-            Tuple of (FunctionalityMapping, COBOLProgramMapping)
+            FunctionalityMapping object
         """
         # Create base functionality mapping
         functionality_mapping = self.create_functionality_mapping(
@@ -111,19 +111,19 @@ class COBOLFunctionalityMapper(FunctionalityMapper):
         # Store COBOL mapping
         self.cobol_programs[functionality_mapping.functionality_id] = cobol_mapping
         
-        return functionality_mapping, cobol_mapping
+        return functionality_mapping
     
     def map_cobol_fields(
         self,
         functionality_id: str,
-        field_definitions: List[Dict[str, Any]]
+        field_mappings: List[COBOLFieldMapping]
     ) -> List[COBOLFieldMapping]:
         """
         Map COBOL field definitions to Python.
         
         Args:
             functionality_id: ID of the functionality mapping
-            field_definitions: List of COBOL field definitions
+            field_mappings: List of COBOL field mappings
             
         Returns:
             List of COBOLFieldMapping objects
@@ -132,13 +132,6 @@ class COBOLFunctionalityMapper(FunctionalityMapper):
             raise ValueError(f"COBOL program mapping {functionality_id} not found")
         
         cobol_mapping = self.cobol_programs[functionality_id]
-        field_mappings = []
-        
-        for field_def in field_definitions:
-            field_mapping = self._create_field_mapping(field_def)
-            field_mappings.append(field_mapping)
-        
-        # Update COBOL mapping
         cobol_mapping.field_mappings = field_mappings
         
         # Update base mapping
@@ -204,65 +197,110 @@ class COBOLFunctionalityMapper(FunctionalityMapper):
         self.logger.info(f"Mapped {len(file_mappings)} COBOL files for {functionality_id}")
         return file_mappings
     
-    def analyze_cobol_structure(
-        self,
-        functionality_id: str,
-        source_code: str
-    ) -> Dict[str, Any]:
+    def analyze_cobol_structure(self, source_code: str) -> Dict[str, Any]:
         """
-        Analyze COBOL program structure and extract mapping information.
+        Analyze COBOL program structure.
         
         Args:
-            functionality_id: ID of the functionality mapping
             source_code: COBOL source code
             
         Returns:
-            Analysis result with extracted structure information
+            Analysis results
         """
-        if functionality_id not in self.cobol_programs:
-            raise ValueError(f"COBOL program mapping {functionality_id} not found")
-        
-        analysis_result = {
+        analysis = {
+            "program_name": "",
             "divisions": {},
             "paragraphs": [],
             "files": [],
-            "fields": [],
+            "data_structures": [],
             "working_storage": {},
             "linkage_section": {}
         }
         
-        # Parse COBOL divisions
+        # Extract program name
+        program_match = re.search(r'PROGRAM-ID\.\s+([A-Z0-9-]+)', source_code, re.IGNORECASE)
+        if program_match:
+            analysis["program_name"] = program_match.group(1)
+        
+        # Extract divisions
         divisions = self._parse_cobol_divisions(source_code)
-        analysis_result["divisions"] = divisions
+        analysis["divisions"] = divisions
         
         # Extract paragraphs
         paragraphs = self._extract_paragraphs(source_code)
-        analysis_result["paragraphs"] = paragraphs
+        analysis["paragraphs"] = paragraphs
         
         # Extract file definitions
         files = self._extract_file_definitions(source_code)
-        analysis_result["files"] = files
+        analysis["files"] = files
         
-        # Extract field definitions
-        fields = self._extract_field_definitions(source_code)
-        analysis_result["fields"] = fields
+        # Extract data structures
+        data_structures = self._extract_field_definitions(source_code)
+        analysis["data_structures"] = data_structures
         
         # Extract working storage
         working_storage = self._extract_working_storage(source_code)
-        analysis_result["working_storage"] = working_storage
+        analysis["working_storage"] = working_storage
         
         # Extract linkage section
         linkage_section = self._extract_linkage_section(source_code)
-        analysis_result["linkage_section"] = linkage_section
+        analysis["linkage_section"] = linkage_section
         
-        return analysis_result
+        return analysis
+    
+    def parse_pic_clause(self, pic_clause: str) -> str:
+        """
+        Parse COBOL PIC clause and return Python type.
+        
+        Args:
+            pic_clause: COBOL PIC clause (e.g., "PIC 9(6)", "PIC X(30)")
+            
+        Returns:
+            Python type string
+        """
+        # Remove PIC keyword and spaces
+        pic_clean = pic_clause.replace("PIC", "").strip()
+        
+        # Handle alphanumeric (X)
+        if "X" in pic_clean:
+            return "str"
+        
+        # Handle numeric (9)
+        if "9" in pic_clean:
+            # Check for decimal places
+            if "V" in pic_clean:
+                return "float"
+            else:
+                return "int"
+        
+        # Handle other types
+        if "COMP" in pic_clean:
+            return "int"
+        elif "FLOAT" in pic_clean:
+            return "float"
+        else:
+            return "str"
+    
+    def convert_to_snake_case(self, name: str) -> str:
+        """
+        Convert COBOL name to Python snake_case.
+        
+        Args:
+            name: COBOL name (e.g., "EMPLOYEE-ID")
+            
+        Returns:
+            Python snake_case name (e.g., "employee_id")
+        """
+        # Replace hyphens with underscores and convert to lowercase
+        snake_case = name.replace("-", "_").lower()
+        return snake_case
     
     def generate_python_equivalence_tests(
         self,
         functionality_id: str
     ) -> List[Dict[str, Any]]:
         """
-        Generate test cases to validate COBOL to Python equivalence.
+        Generate Python equivalence tests for COBOL program.
         
         Args:
             functionality_id: ID of the functionality mapping
@@ -274,283 +312,230 @@ class COBOLFunctionalityMapper(FunctionalityMapper):
             raise ValueError(f"COBOL program mapping {functionality_id} not found")
         
         cobol_mapping = self.cobol_programs[functionality_id]
-        test_cases = []
+        tests = []
         
-        # Generate test cases based on field mappings
+        # Generate field tests
         for field_mapping in cobol_mapping.field_mappings:
-            test_case = self._generate_field_test_case(field_mapping)
-            test_cases.append(test_case)
+            test = self._generate_field_test_case(field_mapping)
+            tests.append(test)
         
-        # Generate test cases based on paragraph mappings
+        # Generate paragraph tests
         for cobol_paragraph, python_function in cobol_mapping.paragraph_mappings.items():
-            test_case = self._generate_paragraph_test_case(cobol_paragraph, python_function)
-            test_cases.append(test_case)
+            test = self._generate_paragraph_test_case(cobol_paragraph, python_function)
+            tests.append(test)
         
-        return test_cases
+        return tests
     
     def _create_field_mapping(self, field_def: Dict[str, Any]) -> COBOLFieldMapping:
         """Create a COBOL field mapping from field definition."""
         cobol_name = field_def.get("name", "")
-        python_name = self._convert_to_snake_case(cobol_name)
+        python_name = self.convert_to_snake_case(cobol_name)
+        cobol_type = field_def.get("pic", "")
+        python_type = self.parse_pic_clause(cobol_type)
         
-        # Parse PIC clause
-        pic_clause = field_def.get("pic", "")
-        cobol_type, length, precision, scale, is_signed = self._parse_pic_clause(pic_clause)
-        
-        # Determine Python type
-        python_type = self._map_cobol_type_to_python(cobol_type, length, precision, scale)
+        # Parse PIC clause for additional details
+        pic_details = self._parse_pic_clause_details(cobol_type)
         
         return COBOLFieldMapping(
-            cobol_name=cobol_name,
-            python_name=python_name,
-            cobol_type=cobol_type,
-            python_type=python_type,
-            level_number=field_def.get("level", 0),
-            length=length,
-            precision=precision,
-            scale=scale,
-            is_signed=is_signed,
-            is_comp=field_def.get("is_comp", False),
-            default_value=field_def.get("default_value"),
-            validation_rules=field_def.get("validation_rules", [])
+            source_name=cobol_name,
+            target_name=python_name,
+            source_type=cobol_type,
+            target_type=python_type,
+            level_number=field_def.get("level", 1),
+            length=pic_details.get("length", 0),
+            precision=pic_details.get("precision"),
+            scale=pic_details.get("scale"),
+            is_signed=pic_details.get("is_signed", False)
         )
     
+    def _parse_pic_clause_details(self, pic_clause: str) -> Dict[str, Any]:
+        """Parse PIC clause for detailed information."""
+        details = {
+            "length": 0,
+            "precision": None,
+            "scale": None,
+            "is_signed": False
+        }
+        
+        # Handle alphanumeric (X)
+        x_match = re.search(r'X\((\d+)\)', pic_clause)
+        if x_match:
+            details["length"] = int(x_match.group(1))
+            return details
+        
+        # Handle numeric (9)
+        nine_match = re.search(r'9\((\d+)\)', pic_clause)
+        if nine_match:
+            details["length"] = int(nine_match.group(1))
+            details["precision"] = details["length"]
+            
+            # Check for decimal places
+            v_match = re.search(r'V(\d+)', pic_clause)
+            if v_match:
+                details["scale"] = int(v_match.group(1))
+            
+            return details
+        
+        # Handle signed numbers
+        if "S" in pic_clause:
+            details["is_signed"] = True
+        
+        return details
+    
     def _parse_pic_clause(self, pic_clause: str) -> Tuple[str, int, Optional[int], Optional[int], bool]:
-        """Parse COBOL PIC clause."""
-        if not pic_clause:
-            return "X", 1, None, None, False
+        """Parse PIC clause and return type information."""
+        # This is a legacy method for backward compatibility
+        details = self._parse_pic_clause_details(pic_clause)
+        python_type = self.parse_pic_clause(pic_clause)
         
-        # Remove PIC and parentheses
-        pic_clean = re.sub(r'PIC\s*', '', pic_clause.upper())
-        
-        # Check for signed fields
-        is_signed = "S" in pic_clean
-        
-        # Parse alphanumeric fields (X)
-        if "X" in pic_clean:
-            # Extract length from X(10) format
-            x_match = re.search(r'X\((\d+)\)', pic_clean)
-            if x_match:
-                length = int(x_match.group(1))
-            else:
-                # Count X characters if no parentheses
-                length = pic_clean.count("X")
-            return "X", length, None, None, False
-        
-        # Parse numeric fields (9)
-        elif "9" in pic_clean:
-            # Handle decimal places (V)
-            if "V" in pic_clean:
-                parts = pic_clean.split("V")
-                # Extract length from 9(8) format
-                nine_match = re.search(r'9\((\d+)\)', parts[0])
-                if nine_match:
-                    integer_part = int(nine_match.group(1))
-                else:
-                    integer_part = parts[0].count("9")
-                decimal_part = parts[1].count("9")
-                return "9", integer_part + decimal_part, integer_part + decimal_part, decimal_part, is_signed
-            else:
-                # Extract length from 9(5) format
-                nine_match = re.search(r'9\((\d+)\)', pic_clean)
-                if nine_match:
-                    length = int(nine_match.group(1))
-                else:
-                    length = pic_clean.count("9")
-                return "9", length, length, None, is_signed
-        
-        # Default to alphanumeric
-        return "X", 1, None, None, False
+        return (
+            python_type,
+            details["length"],
+            details["precision"],
+            details["scale"],
+            details["is_signed"]
+        )
     
     def _map_cobol_type_to_python(self, cobol_type: str, length: int, precision: Optional[int], scale: Optional[int]) -> str:
         """Map COBOL type to Python type."""
-        if cobol_type == "9":
-            if scale and scale > 0:
-                return "decimal.Decimal"
-            elif length <= 9:
-                return "int"
-            else:
-                return "str"  # Large numbers as string to preserve precision
-        elif cobol_type == "X":
+        if "X" in cobol_type:
             return "str"
-        elif cobol_type == "COMP":
-            return "int"
+        elif "9" in cobol_type:
+            if scale:
+                return "float"
+            else:
+                return "int"
         else:
             return "str"
     
     def _convert_to_snake_case(self, name: str) -> str:
-        """Convert COBOL field name to Python snake_case."""
-        # Remove common COBOL prefixes/suffixes
-        name = re.sub(r'^(WS-|LS-|FD-)', '', name)
-        
-        # Convert to snake_case
-        name = re.sub(r'[^a-zA-Z0-9]', '_', name)
-        name = re.sub(r'_+', '_', name)
-        name = name.strip('_').lower()
-        
-        return name
+        """Convert COBOL name to snake_case (legacy method)."""
+        return self.convert_to_snake_case(name)
     
     def _parse_cobol_divisions(self, source_code: str) -> Dict[str, str]:
-        """Parse COBOL divisions from source code."""
+        """Parse COBOL divisions."""
         divisions = {}
         
-        # Find division headers
-        division_pattern = r'^\s*(IDENTIFICATION|ENVIRONMENT|DATA|PROCEDURE)\s+DIVISION'
+        # Extract division names
+        division_patterns = [
+            r'IDENTIFICATION\s+DIVISION',
+            r'ENVIRONMENT\s+DIVISION',
+            r'DATA\s+DIVISION',
+            r'PROCEDURE\s+DIVISION'
+        ]
         
-        for line in source_code.split('\n'):
-            match = re.match(division_pattern, line, re.IGNORECASE)
-            if match:
-                division_name = match.group(1).upper()
-                divisions[division_name] = line.strip()
+        for pattern in division_patterns:
+            if re.search(pattern, source_code, re.IGNORECASE):
+                division_name = pattern.replace(r'\s+', ' ').replace('\\', '')
+                divisions[division_name] = "found"
         
         return divisions
     
     def _extract_paragraphs(self, source_code: str) -> List[str]:
-        """Extract paragraph names from COBOL source code."""
+        """Extract COBOL paragraphs."""
         paragraphs = []
         
-        # Find paragraph definitions
-        paragraph_pattern = r'^\s*([A-Z][A-Z0-9-]*)\s*\.'
+        # Look for paragraph names (usually start at column 8)
+        paragraph_pattern = r'^\s*(\w+)\s*\.'
+        matches = re.findall(paragraph_pattern, source_code, re.MULTILINE)
         
-        for line in source_code.split('\n'):
-            match = re.match(paragraph_pattern, line, re.IGNORECASE)
-            if match:
-                paragraph_name = match.group(1).upper()
-                paragraphs.append(paragraph_name)
+        for match in matches:
+            if match not in ['PROGRAM-ID', 'AUTHOR', 'DATE-WRITTEN', 'DATE-COMPILED']:
+                paragraphs.append(match)
         
         return paragraphs
     
     def _extract_file_definitions(self, source_code: str) -> List[str]:
-        """Extract file definitions from COBOL source code."""
+        """Extract COBOL file definitions."""
         files = []
         
-        # Find file definitions
-        file_pattern = r'^\s*SELECT\s+([A-Z][A-Z0-9-]*)'
+        # Look for SELECT statements
+        select_pattern = r'SELECT\s+(\w+)'
+        matches = re.findall(select_pattern, source_code, re.IGNORECASE)
         
-        for line in source_code.split('\n'):
-            match = re.search(file_pattern, line, re.IGNORECASE)
-            if match:
-                file_name = match.group(1).upper()
-                files.append(file_name)
+        for match in matches:
+            files.append(match)
         
         return files
     
     def _extract_field_definitions(self, source_code: str) -> List[Dict[str, Any]]:
-        """Extract field definitions from COBOL source code."""
+        """Extract COBOL field definitions."""
         fields = []
         
-        # Find field definitions (level numbers)
-        field_pattern = r'^\s*(\d{2})\s+([A-Z][A-Z0-9-]*)\s+PIC\s+([^\.]+)'
+        # Look for field definitions (level numbers) - handle hyphens in names
+        field_pattern = r'(\d{2})\s+([A-Z0-9-]+)\s+PIC\s+([^\.]+)'
+        matches = re.findall(field_pattern, source_code, re.IGNORECASE)
         
-        for line in source_code.split('\n'):
-            match = re.match(field_pattern, line, re.IGNORECASE)
-            if match:
-                level = int(match.group(1))
-                name = match.group(2).upper()
-                pic_clause = match.group(3).strip()
-                
-                fields.append({
-                    "level": level,
-                    "name": name,
-                    "pic": pic_clause
-                })
+        for level, name, pic in matches:
+            fields.append({
+                "level": int(level),
+                "name": name,
+                "pic": pic.strip()
+            })
         
         return fields
     
     def _extract_working_storage(self, source_code: str) -> Dict[str, Any]:
-        """Extract working storage section from COBOL source code."""
+        """Extract working storage section."""
         working_storage = {}
         
-        # Find working storage section
-        in_working_storage = False
-        for line in source_code.split('\n'):
-            if re.match(r'^\s*WORKING-STORAGE\s+SECTION', line, re.IGNORECASE):
-                in_working_storage = True
-                continue
-            elif re.match(r'^\s*(PROCEDURE|LINKAGE)\s+DIVISION', line, re.IGNORECASE):
-                in_working_storage = False
-                continue
-            
-            if in_working_storage:
-                # Parse field definitions in working storage
-                field_match = re.match(r'^\s*(\d{2})\s+([A-Z][A-Z0-9-]*)\s+PIC\s+([^\.]+)', line, re.IGNORECASE)
-                if field_match:
-                    level = int(field_match.group(1))
-                    name = field_match.group(2).upper()
-                    pic_clause = field_match.group(3).strip()
-                    
-                    working_storage[name] = {
-                        "level": level,
-                        "pic": pic_clause
-                    }
+        # Look for WORKING-STORAGE SECTION
+        ws_pattern = r'WORKING-STORAGE\s+SECTION(.*?)(?=PROCEDURE\s+DIVISION|$)'
+        ws_match = re.search(ws_pattern, source_code, re.IGNORECASE | re.DOTALL)
+        
+        if ws_match:
+            ws_content = ws_match.group(1)
+            # Extract field definitions from working storage
+            fields = self._extract_field_definitions(ws_content)
+            for field in fields:
+                working_storage[field["name"]] = field
         
         return working_storage
     
     def _extract_linkage_section(self, source_code: str) -> Dict[str, Any]:
-        """Extract linkage section from COBOL source code."""
+        """Extract linkage section."""
         linkage_section = {}
         
-        # Find linkage section
-        in_linkage_section = False
-        for line in source_code.split('\n'):
-            if re.match(r'^\s*LINKAGE\s+SECTION', line, re.IGNORECASE):
-                in_linkage_section = True
-                continue
-            elif re.match(r'^\s*PROCEDURE\s+DIVISION', line, re.IGNORECASE):
-                in_linkage_section = False
-                continue
-            
-            if in_linkage_section:
-                # Parse field definitions in linkage section
-                field_match = re.match(r'^\s*(\d{2})\s+([A-Z][A-Z0-9-]*)\s+PIC\s+([^\.]+)', line, re.IGNORECASE)
-                if field_match:
-                    level = int(field_match.group(1))
-                    name = field_match.group(2).upper()
-                    pic_clause = field_match.group(3).strip()
-                    
-                    linkage_section[name] = {
-                        "level": level,
-                        "pic": pic_clause
-                    }
+        # Look for LINKAGE SECTION
+        linkage_pattern = r'LINKAGE\s+SECTION(.*?)(?=PROCEDURE\s+DIVISION|$)'
+        linkage_match = re.search(linkage_pattern, source_code, re.IGNORECASE | re.DOTALL)
+        
+        if linkage_match:
+            linkage_content = linkage_match.group(1)
+            # Extract field definitions from linkage section
+            fields = self._extract_field_definitions(linkage_content)
+            for field in fields:
+                linkage_section[field["name"]] = field
         
         return linkage_section
     
     def _generate_field_test_case(self, field_mapping: COBOLFieldMapping) -> Dict[str, Any]:
         """Generate test case for a field mapping."""
         return {
-            "test_type": "field_mapping",
-            "cobol_field": field_mapping.cobol_name,
-            "python_field": field_mapping.python_name,
-            "cobol_type": field_mapping.cobol_type,
-            "python_type": field_mapping.python_type,
-            "test_inputs": {
-                "cobol_value": self._generate_test_value(field_mapping.cobol_type, field_mapping.length),
-                "expected_python_value": None  # To be filled based on transformation
-            },
-            "expected_outputs": {
-                "python_value": None  # To be filled based on transformation
-            }
+            "test_id": f"field_{field_mapping.source_name.lower()}",
+            "test_type": "unit_test",
+            "name": f"Test {field_mapping.source_name} field mapping",
+            "description": f"Test mapping of {field_mapping.source_name} to {field_mapping.target_name}",
+            "inputs": {"cobol_value": self._generate_test_value(field_mapping.source_type, field_mapping.length)},
+            "expected_outputs": {"python_value": "expected_value"}
         }
     
     def _generate_paragraph_test_case(self, cobol_paragraph: str, python_function: str) -> Dict[str, Any]:
         """Generate test case for a paragraph mapping."""
         return {
-            "test_type": "paragraph_mapping",
-            "cobol_paragraph": cobol_paragraph,
-            "python_function": python_function,
-            "test_inputs": {
-                "paragraph_inputs": {}  # To be filled based on paragraph analysis
-            },
-            "expected_outputs": {
-                "function_outputs": {}  # To be filled based on function analysis
-            }
+            "test_id": f"paragraph_{cobol_paragraph.lower()}",
+            "test_type": "unit_test",
+            "name": f"Test {cobol_paragraph} paragraph mapping",
+            "description": f"Test mapping of {cobol_paragraph} to {python_function}",
+            "inputs": {},
+            "expected_outputs": {}
         }
     
     def _generate_test_value(self, cobol_type: str, length: int) -> str:
-        """Generate test value for a COBOL field type."""
-        if cobol_type == "9":
-            return "1" * length
-        elif cobol_type == "X":
-            return "A" * length
+        """Generate test value for COBOL type."""
+        if "X" in cobol_type:
+            return "A" * min(length, 10)
+        elif "9" in cobol_type:
+            return "1" * min(length, 5)
         else:
-            return "TEST" * (length // 4 + 1) 
+            return "test_value" 
