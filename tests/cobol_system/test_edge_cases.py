@@ -79,7 +79,7 @@ class TestEdgeCases(unittest.TestCase):
         
         if os.path.exists(input_file):
             # Parse the file to get LST
-            from engine.modernizers.cobol_system.parser.cobol_lst import parse_cobol_source
+            from engine.modernizers.cobol_system.parsers.cobol_lst import parse_cobol_source
             
             with open(input_file, 'r') as f:
                 cobol_source = f.read()

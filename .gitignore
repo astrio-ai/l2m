@@ -98,6 +98,9 @@ ipython_config.py
 #   Similar to Pipfile.lock, it is generally recommended to include poetry.lock in version control.
 #   This is especially recommended for binary packages to ensure reproducibility, and is more
 #   commonly ignored for libraries.
+
+# Private API (FastAPI)
+api/
 #   https://python-poetry.org/docs/basic-usage/#commit-your-poetrylock-file-to-version-control
 #poetry.lock
 
@@ -176,6 +179,9 @@ cython_debug/
 
 # VS Code
 .vscode/
+
+# Private API (FastAPI)
+api/
 
 # macOS
 .DS_Store
