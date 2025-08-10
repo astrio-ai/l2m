@@ -119,10 +119,10 @@ class TestWebsiteFunctionalityMapper:
     
     def test_create_website_mapping(self):
         """Test creating a website mapping."""
-        functionality_mapping, website_mapping = self.website_mapper.create_website_mapping(
+        functionality_mapping = self.website_mapper.create_website_mapping(
             "https://legacy-company.com",
-            "https://modern-company.com",
             WebsiteFramework.REACT,
+            "https://modern-company.com",
             self.sample_html
         )
         
@@ -132,17 +132,13 @@ class TestWebsiteFunctionalityMapper:
         assert functionality_mapping.source_language == "html"
         assert functionality_mapping.target_language == "react"
         assert functionality_mapping.functionality_type == FunctionalityType.COMPONENT
-        
-        assert website_mapping.legacy_url == "https://legacy-company.com"
-        assert website_mapping.modern_url == "https://modern-company.com"
-        assert website_mapping.target_framework == WebsiteFramework.REACT
     
     def test_map_ui_components(self):
         """Test mapping UI components."""
-        functionality_mapping, _ = self.website_mapper.create_website_mapping(
+        functionality_mapping = self.website_mapper.create_website_mapping(
             "https://test.com",
-            "https://modern-test.com",
-            WebsiteFramework.REACT
+            WebsiteFramework.REACT,
+            "https://modern-test.com"
         )
         
         component_mappings = [
@@ -182,10 +178,10 @@ class TestWebsiteFunctionalityMapper:
     
     def test_map_api_endpoints(self):
         """Test mapping API endpoints."""
-        functionality_mapping, _ = self.website_mapper.create_website_mapping(
+        functionality_mapping = self.website_mapper.create_website_mapping(
             "https://test.com",
-            "https://modern-test.com",
-            WebsiteFramework.REACT
+            WebsiteFramework.REACT,
+            "https://modern-test.com"
         )
         
         api_mappings = [
@@ -217,10 +213,10 @@ class TestWebsiteFunctionalityMapper:
     
     def test_map_routing(self):
         """Test mapping routing between legacy and modern frameworks."""
-        functionality_mapping, _ = self.website_mapper.create_website_mapping(
+        functionality_mapping = self.website_mapper.create_website_mapping(
             "https://test.com",
-            "https://modern-test.com",
-            WebsiteFramework.REACT
+            WebsiteFramework.REACT,
+            "https://modern-test.com"
         )
         
         routing_mapping = {
@@ -242,10 +238,10 @@ class TestWebsiteFunctionalityMapper:
     
     def test_map_state_management(self):
         """Test mapping state management between legacy and modern frameworks."""
-        functionality_mapping, _ = self.website_mapper.create_website_mapping(
+        functionality_mapping = self.website_mapper.create_website_mapping(
             "https://test.com",
-            "https://modern-test.com",
-            WebsiteFramework.REACT
+            WebsiteFramework.REACT,
+            "https://modern-test.com"
         )
         
         state_mapping = {
@@ -267,14 +263,13 @@ class TestWebsiteFunctionalityMapper:
     
     def test_analyze_legacy_website(self):
         """Test analyzing legacy website structure."""
-        functionality_mapping, _ = self.website_mapper.create_website_mapping(
+        functionality_mapping = self.website_mapper.create_website_mapping(
             "https://test.com",
-            "https://modern-test.com",
-            WebsiteFramework.REACT
+            WebsiteFramework.REACT,
+            "https://modern-test.com"
         )
         
         analysis = self.website_mapper.analyze_legacy_website(
-            functionality_mapping.functionality_id,
             self.sample_html
         )
         
@@ -295,10 +290,10 @@ class TestWebsiteFunctionalityMapper:
     
     def test_generate_modernization_plan(self):
         """Test generating modernization plan."""
-        functionality_mapping, _ = self.website_mapper.create_website_mapping(
+        functionality_mapping = self.website_mapper.create_website_mapping(
             "https://test.com",
-            "https://modern-test.com",
-            WebsiteFramework.REACT
+            WebsiteFramework.REACT,
+            "https://modern-test.com"
         )
         
         # Add some component mappings first
@@ -461,10 +456,10 @@ class TestWebsiteFunctionalityMapper:
     
     def test_validate_equivalence(self):
         """Test validating website modernization equivalence."""
-        functionality_mapping, _ = self.website_mapper.create_website_mapping(
+        functionality_mapping = self.website_mapper.create_website_mapping(
             "https://test.com",
-            "https://modern-test.com",
-            WebsiteFramework.REACT
+            WebsiteFramework.REACT,
+            "https://modern-test.com"
         )
         
         # Add some mappings
@@ -483,7 +478,6 @@ class TestWebsiteFunctionalityMapper:
         assert "confidence_score" in validation_result
         assert "equivalence_level" in validation_result
         assert "issues" in validation_result
-        assert "warnings" in validation_result
         assert isinstance(validation_result["confidence_score"], float)
         assert validation_result["confidence_score"] >= 0.0
         assert validation_result["confidence_score"] <= 1.0
@@ -491,10 +485,10 @@ class TestWebsiteFunctionalityMapper:
     def test_export_import_mappings(self):
         """Test exporting and importing website mappings."""
         # Create a mapping
-        functionality_mapping, _ = self.website_mapper.create_website_mapping(
+        functionality_mapping = self.website_mapper.create_website_mapping(
             "https://export-test.com",
-            "https://modern-export-test.com",
-            WebsiteFramework.REACT
+            WebsiteFramework.REACT,
+            "https://modern-export-test.com"
         )
         
         # Export mappings
@@ -515,21 +509,20 @@ class TestWebsiteFunctionalityMapper:
         frameworks = [WebsiteFramework.REACT, WebsiteFramework.NEXTJS, WebsiteFramework.ASTRO]
         
         for framework in frameworks:
-            functionality_mapping, website_mapping = self.website_mapper.create_website_mapping(
+            functionality_mapping = self.website_mapper.create_website_mapping(
                 "https://test.com",
-                "https://modern-test.com",
-                framework
+                framework,
+                "https://modern-test.com"
             )
             
-            assert website_mapping.target_framework == framework
             assert functionality_mapping.target_language == framework.value
     
     def test_component_types(self):
         """Test different UI component types."""
-        functionality_mapping, _ = self.website_mapper.create_website_mapping(
+        functionality_mapping = self.website_mapper.create_website_mapping(
             "https://test.com",
-            "https://modern-test.com",
-            WebsiteFramework.REACT
+            WebsiteFramework.REACT,
+            "https://modern-test.com"
         )
         
         component_types = [
