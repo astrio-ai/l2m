@@ -741,12 +741,18 @@ class FunctionalityMapper:
         else:
             mapping.validation_status = "failed"
         
+        # Collect all issues from validation results
+        all_issues = []
+        for validation_result in validation_results.values():
+            all_issues.extend(validation_result.issues)
+        
         # Prepare comprehensive result
         result = {
             "functionality_id": functionality_id,
             "equivalence_level": mapping.equivalence_level.value,
             "confidence_score": confidence_score,
             "validation_status": mapping.validation_status,
+            "issues": all_issues,
             "validation_results": validation_results,
             "test_results": [self._test_result_to_dict(tr) for tr in mapping.test_results],
             "summary": self._generate_validation_summary(validation_results, mapping.test_results)

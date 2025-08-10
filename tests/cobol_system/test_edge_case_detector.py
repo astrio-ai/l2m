@@ -13,7 +13,7 @@ from unittest.mock import Mock
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 from engine.modernizers.cobol_system.transpilers.edge_case_detector import EdgeCaseDetector
-from engine.modernizers.cobol_system.parser.cobol_lst import LosslessNode
+from engine.modernizers.cobol_system.parsers.cobol_lst import LosslessNode
 
 
 @pytest.mark.cobol

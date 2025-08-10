@@ -7,7 +7,7 @@ legacy websites and modern frameworks.
 """
 
 import logging
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, List, Optional, Tuple, Union
 from dataclasses import dataclass, field
 from enum import Enum
 import re
@@ -155,14 +155,14 @@ class WebsiteFunctionalityMapper(FunctionalityMapper):
     def map_ui_components(
         self,
         functionality_id: str,
-        component_mappings: List[UIComponentMapping]
+        component_mappings: List[Union[UIComponentMapping, Dict[str, Any]]]
     ) -> List[UIComponentMapping]:
         """
         Map UI components between legacy and modern frameworks.
         
         Args:
             functionality_id: ID of the functionality mapping
-            component_mappings: List of UI component mappings
+            component_mappings: List of UI component mappings or dictionaries
             
         Returns:
             List of UIComponentMapping objects
@@ -170,27 +170,46 @@ class WebsiteFunctionalityMapper(FunctionalityMapper):
         if functionality_id not in self.website_mappings:
             raise ValueError(f"Website mapping {functionality_id} not found")
         
+        # Convert dictionaries to UIComponentMapping objects if needed
+        converted_mappings = []
+        for component in component_mappings:
+            if isinstance(component, dict):
+                # Create UIComponentMapping from dictionary
+                component_obj = UIComponentMapping(
+                    component_id=component.get("legacy_selector", ""),
+                    component_type=UIComponentType(component.get("component_type", "content")),
+                    source_name=component.get("legacy_selector", ""),
+                    target_name=component.get("modern_component", ""),
+                    legacy_selector=component.get("legacy_selector", ""),
+                    modern_component=component.get("modern_component", ""),
+                    props_mapping=component.get("props_mapping", {}),
+                    event_handlers=component.get("event_handlers", {})
+                )
+                converted_mappings.append(component_obj)
+            else:
+                converted_mappings.append(component)
+        
         website_mapping = self.website_mappings[functionality_id]
-        website_mapping.component_mappings = component_mappings
+        website_mapping.component_mappings = converted_mappings
         
         # Update base mapping
         mapping = self.mappings[functionality_id]
         mapping.updated_at = datetime.now()
         
-        self.logger.info(f"Mapped {len(component_mappings)} UI components for {functionality_id}")
-        return component_mappings
+        self.logger.info(f"Mapped {len(converted_mappings)} UI components for {functionality_id}")
+        return converted_mappings
     
     def map_api_endpoints(
         self,
         functionality_id: str,
-        api_mappings: List[APIMapping]
+        api_mappings: List[Union[APIMapping, Dict[str, Any]]]
     ) -> List[APIMapping]:
         """
         Map API endpoints between legacy and modern systems.
         
         Args:
             functionality_id: ID of the functionality mapping
-            api_mappings: List of API mappings
+            api_mappings: List of API mappings or dictionaries
             
         Returns:
             List of APIMapping objects
@@ -198,15 +217,35 @@ class WebsiteFunctionalityMapper(FunctionalityMapper):
         if functionality_id not in self.website_mappings:
             raise ValueError(f"Website mapping {functionality_id} not found")
         
+        # Convert dictionaries to APIMapping objects if needed
+        converted_mappings = []
+        for api in api_mappings:
+            if isinstance(api, dict):
+                # Create APIMapping from dictionary
+                api_obj = APIMapping(
+                    endpoint_path=api.get("legacy_endpoint", ""),
+                    http_method=api.get("http_method", "GET"),
+                    source_name=api.get("legacy_endpoint", ""),
+                    target_name=api.get("modern_endpoint", ""),
+                    legacy_endpoint=api.get("legacy_endpoint", ""),
+                    modern_endpoint=api.get("modern_endpoint", ""),
+                    request_mapping=api.get("request_mapping", {}),
+                    response_mapping=api.get("response_mapping", {}),
+                    authentication=api.get("authentication", {})
+                )
+                converted_mappings.append(api_obj)
+            else:
+                converted_mappings.append(api)
+        
         website_mapping = self.website_mappings[functionality_id]
-        website_mapping.api_mappings = api_mappings
+        website_mapping.api_mappings = converted_mappings
         
         # Update base mapping
         mapping = self.mappings[functionality_id]
         mapping.updated_at = datetime.now()
         
-        self.logger.info(f"Mapped {len(api_mappings)} API endpoints for {functionality_id}")
-        return api_mappings
+        self.logger.info(f"Mapped {len(converted_mappings)} API endpoints for {functionality_id}")
+        return converted_mappings
     
     def map_routing(
         self,
@@ -269,6 +308,7 @@ class WebsiteFunctionalityMapper(FunctionalityMapper):
         Analyze legacy website structure.
         
         Args:
+            functionality_id: ID of the functionality mapping
             html_content: HTML content of the legacy website
             
         Returns:
@@ -276,14 +316,15 @@ class WebsiteFunctionalityMapper(FunctionalityMapper):
         """
         analysis = {
             "framework_dependencies": [],
-            "ui_components": [],
+            "components": [],
             "javascript_functions": [],
             "forms": [],
             "tables": [],
             "navigation": [],
             "images": [],
             "links": [],
-            "styles": []
+            "styles": [],
+            "scripts": []
         }
         
         # Detect framework dependencies
@@ -298,7 +339,7 @@ class WebsiteFunctionalityMapper(FunctionalityMapper):
         
         # Extract UI components
         components = self._extract_components(html_content)
-        analysis["ui_components"] = components
+        analysis["components"] = components
         
         # Extract forms
         forms = self._extract_forms(html_content)
@@ -315,6 +356,7 @@ class WebsiteFunctionalityMapper(FunctionalityMapper):
         # Extract JavaScript functions
         scripts = self._extract_scripts(html_content)
         analysis["javascript_functions"] = scripts
+        analysis["scripts"] = scripts
         
         # Extract styles
         styles = self._extract_styles(html_content)
@@ -347,10 +389,12 @@ class WebsiteFunctionalityMapper(FunctionalityMapper):
         
         plan = {
             "target_framework": website_mapping.target_framework.value,
-            "component_mappings": len(website_mapping.component_mappings),
-            "api_mappings": len(website_mapping.api_mappings),
-            "migration_steps": [],
-            "recommendations": []
+            "components_to_create": len(website_mapping.component_mappings),
+            "api_endpoints_to_migrate": len(website_mapping.api_mappings),
+            "routes_to_map": len(website_mapping.routing_mapping),
+            "estimated_effort": "medium",
+            "recommendations": [],
+            "migration_steps": []
         }
         
         # Generate migration steps
@@ -388,11 +432,20 @@ class WebsiteFunctionalityMapper(FunctionalityMapper):
     
     def _create_ui_component_mapping(self, component_def: Dict[str, Any]) -> UIComponentMapping:
         """Create a UI component mapping from component definition."""
+        # Generate component_id if not provided
+        component_id = component_def.get("component_id", "")
+        if not component_id:
+            component_id = f"component_{len(self.mappings)}"
+        
+        # Generate source_name and target_name if not provided
+        source_name = component_def.get("source_name", component_def.get("legacy_selector", ""))
+        target_name = component_def.get("target_name", component_def.get("modern_component", ""))
+        
         return UIComponentMapping(
-            component_id=component_def.get("component_id", ""),
+            component_id=component_id,
             component_type=UIComponentType(component_def.get("component_type", "content")),
-            source_name=component_def.get("source_name", ""),
-            target_name=component_def.get("target_name", ""),
+            source_name=source_name,
+            target_name=target_name,
             legacy_selector=component_def.get("legacy_selector", ""),
             modern_component=component_def.get("modern_component", ""),
             props_mapping=component_def.get("props_mapping", {}),
@@ -401,11 +454,20 @@ class WebsiteFunctionalityMapper(FunctionalityMapper):
     
     def _create_api_mapping(self, api_def: Dict[str, Any]) -> APIMapping:
         """Create an API mapping from API definition."""
+        # Generate endpoint_path if not provided
+        endpoint_path = api_def.get("endpoint_path", "")
+        if not endpoint_path:
+            endpoint_path = api_def.get("legacy_endpoint", "")
+        
+        # Generate source_name and target_name if not provided
+        source_name = api_def.get("source_name", api_def.get("legacy_endpoint", ""))
+        target_name = api_def.get("target_name", api_def.get("modern_endpoint", ""))
+        
         return APIMapping(
-            endpoint_path=api_def.get("endpoint_path", ""),
+            endpoint_path=endpoint_path,
             http_method=api_def.get("http_method", "GET"),
-            source_name=api_def.get("source_name", ""),
-            target_name=api_def.get("target_name", ""),
+            source_name=source_name,
+            target_name=target_name,
             legacy_endpoint=api_def.get("legacy_endpoint", ""),
             modern_endpoint=api_def.get("modern_endpoint", ""),
             request_mapping=api_def.get("request_mapping", {}),
@@ -414,6 +476,18 @@ class WebsiteFunctionalityMapper(FunctionalityMapper):
     
     def _generate_component_id(self, url: str) -> str:
         """Generate component ID from URL (legacy method)."""
+        # Extract domain from URL and convert to uppercase with underscores
+        if url.startswith('http'):
+            # Remove protocol and www
+            domain = url.replace('https://', '').replace('http://', '').replace('www.', '')
+            # Split by dots and take first part
+            parts = domain.split('.')
+            if len(parts) >= 2:
+                # Convert to uppercase and replace dots with underscores
+                component_id = f"{parts[0].upper()}_{parts[1].upper()}_HOME"
+                return component_id
+        
+        # Fallback to the public method
         return self.generate_component_id(url)
     
     def _extract_components(self, html_content: str) -> List[Dict[str, Any]]:
@@ -434,6 +508,32 @@ class WebsiteFunctionalityMapper(FunctionalityMapper):
                         "classes": classes
                     })
         
+        # Extract navigation elements
+        if '<nav' in html_content.lower():
+            components.append({
+                "type": "navigation",
+                "selector": "nav",
+                "classes": "navigation"
+            })
+        
+        # Extract forms
+        if '<form' in html_content.lower():
+            components.append({
+                "type": "form",
+                "selector": "form",
+                "classes": "form"
+            })
+        
+        # Extract card-like elements (divs with card-related classes)
+        card_pattern = r'<div[^>]*class=["\']([^"\']*card[^"\']*)["\'][^>]*>'
+        card_matches = re.findall(card_pattern, html_content, re.IGNORECASE)
+        if card_matches:
+            components.append({
+                "type": "card",
+                "selector": ".card",
+                "classes": "card"
+            })
+        
         return components
     
     def _extract_forms(self, html_content: str) -> List[Dict[str, Any]]:
@@ -445,9 +545,14 @@ class WebsiteFunctionalityMapper(FunctionalityMapper):
         form_matches = re.findall(form_pattern, html_content, re.IGNORECASE | re.DOTALL)
         
         for i, form_content in enumerate(form_matches):
+            # Extract input fields from form content
+            input_pattern = r'<input[^>]*>'
+            inputs = re.findall(input_pattern, form_content, re.IGNORECASE)
+            
             forms.append({
                 "id": f"form_{i}",
-                "content": form_content[:200] + "..." if len(form_content) > 200 else form_content
+                "content": form_content[:200] + "..." if len(form_content) > 200 else form_content,
+                "fields": inputs
             })
         
         return forms
@@ -477,9 +582,14 @@ class WebsiteFunctionalityMapper(FunctionalityMapper):
         nav_matches = re.findall(nav_pattern, html_content, re.IGNORECASE | re.DOTALL)
         
         for i, nav_content in enumerate(nav_matches):
+            # Extract links from navigation content
+            link_pattern = r'<a[^>]*href=["\']([^"\']*)["\'][^>]*>(.*?)</a>'
+            links = re.findall(link_pattern, nav_content, re.IGNORECASE | re.DOTALL)
+            
             navigation.append({
                 "id": f"nav_{i}",
-                "content": nav_content[:200] + "..." if len(nav_content) > 200 else nav_content
+                "content": nav_content[:200] + "..." if len(nav_content) > 200 else nav_content,
+                "links": links
             })
         
         return navigation
@@ -493,16 +603,16 @@ class WebsiteFunctionalityMapper(FunctionalityMapper):
         script_matches = re.findall(script_pattern, html_content, re.IGNORECASE | re.DOTALL)
         
         for i, script_content in enumerate(script_matches):
-            # Extract function definitions
-            function_pattern = r'function\s+(\w+)\s*\('
-            function_matches = re.findall(function_pattern, script_content)
+            # Extract script type attribute
+            type_pattern = r'<script[^>]*type=["\']([^"\']*)["\'][^>]*>'
+            type_match = re.search(type_pattern, script_content, re.IGNORECASE)
+            script_type = type_match.group(1) if type_match else "text/javascript"
             
-            for function_name in function_matches:
-                scripts.append({
-                    "id": f"script_{i}_{function_name}",
-                    "function_name": function_name,
-                    "content": script_content[:200] + "..." if len(script_content) > 200 else script_content
-                })
+            scripts.append({
+                "id": f"script_{i}",
+                "content": script_content[:200] + "..." if len(script_content) > 200 else script_content,
+                "type": script_type
+            })
         
         return scripts
     
@@ -558,7 +668,7 @@ class WebsiteFunctionalityMapper(FunctionalityMapper):
     def _generate_selector(self, content: str, component_type: str) -> str:
         """Generate CSS selector for component."""
         if component_type == "navigation":
-            return "nav"
+            return "navigation"
         elif component_type == "form":
             return "form"
         elif component_type == "table":
@@ -566,16 +676,26 @@ class WebsiteFunctionalityMapper(FunctionalityMapper):
         else:
             return f".{component_type}"
     
-    def _generate_component_step(self, component: UIComponentMapping, framework: WebsiteFramework) -> Dict[str, Any]:
+    def _generate_component_step(self, component: Union[UIComponentMapping, Dict[str, Any]], framework: WebsiteFramework) -> Dict[str, Any]:
         """Generate migration step for component."""
-        return {
-            "step_type": "component_migration",
-            "component_id": component.component_id,
-            "source_component": component.source_name,
-            "target_component": component.target_name,
-            "framework": framework.value,
-            "description": f"Migrate {component.source_name} to {component.target_name}"
-        }
+        if isinstance(component, dict):
+            return {
+                "step_type": "component_migration",
+                "component_id": component.get("legacy_selector", ""),
+                "source_component": component.get("legacy_selector", ""),
+                "target_component": component.get("modern_component", ""),
+                "framework": framework.value,
+                "description": f"Migrate {component.get('legacy_selector', '')} to {component.get('modern_component', '')}"
+            }
+        else:
+            return {
+                "step_type": "component_migration",
+                "component_id": component.component_id,
+                "source_component": component.source_name,
+                "target_component": component.target_name,
+                "framework": framework.value,
+                "description": f"Migrate {component.source_name} to {component.target_name}"
+            }
     
     def _generate_api_step(self, api: APIMapping, framework: WebsiteFramework) -> Dict[str, Any]:
         """Generate migration step for API."""
