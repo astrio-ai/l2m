@@ -1,8 +1,11 @@
 """
-Shared functionality mapping infrastructure for software modernization.
+Functionality Mapper Package
 
-This package provides the base functionality mapping system that can be
-extended by domain-specific modernizers (COBOL, websites, etc.).
+This package provides the core functionality mapping system that can be
+extended by domain-specific modernizers (websites, etc.).
+
+The functionality mapper analyzes legacy code and maps it to modern
+equivalents, providing a bridge between old and new technologies.
 """
 
 from .base_mapper import (

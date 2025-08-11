@@ -1,0 +1,54 @@
+# description: Instructions for formatting generated files
+# category: formatting
+# variables: framework, file_type, component_name
+
+## File Formatting Guidelines for {{framework}} {{file_type}}
+
+**Component**: {{component_name}}
+
+### Code Style Requirements
+
+1. **Indentation**: Use consistent indentation (2 spaces for JS/TS, 4 spaces for Python)
+2. **Naming**: Use camelCase for variables/functions, PascalCase for components/classes
+3. **Imports**: Group imports by type (external libraries, internal modules, relative imports)
+4. **Comments**: Add meaningful comments for complex logic
+5. **Spacing**: Use consistent spacing around operators and after commas
+
+### {{framework}} Specific Guidelines
+
+**React/Next.js**:
+- Use functional components with hooks
+- Implement proper prop validation
+- Use TypeScript interfaces for type safety
+- Follow React best practices for state management
+
+**Astro**:
+- Separate frontmatter from template
+- Use proper TypeScript interfaces
+- Implement responsive design patterns
+- Optimize for static generation
+
+**General**:
+- Ensure accessibility (ARIA labels, semantic HTML)
+- Implement responsive design
+- Use modern CSS features (Grid, Flexbox)
+- Optimize for performance
+
+### File Structure
+
+```
+{{file_structure}}
+```
+
+### Quality Checklist
+
+- [ ] Code is properly formatted and indented
+- [ ] All imports are correctly ordered
+- [ ] Component follows naming conventions
+- [ ] Props are properly typed/validated
+- [ ] Accessibility features are implemented
+- [ ] Responsive design is considered
+- [ ] Performance optimizations are applied
+- [ ] Code is well-documented
+
+Generate the {{file_type}} file following these guidelines. 

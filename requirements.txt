@@ -14,6 +14,10 @@ openai>=1.0.0
 anthropic>=0.7.0
 requests>=2.31.0
 
+# AutoGen integration (supports both OpenAI and Anthropic)
+autogen-agentchat>=0.4.0
+autogen-ext[openai]>=0.4.0
+
 # Website modernizer dependencies
 beautifulsoup4>=4.12.0
 lxml>=4.9.0
