@@ -1,0 +1,224 @@
+{
+  "project_map": {
+    "key": "project_map",
+    "value": {
+      "structure": {
+        "project_path": "examples/website/legacy-site.html",
+        "files": [
+          "examples/website/legacy-site.html"
+        ],
+        "categorized_files": {
+          "source_code": [],
+          "configuration": [],
+          "documentation": [],
+          "assets": [],
+          "other": [
+            "examples/website/legacy-site.html"
+          ]
+        },
+        "directory_structure": {
+          "examples": {
+            "type": "directory",
+            "contents": {
+              "website": {
+                "type": "directory",
+                "contents": {
+                  "legacy-site.html": {
+                    "type": "file",
+                    "path": "examples/website/legacy-site.html"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "total_files": 1
+      },
+      "file_analyses": {
+        "examples/website/legacy-site.html": {
+          "file_path": "examples/website/legacy-site.html",
+          "status": "success",
+          "content_length": 8086,
+          "analysis": "I'll help initiate the modernization process for the legacy-site.html project. Let's begin with a systematic analysis and planning approach.\n\n1. **Initial Analysis**\nFirst, I need to examine the source files to understand what we're working with. Please share the contents of the legacy code files, and I'll:\n- Analyze the structure and components\n- Identify key functionalities\n- Note any dependencies or special requirements\n- Highlight potential modernization challenges\n\n2. **Once you provide the source code, I will create**:\n- A detailed component breakdown\n- A functionality map\n- A list of required modernization transformations\n- A risk assessment\n- A phased modernization plan\n\n3. **Target Framework Alignment**\nI'll ensure the modernization plan aligns with {{target_framework}} requirements and best practices, while meeting the specified modernization goals: {{modernization_goals}}\n\nPlease provide the source code files, and I'll begin the detailed analysis and planning phase. This will help us create a comprehensive modernization strategy that meets all project objectives.\n\nAre you ready to share the legacy code for analysis?",
+          "dependencies": {
+            "imports": [],
+            "exports": [],
+            "calls": [
+              "extracted_calls"
+            ]
+          },
+          "patterns": [
+            {
+              "type": "functional",
+              "description": "Functional programming patterns detected",
+              "source_file": "examples/website/legacy-site.html"
+            }
+          ],
+          "functionality": {
+            "purpose": "extracted_purpose",
+            "main_functions": [
+              "extracted_functions"
+            ],
+            "business_logic": "extracted_business_logic"
+          }
+        }
+      },
+      "dependencies": {
+        "imports": {
+          "examples/website/legacy-site.html": []
+        },
+        "exports": {
+          "examples/website/legacy-site.html": []
+        },
+        "calls": {
+          "examples/website/legacy-site.html": [
+            "extracted_calls"
+          ]
+        },
+        "inheritance": {},
+        "composition": {},
+        "data_flow": {}
+      },
+      "patterns": [
+        {
+          "type": "functional",
+          "description": "Functional programming patterns detected",
+          "occurrences": 1,
+          "source_files": [
+            "examples/website/legacy-site.html"
+          ]
+        }
+      ],
+      "summary": {
+        "status": "success",
+        "summary": "I'll begin analyzing the legacy website modernization project and create a detailed plan. Let me break this down systematically.\n\n1. **Project Overview Analysis**\n- Single HTML file: legacy-site.html (8,086 bytes)\n- Project appears to be a standalone website\n- No external dependencies detected in initial scan\n- Functional programming patterns detected\n\n2. **Modernization Scope**\nBased on the target framework and modernization goals, we'll need to:\n- Convert the monolithic HTML file into a modern component-based architecture\n- Implement modern web development best practices\n- Enhance maintainability and scalability\n- Ensure accessibility compliance\n- Optimize performance\n\n3. **Proposed Modernization Steps**\n\nPhase 1: Analysis & Extraction\n- Parse the HTML structure\n- Identify distinct components\n- Extract CSS and JavaScript\n- Document existing functionality\n\nPhase 2: Architecture Planning\n- Design component hierarchy\n- Plan state management strategy\n- Define routing structure\n- Create build and deployment pipeline\n\nPhase 3: Implementation\n- Set up modern project structure\n- Convert HTML to components\n- Modernize CSS with best practices\n- Refactor JavaScript to modern standards\n- Implement responsive design\n\nPhase 4: Quality & Testing\n- Implement automated tests\n- Perform accessibility audit\n- Optimize performance\n- Validate cross-browser compatibility\n\n4. **Next Actions Required**\n\nTo proceed, I need to:\n1. Review the actual contents of legacy-site.html\n2. Create a detailed component breakdown\n3. Identify critical functionality\n4. Map out the modernization path\n\nPlease provide the contents of legacy-site.html so I can perform a detailed analysis and create a specific modernization plan.\n\nWould you like me to proceed with reviewing the legacy code and creating a detailed modernization strategy?",
+        "statistics": {
+          "total_files": 1,
+          "analyzed_files": 1,
+          "failed_files": 0,
+          "patterns_found": 1,
+          "dependencies_mapped": 1
+        }
+      }
+    },
+    "timestamp": 1754936342.3863418,
+    "ttl": null,
+    "metadata": {}
+  },
+  "modernization_result": {
+    "key": "modernization_result",
+    "value": {
+      "project_structure": {
+        "status": "success",
+        "target_stack": "react",
+        "structure": "I'll help you modernize the legacy code into a {{target_framework}} component following the specified guidelines and requirements. Let's analyze the legacy code and create a modern implementation.\n\nFirst, let's examine the file structure and then proceed with the modernization:\n\n1. First, I'll create the new component structure\n2. Then implement the modernized code\n3. Finally, add documentation and ensure all requirements are met\n\nFor {{target_framework}}, I'll generate the appropriate component structure:\n\n```typescript\n// {{component_name}}.tsx\nimport { useState, useEffect } from 'react';\nimport styles from './{{component_name}}.module.css';\n\ninterface {{component_name}}Props {\n  title?: string;\n  // Add other props as needed\n}\n\nexport const {{component_name}} = ({ title = 'Welcome' }: {{component_name}}Props) => {\n  const [isLoading, setIsLoading] = useState(false);\n\n  useEffect(() => {\n    // Initialize component\n  }, []);\n\n  return (\n    <div className={styles.container} role=\"main\">\n      <h1 className={styles.title}>{title}</h1>\n      {/* Implement modernized content here */}\n    </div>\n  );\n};\n\n// Add prop types validation if not using TypeScript\n```\n\n```css\n/* {{component_name}}.module.css */\n.container {\n  max-width: 1200px;\n  margin: 0 auto;\n  padding: 2rem;\n}\n\n.title {\n  font-size: 2rem;\n  color: #333;\n  margin-bottom: 1rem;\n}\n\n/* Add more styles as needed */\n```\n\nCould you please share the legacy code content so I can provide a more specific and tailored modernization implementation? This will help me:\n\n1. Preserve existing functionality\n2. Implement proper state management\n3. Add appropriate error handling\n4. Include accessibility features\n5. Optimize for performance\n\nOnce you provide the legacy code, I'll:\n1. Analyze the existing functionality\n2. Create a modern component structure\n3. Implement responsive design\n4. Add proper documentation\n5. Include type safety\n6. Ensure accessibility compliance\n\nPlease share the legacy code and any specific requirements or constraints to consider.",
+        "directories": [
+          "// {{component_name}}.tsx",
+          "import styles from './{{component_name}}.module.css';",
+          "// Add other props as needed",
+          "// Initialize component",
+          "<h1 className={styles.title}>{title}</h1>",
+          "{/* Implement modernized content here */}",
+          "</div>",
+          "// Add prop types validation if not using TypeScript",
+          "/* {{component_name}}.module.css */",
+          "/* Add more styles as needed */"
+        ],
+        "files": [
+          "I'll help you modernize the legacy code into a {{target_framework}} component following the specified guidelines and requirements. Let's analyze the legacy code and create a modern implementation.",
+          "1. First, I'll create the new component structure",
+          "2. Then implement the modernized code",
+          "3. Finally, add documentation and ensure all requirements are met",
+          "// {{component_name}}.tsx",
+          "import styles from './{{component_name}}.module.css';",
+          "<div className={styles.container} role=\"main\">",
+          "<h1 className={styles.title}>{title}</h1>",
+          "/* {{component_name}}.module.css */",
+          ".container {",
+          ".title {",
+          "1. Preserve existing functionality",
+          "2. Implement proper state management",
+          "3. Add appropriate error handling",
+          "4. Include accessibility features",
+          "5. Optimize for performance",
+          "1. Analyze the existing functionality",
+          "2. Create a modern component structure",
+          "3. Implement responsive design",
+          "4. Add proper documentation",
+          "5. Include type safety",
+          "6. Ensure accessibility compliance",
+          "Please share the legacy code and any specific requirements or constraints to consider."
+        ]
+      },
+      "components": {
+        "status": "success",
+        "target_stack": "react",
+        "component_files": {
+          "src/App.jsx": "import Navigation from './components/Navigation';\nimport Hero from './components/Hero';\nimport Services from './components/Services';\nimport ContactForm from './components/ContactForm';\nimport Footer from './components/Footer';\nimport './styles/globals.css';\n\nexport default function App() {\n  return (\n    <div className=\"app\">\n      <Navigation />\n      <main>\n        <Hero />\n        <Services />\n        <ContactForm />\n      </main>\n      <Footer />\n    </div>\n  );\n}",
+          "src/components/Navigation.jsx": "export default function Navigation() {\n  return (\n    <nav className=\"navigation\">\n      <div className=\"nav-brand\">\n        <a href=\"/\">Modern Company</a>\n      </div>\n      <ul className=\"nav-links\">\n        <li><a href=\"#home\">Home</a></li>\n        <li><a href=\"#services\">Services</a></li>\n        <li><a href=\"#contact\">Contact</a></li>\n      </ul>\n    </nav>\n  );\n}",
+          "src/components/Hero.jsx": "export default function Hero() {\n  return (\n    <section id=\"home\" className=\"hero\">\n      <div className=\"hero-content\">\n        <h1>Welcome to Modern Company</h1>\n        <p>We build amazing digital experiences</p>\n        <button className=\"cta-button\">Get Started</button>\n      </div>\n    </section>\n  );\n}",
+          "src/components/Services.jsx": "export default function Services() {\n  const services = [\n    {\n      title: \"Web Development\",\n      description: \"Custom websites and applications\"\n    },\n    {\n      title: \"Mobile Apps\",\n      description: \"iOS and Android development\"\n    },\n    {\n      title: \"Cloud Solutions\",\n      description: \"Scalable cloud infrastructure\"\n    }\n  ];\n\n  return (\n    <section id=\"services\" className=\"services\">\n      <h2>Our Services</h2>\n      <div className=\"services-grid\">\n        {services.map((service, index) => (\n          <div key={index} className=\"service-card\">\n            <h3>{service.title}</h3>\n            <p>{service.description}</p>\n          </div>\n        ))}\n      </div>\n    </section>\n  );\n}",
+          "src/components/ContactForm.jsx": "import { useState } from 'react';\n\nexport default function ContactForm() {\n  const [formData, setFormData] = useState({\n    name: '',\n    email: '',\n    message: ''\n  });\n\n  const handleSubmit = (e) => {\n    e.preventDefault();\n    // Handle form submission\n    console.log('Form submitted:', formData);\n  };\n\n  const handleChange = (e) => {\n    setFormData({\n      ...formData,\n      [e.target.name]: e.target.value\n    });\n  };\n\n  return (\n    <section id=\"contact\" className=\"contact\">\n      <h2>Contact Us</h2>\n      <form onSubmit={handleSubmit} className=\"contact-form\">\n        <div className=\"form-group\">\n          <label htmlFor=\"name\">Name</label>\n          <input\n            type=\"text\"\n            id=\"name\"\n            name=\"name\"\n            value={formData.name}\n            onChange={handleChange}\n            required\n          />\n        </div>\n        <div className=\"form-group\">\n          <label htmlFor=\"email\">Email</label>\n          <input\n            type=\"email\"\n            id=\"email\"\n            name=\"email\"\n            value={formData.email}\n            onChange={handleChange}\n            required\n          />\n        </div>\n        <div className=\"form-group\">\n          <label htmlFor=\"message\">Message</label>\n          <textarea\n            id=\"message\"\n            name=\"message\"\n            value={formData.message}\n            onChange={handleChange}\n            required\n          />\n        </div>\n        <button type=\"submit\" className=\"submit-button\">\n          Send Message\n        </button>\n      </form>\n    </section>\n  );\n}",
+          "src/components/Footer.jsx": "export default function Footer() {\n  return (\n    <footer className=\"footer\">\n      <div className=\"footer-content\">\n        <div className=\"footer-section\">\n          <h4>Modern Company</h4>\n          <p>Building the future, one project at a time.</p>\n        </div>\n        <div className=\"footer-section\">\n          <h4>Contact</h4>\n          <p>Email: info@moderncompany.com</p>\n          <p>Phone: (555) 123-4567</p>\n        </div>\n        <div className=\"footer-section\">\n          <h4>Follow Us</h4>\n          <div className=\"social-links\">\n            <a href=\"#\">Twitter</a>\n            <a href=\"#\">LinkedIn</a>\n            <a href=\"#\">GitHub</a>\n          </div>\n        </div>\n      </div>\n      <div className=\"footer-bottom\">\n        <p>&copy; 2024 Modern Company. All rights reserved.</p>\n      </div>\n    </footer>\n  );\n}",
+          "src/styles/globals.css": ":root {\n  --primary-color: #0066cc;\n  --secondary-color: #333;\n  --background-color: #fff;\n  --text-color: #333;\n}\n\n* {\n  margin: 0;\n  padding: 0;\n  box-sizing: border-box;\n}\n\nbody {\n  font-family: 'Inter', sans-serif;\n  line-height: 1.6;\n  color: var(--text-color);\n}\n\n.app {\n  min-height: 100vh;\n  display: flex;\n  flex-direction: column;\n}\n\n.navigation {\n  padding: 1rem 2rem;\n  display: flex;\n  justify-content: space-between;\n  align-items: center;\n  background-color: var(--background-color);\n  box-shadow: 0 2px 4px rgba(0,0,0,0.1);\n}\n\n.nav-links {\n  display: flex;\n  gap: 2rem;\n  list-style: none;\n}\n\n.hero {\n  min-height: 80vh;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  text-align: center;\n  background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('/hero-bg.jpg');\n  background-size: cover;\n  color: white;\n}\n\n.services {\n  padding: 4rem 2rem;\n}\n\n.services-grid {\n  display: grid;\n  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));\n  gap: 2rem;\n  margin-top: 2rem;\n}\n\n.contact {\n  padding: 4rem 2rem;\n  background-color: #f5f5f5;\n}\n\n.contact-form {\n  max-width: 600px;\n  margin: 2rem auto;\n}\n\n.form-group {\n  margin-bottom: 1.5rem;\n}\n\n.footer {\n  margin-top: auto;\n  padding: 3rem 2rem;\n  background-color: var(--secondary-color);\n  color: white;\n}\n\n@media (max-width: 768px) {\n  .nav-links {\n    display: none;\n  }\n  \n  .services-grid {\n    grid-template-columns: 1fr;\n  }\n}"
+        },
+        "component_list": [
+          "src/App.jsx",
+          "src/components/Navigation.jsx",
+          "src/components/Hero.jsx",
+          "src/components/Services.jsx",
+          "src/components/ContactForm.jsx",
+          "src/components/Footer.jsx",
+          "src/styles/globals.css"
+        ]
+      },
+      "config_files": {
+        "package.json": {
+          "status": "success",
+          "content": "{\n  \"name\": \"legacy-site.html\",\n  \"version\": \"1.0.0\",\n  \"description\": \"Modernized legacy-site.html using React\",\n  \"main\": \"src/index.js\",\n  \"scripts\": {\n    \"start\": \"react-scripts start\",\n    \"build\": \"react-scripts build\",\n    \"test\": \"react-scripts test\",\n    \"eject\": \"react-scripts eject\"\n  },\n  \"dependencies\": {\n    \"react\": \"^18.2.0\",\n    \"react-dom\": \"^18.2.0\",\n    \"react-scripts\": \"5.0.1\"\n  },\n  \"devDependencies\": {\n    \"@types/react\": \"^18.2.0\",\n    \"@types/react-dom\": \"^18.2.0\",\n    \"typescript\": \"^4.9.0\"\n  },\n  \"browserslist\": {\n    \"production\": [\n      \">0.2%\",\n      \"not dead\",\n      \"not op_mini all\"\n    ],\n    \"development\": [\n      \"last 1 chrome version\",\n      \"last 1 firefox version\",\n      \"last 1 safari version\"\n    ]\n  }\n}",
+          "target_stack": "react"
+        },
+        "tsconfig.json": {
+          "status": "success",
+          "content": "{\n  \"compilerOptions\": {\n    \"target\": \"es5\",\n    \"lib\": [\"dom\", \"dom.iterable\", \"es6\"],\n    \"allowJs\": true,\n    \"skipLibCheck\": true,\n    \"esModuleInterop\": true,\n    \"allowSyntheticDefaultImports\": true,\n    \"strict\": true,\n    \"forceConsistentCasingInFileNames\": true,\n    \"noFallthroughCasesInSwitch\": true,\n    \"module\": \"esnext\",\n    \"moduleResolution\": \"node\",\n    \"resolveJsonModule\": true,\n    \"isolatedModules\": true,\n    \"noEmit\": true,\n    \"jsx\": \"react-jsx\",\n    \"baseUrl\": \".\",\n    \"paths\": {\n      \"@/*\": [\"src/*\"]\n    }\n  },\n  \"include\": [\"src/**/*\", \"*.tsx\", \"*.ts\", \"*.jsx\", \"*.js\"],\n  \"exclude\": [\"node_modules\", \"dist\", \"build\"]\n}"
+        },
+        ".eslintrc.json": {
+          "status": "success",
+          "content": "{\n  \"extends\": [\"react-app\", \"react-app/jest\"]\n}"
+        },
+        ".prettierrc": {
+          "status": "success",
+          "content": "{\n  \"semi\": true,\n  \"trailingComma\": \"es5\",\n  \"singleQuote\": true,\n  \"printWidth\": 80,\n  \"tabWidth\": 2\n}"
+        },
+        ".gitignore": {
+          "status": "success",
+          "content": "# Dependencies\nnode_modules/\npnpm-debug.log*\nyarn-debug.log*\nyarn-error.log*\n\n# Production\nbuild/\ndist/\n\n# Environment variables\n.env\n.env.local\n.env.development.local\n.env.test.local\n.env.production.local\n\n# IDE\n.vscode/\n.idea/\n*.swp\n*.swo\n\n# OS\n.DS_Store\nThumbs.db\n\n# Logs\nnpm-debug.log*\nyarn-debug.log*\nyarn-error.log*\n\n# Runtime data\npids\n*.pid\n*.seed\n*.pid.lock\n\n# Coverage directory used by tools like istanbul\ncoverage/\n\n# nyc test coverage\n.nyc_output\n\n# Dependency directories\njspm_packages/\n\n# Optional npm cache directory\n.npm\n\n# Optional eslint cache\n.eslintcache\n\n# Microbundle cache\n.rpt2_cache/\n.rts2_cache_cjs/\n.rts2_cache_es/\n.rts2_cache_umd/\n\n# Optional REPL history\n.node_repl_history\n\n# Output of 'npm pack'\n*.tgz\n\n# Yarn Integrity file\n.yarn-integrity\n\n# parcel-bundler cache (https://parceljs.org/)\n.cache\n.parcel-cache\n\n# Next.js build output\n.next\n\n# Nuxt.js build / generate output\n.nuxt\ndist\n\n# Storybook build outputs\n.out\n.storybook-out\n\n# Temporary folders\ntmp/\ntemp/\n"
+        },
+        "README.md": {
+          "status": "success",
+          "content": "# legacy-site.html\n\nThis is a modernized React application generated by Legacy2Modern.\n\n## Getting Started\n\n### Prerequisites\n\n- Node.js (version 16 or higher)\n- npm or yarn\n\n### Installation\n\n1. Install dependencies:\n```bash\nnpm install\n```\n\n2. Start the development server:\n```bash\nnpm start\n```\n\n3. Open [http://localhost:3000](http://localhost:3000) to view it in the browser.\n\n## Available Scripts\n\n- `npm start` - Runs the app in development mode\n- `npm run build` - Builds the app for production\n- `npm test` - Launches the test runner\n- `npm run eject` - Ejects from Create React App\n\n## Project Structure\n\n```\nproject-root/\n\u251c\u2500\u2500 public/          # Static files\n\u251c\u2500\u2500 src/             # Source code\n\u2502   \u251c\u2500\u2500 components/  # Reusable components\n\u2502   \u251c\u2500\u2500 pages/       # Page components\n\u2502   \u251c\u2500\u2500 styles/      # CSS files\n\u2502   \u2514\u2500\u2500 utils/       # Utility functions\n\u2514\u2500\u2500 package.json     # Dependencies and scripts\n```\n\n## Technologies Used\n\n- React 18\n- TypeScript\n- Tailwind CSS\n- Vite (for development)\n\n## Contributing\n\n1. Fork the repository\n2. Create your feature branch (`git checkout -b feature/amazing-feature`)\n3. Commit your changes (`git commit -m 'Add some amazing feature'`)\n4. Push to the branch (`git push origin feature/amazing-feature`)\n5. Open a Pull Request\n\n## License\n\nThis project is licensed under the MIT License.\n"
+        },
+        "vite.config.js": {
+          "status": "success",
+          "content": "import { defineConfig } from 'vite'\nimport react from '@vitejs/plugin-react'\nimport path from 'path'\n\n// https://vitejs.dev/config/\nexport default defineConfig({\n  plugins: [react()],\n  resolve: {\n    alias: {\n      '@': path.resolve(__dirname, './src'),\n    },\n  },\n  server: {\n    port: 3000,\n    open: true,\n  },\n  build: {\n    outDir: 'dist',\n    sourcemap: true,\n  },\n})\n"
+        },
+        "tailwind.config.js": {
+          "status": "success",
+          "content": "/** @type {import('tailwindcss').Config} */\nexport default {\n  content: [\n    \"./index.html\",\n    \"./src/**/*.{js,ts,jsx,tsx}\",\n  ],\n  theme: {\n    extend: {\n      colors: {\n        primary: {\n          50: '#eff6ff',\n          500: '#3b82f6',\n          600: '#2563eb',\n          700: '#1d4ed8',\n        },\n      },\n    },\n  },\n  plugins: [],\n}\n"
+        },
+        "public/index.html": {
+          "status": "success",
+          "content": "<!DOCTYPE html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"utf-8\" />\n    <link rel=\"icon\" href=\"%PUBLIC_URL%/favicon.ico\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />\n    <meta name=\"theme-color\" content=\"#000000\" />\n    <meta\n      name=\"description\"\n      content=\"Modernized React application\"\n    />\n    <link rel=\"apple-touch-icon\" href=\"%PUBLIC_URL%/logo192.png\" />\n    <link rel=\"manifest\" href=\"%PUBLIC_URL%/manifest.json\" />\n    <title>Modernized React App</title>\n  </head>\n  <body>\n    <noscript>You need to enable JavaScript to run this app.</noscript>\n    <div id=\"root\"></div>\n  </body>\n</html>"
+        },
+        "public/manifest.json": {
+          "status": "success",
+          "content": "{\n  \"short_name\": \"React App\",\n  \"name\": \"Modernized React Application\",\n  \"icons\": [\n    {\n      \"src\": \"favicon.ico\",\n      \"sizes\": \"64x64 32x32 24x24 16x16\",\n      \"type\": \"image/x-icon\"\n    }\n  ],\n  \"start_url\": \".\",\n  \"display\": \"standalone\",\n  \"theme_color\": \"#000000\",\n  \"background_color\": \"#ffffff\"\n}"
+        }
+      },
+      "target_stack": "react"
+    },
+    "timestamp": 1754936375.771696,
+    "ttl": null,
+    "metadata": {}
+  }
+}

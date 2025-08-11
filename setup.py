@@ -52,7 +52,7 @@ setup(
     ],
     include_package_data=True,
     zip_safe=False,
-    keywords="cobol, transpiler, legacy, modernization, python, cli",
+    keywords="website, modernization, react, nextjs, astro, legacy, cli, transpiler",
     project_urls={
         "Bug Reports": "https://github.com/astrio-ai/legacy2modern/issues",
         "Source": "https://github.com/astrio-ai/legacy2modern",
