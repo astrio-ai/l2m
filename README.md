@@ -1,10 +1,16 @@
-# Legacy2Modern
+# Legacy2Modern (L2M)
 
-**Transform legacy websites into modern applications with AI-powered analysis and intelligent transpilation.**
+L2M is a local, open-source, and multi-agent AI legacy website modernizer. 
 
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![PyPI version](https://badge.fury.io/py/legacy2modern.svg)](https://badge.fury.io/py/legacy2modern)
+<div align="center">
+
+<!-- Keep the gap above this line, otherwise they won't render correctly! -->
+[![GitHub Repo stars](https://img.shields.io/github/stars/astrio-ai/openlegacy)](https://github.com/astrio-ai/openlegacy) 
+[![Join us on Discord](https://img.shields.io/discord/1396038465002405948?logo=discord&logoColor=white&label=discord)](https://discord.gg/2BVwAUzW)
+[![Contributing Guide](https://img.shields.io/badge/Contributing-Guide-informational)](https://github.com/openrewrite/.github/blob/main/CONTRIBUTING.md)
+</div>
+
+![L2M CLI Screenshot](./docs/assets/l2m-screenshot.png)
 
 ## 🚀 Features
 
