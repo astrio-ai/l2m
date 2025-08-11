@@ -1,4 +1,4 @@
-class Legacy2modernCli < Formula
+class Legacy2modern < Formula
   desc "AI-Powered Legacy Code Transpilation Engine with Modern CLI"
   homepage "https://github.com/astrio-ai/legacy2modern"
   url "https://github.com/astrio-ai/legacy2modern/archive/refs/tags/v0.1.0.tar.gz"

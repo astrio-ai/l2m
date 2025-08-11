@@ -67,15 +67,16 @@ We follow PEP 8 style guidelines:
 ### Project Structure
 
 ```
-legacy2modern-cli/
-├── packages/
-│   ├── cli/              # CLI interface
-│   ├── llm_agent/        # AI-powered analysis
-│   └── transpiler/       # Core transpilation engine
-├── examples/             # COBOL examples
-├── tests/               # Test suite
-├── docs/                # Documentation
-└── scripts/             # Utility scripts
+legacy2modern/
+├── engine/                         # Core engine components
+│   ├── cli/                        # CLI interface
+│   ├── agents/                     # AI-powered analysis
+│   ├── functionality_mapper/       # Functionality equivalence
+│   └── modernizers/                # Core transpilation engine
+├── examples/                       # COBOL examples
+├── tests/                          # Test suite
+├── docs/                           # Documentation
+└── scripts/                        # Utility scripts
 ```
 
 ### Testing
