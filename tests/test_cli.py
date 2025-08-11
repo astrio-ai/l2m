@@ -49,12 +49,12 @@ class TestCLI(unittest.TestCase):
     
     def test_cli_handle_command_transpile(self):
         """Test CLI transpile command handling."""
-        # Test with a valid COBOL file
-        cobol_file = os.path.join(self.test_data_dir, "cobol/HELLO.cobol")
+        # Test with a valid HTML file
+        html_file = os.path.join(self.test_data_dir, "website/legacy-site.html")
         
-        if os.path.exists(cobol_file):
+        if os.path.exists(html_file):
             try:
-                result = self.cli.handle_command(f"transpile {cobol_file}")
+                result = self.cli.handle_command(f"transpile {html_file}")
                 # Command might return None, which is acceptable
                 self.assertIn(result, [True, False, None])
             except SystemExit:
@@ -207,24 +207,7 @@ class TestCLI(unittest.TestCase):
             # SystemExit is acceptable for CLI commands
             pass
     
-    def test_cli_transpile_cobol(self):
-        """Test CLI COBOL transpilation."""
-        cobol_file = os.path.join(self.test_data_dir, "cobol/HELLO.cobol")
-        
-        if os.path.exists(cobol_file):
-            result = self.cli.transpile_file(cobol_file)
-            self.assertIsInstance(result, bool)
-    
-    def test_cli_analyze_cobol(self):
-        """Test CLI COBOL analysis."""
-        cobol_file = os.path.join(self.test_data_dir, "cobol/HELLO.cobol")
-        
-        if os.path.exists(cobol_file):
-            result = self.cli.analyze_file(cobol_file)
-            # Method might return None, which is acceptable
-            self.assertIn(result, [True, False, None])
-        else:
-            self.skipTest("HELLO.cobol file not found")
+
     
     def test_cli_transpile_website(self):
         """Test CLI website transpilation."""
@@ -314,10 +297,7 @@ class TestCLI(unittest.TestCase):
         result = self.cli.start_dev_server("test-project", "react")
         self.assertIsInstance(result, bool)
     
-    def test_cli_display_cobol_analysis(self):
-        """Test CLI COBOL analysis display."""
-        # This method doesn't exist, so we'll skip it
-        self.skipTest("display_cobol_analysis method doesn't exist in CLI")
+
     
     def test_cli_display_website_analysis(self):
         """Test CLI website analysis display."""
@@ -343,10 +323,7 @@ class TestCLI(unittest.TestCase):
             # If method doesn't exist or has different signature, skip
             self.skipTest("display_website_llm_analysis method not available")
     
-    def test_cli_show_cobol_next_steps(self):
-        """Test CLI COBOL next steps display."""
-        # This method doesn't exist, so we'll skip it
-        self.skipTest("show_cobol_next_steps method doesn't exist in CLI")
+
     
     def test_cli_show_website_next_steps(self):
         """Test CLI website next steps display."""

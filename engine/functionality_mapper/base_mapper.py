@@ -20,7 +20,7 @@ import traceback
 
 class FunctionalityType(Enum):
     """Types of functionality that can be mapped."""
-    PROGRAM = "program"  # For COBOL programs, Python modules, etc.
+    PROGRAM = "program"  # For Python modules, JavaScript files, etc.
     FUNCTION = "function"  # For individual functions/methods
     COMPONENT = "component"  # For React components, UI elements
     API_ENDPOINT = "api_endpoint"  # For API functions
@@ -200,9 +200,9 @@ class ValidationEngine:
         warnings = []
         
         # Basic syntax validation (would be enhanced with language-specific parsers)
-        if mapping.source_language == "cobol":
-            if "PROGRAM-ID" not in mapping.business_logic_mapping.source_logic:
-                warnings.append("Missing PROGRAM-ID in COBOL code")
+        if mapping.source_language == "html":
+            if "<html>" not in mapping.business_logic_mapping.source_logic:
+                warnings.append("Missing proper HTML structure")
         
         if mapping.target_language == "python":
             if "def " not in mapping.business_logic_mapping.target_logic and "class " not in mapping.business_logic_mapping.target_logic:
@@ -344,8 +344,8 @@ class ValidationEngine:
         warnings = []
         
         # Check language compatibility
-        if mapping.source_language == "cobol" and mapping.target_language == "python":
-            # COBOL to Python is generally compatible
+        if mapping.source_language == "html" and mapping.target_language in ["javascript", "jsx", "tsx"]:
+            # HTML to React/JavaScript is generally compatible
             pass
         else:
             warnings.append(f"Compatibility between {mapping.source_language} and {mapping.target_language} needs verification")
