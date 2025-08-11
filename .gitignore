@@ -275,3 +275,6 @@ parser_output.json
 
 # Legacy modernizers directory (kept locally but not pushed to public repo)
 engine/modernizers/
+
+# Static site tests directory (kept locally but not pushed to public repo)
+tests-static/

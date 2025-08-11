@@ -9,9 +9,9 @@ from typing import Dict, List, Optional, Any, Union
 from dataclasses import dataclass, field
 from enum import Enum
 
-from .ai import AI
+from ..utilities.ai import AI
 from .base_memory import BaseMemory
-from .project_config import ProjectConfig
+from ..utilities.project_config import ProjectConfig
 
 logger = logging.getLogger(__name__)
 

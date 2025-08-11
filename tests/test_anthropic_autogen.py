@@ -32,11 +32,11 @@ except ImportError:
 except Exception as e:
     print(f"Warning: Could not load .env file: {e}")
 
-from agents.autogen_wrapper import AutoGenAgentWrapper, AutoGenConfig, create_llm_config
-from agents.parser_agent import ParserAgent
-from agents.ai import AI
-from agents.base_memory import FileMemory  # Use concrete implementation
-from agents.project_config import ProjectConfig
+from engine.agents.autogen_integration.autogen_wrapper import AutoGenAgentWrapper, AutoGenConfig, create_llm_config
+from engine.agents.core_agents.parser_agent import ParserAgent
+from engine.agents.utilities.ai import AI
+from engine.agents.core_agents.base_memory import FileMemory  # Use concrete implementation
+from engine.agents.utilities.project_config import ProjectConfig
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)

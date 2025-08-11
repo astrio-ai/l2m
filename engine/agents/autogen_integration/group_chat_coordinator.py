@@ -13,10 +13,10 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 from .autogen_wrapper import AutoGenAgentWrapper, AutoGenConfig
-from .base_agent import BaseAgent
-from .ai import AI
-from .base_memory import BaseMemory
-from .project_config import ProjectConfig
+from ..core_agents.base_agent import BaseAgent
+from ..utilities.ai import AI
+from ..core_agents.base_memory import BaseMemory
+from ..utilities.project_config import ProjectConfig
 
 logger = logging.getLogger(__name__)
 

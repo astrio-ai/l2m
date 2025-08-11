@@ -5,13 +5,27 @@ A beautiful, interactive command-line interface for the AutoGen-based
 multi-agent modernization system.
 """
 
+# Suppress warnings early
+import warnings
+import sys
+import os
+
+# Temporarily redirect stderr and stdout to suppress import warnings
+original_stderr = sys.stderr
+original_stdout = sys.stdout
+sys.stderr = open(os.devnull, 'w')
+sys.stdout = open(os.devnull, 'w')
+
+warnings.filterwarnings('ignore', category=UserWarning)
+warnings.filterwarnings('ignore', message='AutoGen import failed')
+warnings.filterwarnings('ignore', message='TextAnalyzerAgent not available')
+
 import os
 import sys
 import asyncio
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 import json
-import warnings
 
 # Load environment variables from .env file
 try:
@@ -60,19 +74,26 @@ except ImportError:
 # Add the project root to sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-# Import agents system components
+# Import agents system components (with stderr redirected to suppress warnings)
+sys.stderr = open(os.devnull, 'w')
 from engine.agents import (
     AI, BaseAgent, BaseExecutionEnv, ChatToFiles, DiffProcessor,
     FilesDict, GitManager, LintingManager, PrepromptsHolder, ProjectConfig,
     PromptBuilder, TokenUsageTracker, VersionManager, ParserAgent,
     ModernizerAgent, RefactorAgent, QAAgent, CoordinatorAgent
 )
-from engine.agents.base_memory import FileMemory
+from engine.agents.core_agents.base_memory import FileMemory
+from engine.agents.core_agents.base_agent import AgentRole
 
-# Import modernizer components for website modernization
-from engine.modernizers.static_site.transpilers.transpiler import StaticSiteTranspiler as WebsiteTranspiler
-from engine.modernizers.static_site.transpilers.agent import WebsiteAgent
-from engine.modernizers.static_site.transpilers.llm_augmentor import StaticSiteLLMConfig
+# Import AutoGen integration modules (with stderr redirected to suppress warnings)
+from engine.agents.autogen_integration.autogen_wrapper import AutoGenAgentWrapper, AutoGenConfig
+from engine.agents.autogen_integration.group_chat_coordinator import GroupChatCoordinator
+
+# Restore stderr and stdout after imports
+sys.stderr.close()
+sys.stdout.close()
+sys.stderr = original_stderr
+sys.stdout = original_stdout
 
 """
 AutoGen integration layer for legacy2modern agents.
@@ -90,10 +111,14 @@ from dataclasses import dataclass, field
 try:
     import autogen
     from autogen import ConversableAgent, AssistantAgent, UserProxyAgent
-    from autogen.agentchat.contrib.text_analyzer_agent import TextAnalyzerAgent
+    try:
+        from autogen.agentchat.contrib.text_analyzer_agent import TextAnalyzerAgent
+    except ImportError:
+        TextAnalyzerAgent = None
     AUTOGEN_AVAILABLE = True
 except ImportError:
     AUTOGEN_AVAILABLE = False
+    TextAnalyzerAgent = None
     # Fallback classes for when AutoGen is not available
     class ConversableAgent:
         def __init__(self, *args, **kwargs):
@@ -107,10 +132,7 @@ except ImportError:
         def __init__(self, *args, **kwargs):
             raise ImportError("AutoGen not installed. Run: pip install -U 'autogen-agentchat' 'autogen-ext[openai]'")
 
-from .base_agent import BaseAgent, AgentRole
-from .ai import AI
-from .base_memory import BaseMemory
-from .project_config import ProjectConfig
+# These imports are already handled above, removing duplicates
 
 logger = logging.getLogger(__name__)
 
@@ -395,7 +417,6 @@ class Legacy2ModernCLI:
     
     def __init__(self):
         self.console = Console()
-        self.session = PromptSession() if PromptSession else None
         
         # Agent system components
         self.ai = None
@@ -483,9 +504,11 @@ class Legacy2ModernCLI:
             
             # Initialize agents based on configuration
             if self.use_autogen:
-                await self._initialize_autogen_agents()
+                success = await self._initialize_autogen_agents()
             else:
-                await self._initialize_traditional_agents()
+                success = await self._initialize_traditional_agents()
+            
+            return success
                 
         except Exception as e:
             self.console.print(f"[#FF6B6B]Error initializing components: {e}[/#FF6B6B]")
@@ -548,7 +571,7 @@ class Legacy2ModernCLI:
         await self.coordinator.register_agent(self.refactor_agent)
         await self.coordinator.register_agent(self.qa_agent)
         
-        self.console.print("[green]Traditional agents initialized successfully[/green]")
+        return True
     
     async def _initialize_autogen_agents(self):
         """Initialize AutoGen-wrapped agents."""
@@ -999,22 +1022,10 @@ class Legacy2ModernCLI:
         self.console.print("\n[bold]Interactive Mode[/bold]")
         self.console.print("Type your commands or questions. Type /help for available commands.")
         
-        # Command completions
-        completions = WordCompleter([
-            '/help', '/modernize', '/analyze', '/status', '/agents', '/exit', '/quit',
-            'modernize', 'analyze', 'status', 'agents', 'help', 'exit', 'quit'
-        ]) if WordCompleter else None
-        
         while True:
             try:
-                # Get user input
-                if self.session:
-                    user_input = self.session.prompt(
-                        "> ",
-                        completer=completions
-                    ).strip()
-                else:
-                    user_input = input("> ").strip()
+                # Get user input using regular input to avoid event loop conflicts
+                user_input = input("> ").strip()
                 
                 if not user_input:
                     continue
@@ -1241,7 +1252,8 @@ async def main():
     cli.display_banner()
     cli.display_tips()
     
-    # Initialize components
+    # Initialize components with progress indication
+    cli.console.print("\n[blue]Initializing agents...[/blue]")
     agents_available = await cli.initialize_components()
     
     if not agents_available:

@@ -82,10 +82,10 @@ except ImportError:
     print("TextAnalyzerAgent not available (optional)")
     TextAnalyzerAgent = None
 
-from .base_agent import BaseAgent, AgentRole
-from .ai import AI
-from .base_memory import BaseMemory
-from .project_config import ProjectConfig
+from ..core_agents.base_agent import BaseAgent, AgentRole
+from ..utilities.ai import AI
+from ..core_agents.base_memory import BaseMemory
+from ..utilities.project_config import ProjectConfig
 
 logger = logging.getLogger(__name__)
 

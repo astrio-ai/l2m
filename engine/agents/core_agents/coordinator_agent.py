@@ -13,10 +13,10 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 from .base_agent import BaseAgent, AgentRole, AgentState
-from .ai import AI
+from ..utilities.ai import AI
 from .base_memory import BaseMemory
-from .project_config import ProjectConfig
-from .preprompts_holder import PrepromptsHolder
+from ..utilities.project_config import ProjectConfig
+from ..utilities.preprompts_holder import PrepromptsHolder
 
 logger = logging.getLogger(__name__)
 

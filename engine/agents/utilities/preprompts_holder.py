@@ -29,9 +29,9 @@ class PrepromptsHolder:
     
     def __init__(self, preprompts_dir: Optional[str] = None):
         if preprompts_dir is None:
-            # Default to the preprompts directory relative to this file
+            # Default to the preprompts directory relative to the agents directory
             current_dir = Path(__file__).parent
-            preprompts_dir = current_dir / "preprompts"
+            preprompts_dir = current_dir.parent / "preprompts"
         
         self.prompts_dir = Path(preprompts_dir)
         self.templates: Dict[str, PromptTemplate] = {}

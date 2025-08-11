@@ -6,7 +6,7 @@ import logging
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 from .base_agent import BaseAgent, AgentRole
-from .prompt import PromptContext
+from ..utilities.prompt import PromptContext
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ class ModernizerAgent(BaseAgent):
         )
         
         # Initialize prompt builder
-        from .prompt import PromptBuilder
+        from ..utilities.prompt import PromptBuilder
         self.prompt_builder = PromptBuilder()
         
         self.generated_files = {}
