@@ -99,8 +99,6 @@ ipython_config.py
 #   This is especially recommended for binary packages to ensure reproducibility, and is more
 #   commonly ignored for libraries.
 
-# Private API (FastAPI)
-api/
 #   https://python-poetry.org/docs/basic-usage/#commit-your-poetrylock-file-to-version-control
 #poetry.lock
 
@@ -179,10 +177,6 @@ cython_debug/
 
 # VS Code
 .vscode/
-
-# Private API (FastAPI)
-api/
-tests/api/
 
 # macOS
 .DS_Store
