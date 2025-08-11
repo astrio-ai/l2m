@@ -30,16 +30,16 @@ except ImportError:
 except Exception as e:
     print(f"Warning: Could not load .env file: {e}")
 
-from agents.group_chat_coordinator import GroupChatCoordinator, ChatType
-from agents.autogen_wrapper import AutoGenConfig
-from agents.parser_agent import ParserAgent
-from agents.modernizer_agent import ModernizerAgent
-from agents.refactor_agent import RefactorAgent
-from agents.qa_agent import QAAgent
-from agents.coordinator_agent import CoordinatorAgent
-from agents.ai import AI
-from agents.base_memory import FileMemory
-from agents.project_config import ProjectConfig
+from .group_chat_coordinator import GroupChatCoordinator, ChatType
+from .autogen_wrapper import AutoGenConfig
+from ..core_agents.parser_agent import ParserAgent
+from ..core_agents.modernizer_agent import ModernizerAgent
+from ..core_agents.refactor_agent import RefactorAgent
+from ..core_agents.qa_agent import QAAgent
+from ..core_agents.coordinator_agent import CoordinatorAgent
+from ..utilities.ai import AI
+from ..core_agents.base_memory import FileMemory
+from ..utilities.project_config import ProjectConfig
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)

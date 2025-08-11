@@ -23,10 +23,18 @@ def test_autogen_import():
     """Test AutoGen import directly."""
     print("\nTesting AutoGen import...")
     try:
-        import autogen_agentchat as autogen
+        import autogen_agentchat
         print(f"✅ AutoGen imported successfully")
-        print(f"   Version: {getattr(autogen, '__version__', 'unknown')}")
-        print(f"   Module path: {autogen.__file__}")
+        print(f"   Version: {getattr(autogen_agentchat, '__version__', 'unknown')}")
+        print(f"   Module path: {autogen_agentchat.__file__}")
+        
+        # Also try importing autogen_core
+        try:
+            import autogen_core
+            print(f"✅ AutoGen Core imported successfully")
+            print(f"   Version: {getattr(autogen_core, '__version__', 'unknown')}")
+        except ImportError as e:
+            print(f"❌ AutoGen Core import failed: {e}")
         
         # Test specific imports from autogen_core
         try:
@@ -60,12 +68,13 @@ def test_autogen_wrapper_import():
     """Test our AutoGen wrapper import."""
     print("\nTesting AutoGen wrapper import...")
     try:
-        # Add the engine directory to the path
+        # Add the project root to the path
         import sys
         from pathlib import Path
-        sys.path.insert(0, str(Path(__file__).parent.parent))
+        project_root = Path(__file__).parent.parent.parent.parent
+        sys.path.insert(0, str(project_root))
         
-        from agents.autogen_wrapper import AutoGenAgentWrapper, AutoGenConfig
+        from engine.agents.autogen_integration.autogen_wrapper import AutoGenAgentWrapper, AutoGenConfig
         print("✅ AutoGen wrapper imported successfully")
         return True
     except ImportError as e:
@@ -80,6 +89,11 @@ def main():
     print("AutoGen Debug Information")
     print("=" * 50)
     
+    # Check Python interpreter
+    import sys
+    print(f"Python interpreter: {sys.executable}")
+    print(f"Python version: {sys.version}")
+    
     check_pip_packages()
     
     autogen_ok = test_autogen_import()
@@ -92,10 +106,13 @@ def main():
     else:
         print("❌ Some imports failed.")
         print("\nTroubleshooting steps:")
-        print("1. Make sure you're in the correct virtual environment")
+        print("1. Make sure you're using the correct Python interpreter")
+        print("   - If using conda: conda activate base")
+        print("   - If using venv: source .venv/bin/activate")
         print("2. Install AutoGen: pip install -U 'autogen-agentchat' 'autogen-ext[openai]'")
         print("3. Check if there are any conflicting packages")
         print("4. Try: pip install --upgrade autogen-agentchat")
+        print("5. If using conda, try: conda install -c conda-forge autogen-agentchat")
 
 if __name__ == "__main__":
     main() 

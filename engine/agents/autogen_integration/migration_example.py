@@ -9,14 +9,14 @@ import logging
 from typing import Dict, List, Optional, Any
 
 from .autogen_wrapper import AutoGenAgentWrapper, AutoGenCoordinator, AutoGenConfig
-from .parser_agent import ParserAgent
-from .modernizer_agent import ModernizerAgent
-from .refactor_agent import RefactorAgent
-from .qa_agent import QAAgent
-from .coordinator_agent import CoordinatorAgent
-from .ai import AI
-from .base_memory import BaseMemory
-from .project_config import ProjectConfig
+from ..core_agents.parser_agent import ParserAgent
+from ..core_agents.modernizer_agent import ModernizerAgent
+from ..core_agents.refactor_agent import RefactorAgent
+from ..core_agents.qa_agent import QAAgent
+from ..core_agents.coordinator_agent import CoordinatorAgent
+from ..utilities.ai import AI
+from ..core_agents.base_memory import BaseMemory
+from ..utilities.project_config import ProjectConfig
 
 logger = logging.getLogger(__name__)
 

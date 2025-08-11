@@ -5,7 +5,7 @@ QA Agent - Runs automated checks/tests on new code.
 import logging
 from typing import Dict, List, Optional, Any
 from .base_agent import BaseAgent, AgentRole
-from .prompt import PromptContext
+from ..utilities.prompt import PromptContext
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ class QAAgent(BaseAgent):
         )
         
         # Initialize prompt builder
-        from .prompt import PromptBuilder
+        from ..utilities.prompt import PromptBuilder
         self.prompt_builder = PromptBuilder()
         
         self.test_results = {}
