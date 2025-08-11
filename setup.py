@@ -16,7 +16,7 @@ def read_requirements():
         return [line.strip() for line in fh if line.strip() and not line.startswith("#")]
 
 setup(
-    name="legacy2modern-cli",
+    name="legacy2modern",
     version="0.1.0",
     author="Naing Oo Lwin",
     author_email="naingoolwin.astrio@gmail.com",

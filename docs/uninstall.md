@@ -10,7 +10,7 @@ If you installed via Homebrew:
 
 ```bash
 # Uninstall the CLI
-brew uninstall legacy2modern-cli
+brew uninstall legacy2modern
 
 # Verify removal
 which legacy2modern
@@ -23,7 +23,7 @@ If you installed via pip:
 
 ```bash
 # Uninstall the CLI package
-pip uninstall legacy2modern-cli
+pip uninstall legacy2modern
 
 # Or if installed in editable mode
 pip uninstall -e .
@@ -56,7 +56,7 @@ If you were running directly without installation, simply delete the cloned repo
 cd ..
 
 # Remove the entire project directory
-rm -rf legacy2modern-cli
+rm -rf legacy2modern
 ```
 
 ## 🧹 Clean Up Dependencies
@@ -156,7 +156,7 @@ If Python can still import the package:
 After uninstalling, ensure you've removed:
 
 - [ ] CLI executable (`legacy2modern`)
-- [ ] Python package (`legacy2modern-cli`)
+- [ ] Python package (`legacy2modern`)
 - [ ] Configuration files (`~/.config/legacy2modern/`)
 - [ ] Cache files (`__pycache__`, `*.pyc`)
 - [ ] Output files (`output/`, `parser_output.json`)
@@ -168,8 +168,11 @@ After uninstalling, ensure you've removed:
 If you want to reinstall after uninstalling:
 
 ```bash
-# Homebrew (recommended)
-brew install legacy2modern-cli
+# PyPI (recommended)
+pip install legacy2modern
+
+# Homebrew (macOS)
+brew install legacy2modern
 
 # Or manual installation
 git clone https://github.com/astrio-ai/legacy2modern.git

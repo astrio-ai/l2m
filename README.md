@@ -50,7 +50,8 @@ Whether you're modernizing COBOL business systems, migrating legacy websites to 
   Unit tests, integration tests, and validation for all transpilation components.
 
 * 📦 **Easy Installation Options**  
-  - Homebrew installation: `brew install legacy2modern-cli`
+  - PyPI installation: `pip install legacy2modern`
+  - Homebrew installation: `brew install legacy2modern`
   - Direct installation: `pip install -e .`
   - Run without installation: `python run_cli.py`
 
@@ -62,7 +63,17 @@ Whether you're modernizing COBOL business systems, migrating legacy websites to 
 - Git (for cloning the repository)
 - Homebrew (for Option 3)
 
-### Option 1: Quick Install (Recommended)
+### Option 1: PyPI Installation (Recommended)
+
+```bash
+# Install from PyPI
+pip install legacy2modern
+
+# Run the CLI
+legacy2modern
+```
+
+### Option 2: Quick Install (Development)
 
 ```bash
 # Clone the repository
@@ -73,7 +84,7 @@ cd legacy2modern
 ./install.sh
 ```
 
-### Option 2: Manual Installation
+### Option 3: Manual Installation
 
 ```bash
 # Clone the repository
@@ -87,17 +98,17 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
-### Option 3: Homebrew Installation (macOS)
+### Option 4: Homebrew Installation (macOS)
 
 ```bash
 # Install via Homebrew
-brew install legacy2modern-cli
+brew install legacy2modern
 
 # Run the CLI
 legacy2modern
 ```
 
-### Option 4: Run Directly (No Installation)
+### Option 5: Run Directly (No Installation)
 
 ```bash
 # Clone the repository
@@ -126,7 +137,7 @@ l2m
 python run_cli.py
 ```
 
-**Note**: Homebrew installation provides the most convenient way to install and use the CLI on macOS.
+**Note**: PyPI installation provides the most convenient way to install and use the CLI across all platforms.
 
 ### Examples
 

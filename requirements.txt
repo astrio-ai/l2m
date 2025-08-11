@@ -18,6 +18,12 @@ requests>=2.31.0
 beautifulsoup4>=4.12.0
 lxml>=4.9.0
 
+# Parser dependencies
+antlr4-python3-runtime>=4.9.0
+
+# Template engine
+jinja2>=3.0.0
+
 # Optional: For better logging
 colorlog>=6.0.0
 

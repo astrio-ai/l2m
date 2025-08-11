@@ -1,0 +1,73 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "legacy2modern"
+version = "0.1.0"
+description = "AI-Powered Legacy Code Transpilation Engine with Modern CLI"
+readme = "README.md"
+license = {text = "Apache-2.0"}
+authors = [
+    {name = "Naing Oo Lwin", email = "naingoolwin.astrio@gmail.com"}
+]
+maintainers = [
+    {name = "Naing Oo Lwin", email = "naingoolwin.astrio@gmail.com"}
+]
+keywords = ["cobol", "transpiler", "legacy", "modernization", "python", "cli"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Code Generators",
+    "Topic :: Software Development :: Compilers",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "pytest>=8.0.0",
+    "python-dotenv>=1.0.0",
+    "click>=8.1.0",
+    "rich>=13.0.0",
+    "typer>=0.9.0",
+    "prompt_toolkit>=3.0.0",
+    "pygments>=2.15.0",
+    "openai>=1.0.0",
+    "anthropic>=0.7.0",
+    "requests>=2.31.0",
+    "beautifulsoup4>=4.12.0",
+    "lxml>=4.9.0",
+    "antlr4-python3-runtime>=4.9.0",
+    "jinja2>=3.0.0",
+    "colorlog>=6.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "mypy>=1.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/astrio-ai/legacy2modern"
+Documentation = "https://github.com/astrio-ai/legacy2modern#readme"
+Repository = "https://github.com/astrio-ai/legacy2modern"
+"Bug Tracker" = "https://github.com/astrio-ai/legacy2modern/issues"
+
+[project.scripts]
+legacy2modern = "engine.cli.cli:main"
+l2m = "engine.cli.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[tool.setuptools.package-data]
+"*" = ["*.yaml", "*.g4", "*.tokens", "*.interp", "*.j2"] 

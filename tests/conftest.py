@@ -1,5 +1,5 @@
 """
-Pytest configuration and shared fixtures for the legacy2modern-cli test suite.
+Pytest configuration and shared fixtures for the legacy2modern test suite.
 """
 
 import os

@@ -1,0 +1,30 @@
+include README.md
+include LICENSE
+include requirements.txt
+include pytest.ini
+include *.md
+include *.txt
+include *.ini
+
+# Include all template files
+recursive-include engine/modernizers/cobol_system/templates *
+recursive-include engine/modernizers/static_site/templates *
+
+# Include parser files
+recursive-include engine/modernizers/cobol_system/parsers/cobol85 *.g4 *.tokens *.interp *.py
+
+# Include configuration files
+recursive-include engine/modernizers/*/modernizer.yaml
+
+# Include scripts
+include scripts/*
+
+# Exclude development files
+exclude .git*
+exclude .env*
+exclude output/*
+exclude __pycache__/*
+exclude *.pyc
+exclude .pytest_cache/*
+exclude .coverage
+exclude .mypy_cache/* 
