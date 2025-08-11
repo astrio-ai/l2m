@@ -272,3 +272,6 @@ clean_output.py
 # Parser output files
 parser_output.json
 *.parser_output.json
+
+# Legacy modernizers directory (kept locally but not pushed to public repo)
+engine/modernizers/
