@@ -7,87 +7,162 @@ ConversableAgent framework while preserving domain-specific logic.
 
 import asyncio
 import logging
+import sys
+import os
 from typing import Dict, List, Optional, Any, Union, Callable
 from dataclasses import dataclass, field
 
-# AutoGen imports with better error handling
+# AutoGen imports with better error handling and interpreter detection
+logger = logging.getLogger(__name__)
+
+def _check_python_interpreter():
+    """Check if we're using the correct Python interpreter."""
+    python_path = sys.executable
+    logger.info(f"Using Python interpreter: {python_path}")
+    
+    # Check if we're in a conda environment
+    conda_env = os.environ.get('CONDA_DEFAULT_ENV', None)
+    if conda_env:
+        logger.info(f"Running in conda environment: {conda_env}")
+    
+    # Check if autogen packages are accessible
+    try:
+        import autogen_core
+        logger.info(f"AutoGen Core accessible from {python_path}")
+        return True
+    except ImportError:
+        logger.warning(f"AutoGen Core not accessible from {python_path}")
+        return False
+
 AUTOGEN_AVAILABLE = False
+AUTOGEN_CORE_AVAILABLE = False
+
+# First check the interpreter
+_interpreter_ok = _check_python_interpreter()
+
 try:
     import autogen_agentchat as autogen
-    print(f"AutoGen imported successfully: {getattr(autogen, '__version__', 'unknown')}")
+    logger.info(f"AutoGen imported successfully: {getattr(autogen, '__version__', 'unknown')}")
+    AUTOGEN_AVAILABLE = True
     
     # Try importing specific classes from autogen_core
     try:
         from autogen_core import Agent, BaseAgent
-        print("AutoGen core classes imported successfully")
-        AUTOGEN_AVAILABLE = True
+        logger.info("AutoGen core classes imported successfully")
+        AUTOGEN_CORE_AVAILABLE = True
         
-        # Create wrapper classes for compatibility
-        class ConversableAgent(Agent):
-            def __init__(self, name, system_message=None, llm_config=None, **kwargs):
-                super().__init__(name=name, **kwargs)
-                self.system_message = system_message
-                self.llm_config = llm_config
-        
-        class AssistantAgent(Agent):
-            def __init__(self, name, system_message=None, llm_config=None, **kwargs):
-                super().__init__(name=name, **kwargs)
-                self.system_message = system_message
-                self.llm_config = llm_config
-        
-        class UserProxyAgent(Agent):
-            def __init__(self, name, system_message=None, llm_config=None, **kwargs):
-                super().__init__(name=name, **kwargs)
-                self.system_message = system_message
-                self.llm_config = llm_config
+        # Import the correct agent classes from autogen_agentchat
+        try:
+            from autogen_agentchat.agents import AssistantAgent, UserProxyAgent
+            logger.info("AutoGen AgentChat classes imported successfully")
+            
+            # We'll use the actual AutoGen classes instead of creating wrappers
+            ConversableAgent = AssistantAgent  # Use AssistantAgent as the base conversable agent
+            
+        except ImportError as e:
+            logger.warning(f"AutoGen AgentChat classes not available: {e}")
+            # Create fallback classes that provide better error messages
+            class ConversableAgent:
+                def __init__(self, *args, **kwargs):
+                    raise ImportError(
+                        "AutoGen ConversableAgent not available. "
+                        "Please ensure you're using the correct Python interpreter. "
+                        "If using conda: conda activate base && python -c 'import autogen_agentchat'"
+                    )
+            
+            class AssistantAgent:
+                def __init__(self, *args, **kwargs):
+                    raise ImportError(
+                        "AutoGen AssistantAgent not available. "
+                        "Please ensure you're using the correct Python interpreter. "
+                        "If using conda: conda activate base && python -c 'import autogen_agentchat'"
+                    )
+            
+            class UserProxyAgent:
+                def __init__(self, *args, **kwargs):
+                    raise ImportError(
+                        "AutoGen UserProxyAgent not available. "
+                        "Please ensure you're using the correct Python interpreter. "
+                        "If using conda: conda activate base && python -c 'import autogen_agentchat'"
+                    )
+            
+            AUTOGEN_CORE_AVAILABLE = False
                 
     except ImportError as e:
-        print(f"Warning: AutoGen core classes not available: {e}")
-        # Create fallback classes
+        logger.warning(f"AutoGen core classes not available: {e}")
+        # Create fallback classes that provide better error messages
         class ConversableAgent:
             def __init__(self, *args, **kwargs):
-                raise ImportError("AutoGen ConversableAgent not available")
+                raise ImportError(
+                    "AutoGen ConversableAgent not available. "
+                    "Please ensure you're using the correct Python interpreter. "
+                    "If using conda: conda activate base && python -c 'import autogen_core'"
+                )
         
         class AssistantAgent:
             def __init__(self, *args, **kwargs):
-                raise ImportError("AutoGen AssistantAgent not available")
+                raise ImportError(
+                    "AutoGen AssistantAgent not available. "
+                    "Please ensure you're using the correct Python interpreter. "
+                    "If using conda: conda activate base && python -c 'import autogen_core'"
+                )
         
         class UserProxyAgent:
             def __init__(self, *args, **kwargs):
-                raise ImportError("AutoGen UserProxyAgent not available")
+                raise ImportError(
+                    "AutoGen UserProxyAgent not available. "
+                    "Please ensure you're using the correct Python interpreter. "
+                    "If using conda: conda activate base && python -c 'import autogen_core'"
+                )
         
-        AUTOGEN_AVAILABLE = False
+        AUTOGEN_CORE_AVAILABLE = False
         
 except ImportError as e:
-    print(f"AutoGen import failed: {e}")
+    logger.error(f"AutoGen import failed: {e}")
+    logger.error(f"Python interpreter: {sys.executable}")
+    logger.error(f"Python path: {sys.path[:3]}...")  # Show first 3 paths
+    
     # Fallback classes for when AutoGen is not available
     class ConversableAgent:
         def __init__(self, *args, **kwargs):
-            raise ImportError("AutoGen not installed. Run: pip install -U 'autogen-agentchat' 'autogen-ext[openai]'")
+            raise ImportError(
+                f"AutoGen not installed or not accessible. "
+                f"Current Python: {sys.executable}\n"
+                f"Install with: pip install -U 'autogen-agentchat' 'autogen-ext[openai]'\n"
+                f"Or if using conda: conda install -c conda-forge autogen-agentchat"
+            )
     
     class AssistantAgent:
         def __init__(self, *args, **kwargs):
-            raise ImportError("AutoGen not installed. Run: pip install -U 'autogen-agentchat' 'autogen-ext[openai]'")
+            raise ImportError(
+                f"AutoGen not installed or not accessible. "
+                f"Current Python: {sys.executable}\n"
+                f"Install with: pip install -U 'autogen-agentchat' 'autogen-ext[openai]'\n"
+                f"Or if using conda: conda install -c conda-forge autogen-agentchat"
+            )
     
     class UserProxyAgent:
         def __init__(self, *args, **kwargs):
-            raise ImportError("AutoGen not installed. Run: pip install -U 'autogen-agentchat' 'autogen-ext[openai]'")
+            raise ImportError(
+                f"AutoGen not installed or not accessible. "
+                f"Current Python: {sys.executable}\n"
+                f"Install with: pip install -U 'autogen-agentchat' 'autogen-ext[openai]'\n"
+                f"Or if using conda: conda install -c conda-forge autogen-agentchat"
+            )
 
 # Try to import TextAnalyzerAgent (optional)
 try:
     # TextAnalyzerAgent might not be available in newer versions
     TextAnalyzerAgent = None
-    print("TextAnalyzerAgent not available in this version (optional)")
+    logger.info("TextAnalyzerAgent not available in this version (optional)")
 except ImportError:
-    print("TextAnalyzerAgent not available (optional)")
+    logger.info("TextAnalyzerAgent not available (optional)")
     TextAnalyzerAgent = None
 
 from ..core_agents.base_agent import BaseAgent, AgentRole
 from ..utilities.ai import AI
 from ..core_agents.base_memory import BaseMemory
 from ..utilities.project_config import ProjectConfig
-
-logger = logging.getLogger(__name__)
 
 @dataclass
 class AutoGenConfig:
@@ -97,6 +172,10 @@ class AutoGenConfig:
     human_in_the_loop: bool = False
     max_consecutive_auto_reply: int = 10
     llm_config: Optional[Dict[str, Any]] = None
+    # New configuration options for better error handling
+    fallback_on_error: bool = True
+    log_detailed_errors: bool = True
+    retry_imports: bool = True
 
 class AutoGenAgentWrapper:
     """
@@ -114,7 +193,7 @@ class AutoGenAgentWrapper:
         self.base_agent = base_agent
         self.autogen_config = autogen_config or AutoGenConfig()
         
-        # Create AutoGen agent
+        # Create AutoGen agent with better error handling
         self.autogen_agent = self._create_autogen_agent(**kwargs)
         
         # Bridge between systems
@@ -123,30 +202,62 @@ class AutoGenAgentWrapper:
         logger.info(f"Created AutoGen wrapper for {base_agent.name} ({base_agent.role.value})")
         
     def _create_autogen_agent(self, **kwargs) -> ConversableAgent:
-        """Create the underlying AutoGen agent."""
+        """Create the underlying AutoGen agent with improved error handling."""
         if not AUTOGEN_AVAILABLE:
-            raise ImportError("AutoGen not available. Install with: pip install -U 'autogen-agentchat' 'autogen-ext[openai]'")
+            if self.autogen_config.fallback_on_error:
+                logger.warning("AutoGen not available, using fallback mode")
+                return self._create_fallback_agent(**kwargs)
+            else:
+                raise ImportError(
+                    "AutoGen not available. Install with: pip install -U 'autogen-agentchat' 'autogen-ext[openai]'"
+                )
         
-        # Convert our AI wrapper to AutoGen LLM config
-        llm_config = self._convert_ai_to_llm_config()
+        try:
+            # Convert our AI wrapper to AutoGen model client
+            model_client = self._convert_ai_to_model_client()
+            
+            # Create agent based on role
+            if self.base_agent.role == AgentRole.COORDINATOR:
+                return AssistantAgent(
+                    name=self.base_agent.name,
+                    model_client=model_client,
+                    system_message=self.base_agent.system_prompt,
+                    **kwargs
+                )
+            else:
+                return AssistantAgent(
+                    name=self.base_agent.name,
+                    model_client=model_client,
+                    system_message=self.base_agent.system_prompt,
+                    **kwargs
+                )
+        except Exception as e:
+            if self.autogen_config.fallback_on_error:
+                logger.warning(f"Failed to create AutoGen agent: {e}, using fallback")
+                return self._create_fallback_agent(**kwargs)
+            else:
+                raise
+    
+    def _create_fallback_agent(self, **kwargs):
+        """Create a fallback agent when AutoGen is not available."""
+        class FallbackAgent:
+            def __init__(self, name, system_message=None, llm_config=None, **kwargs):
+                self.name = name
+                self.system_message = system_message
+                self.llm_config = llm_config
+                self.max_consecutive_auto_reply = kwargs.get('max_consecutive_auto_reply', 10)
+            
+            async def a_generate_reply(self, messages, sender, config=None):
+                """Fallback reply generation."""
+                return f"Fallback response from {self.name}: AutoGen not available"
         
-        # Create agent based on role
-        if self.base_agent.role == AgentRole.COORDINATOR:
-            return AssistantAgent(
-                name=self.base_agent.name,
-                system_message=self.base_agent.system_prompt,
-                llm_config=llm_config,
-                max_consecutive_auto_reply=self.autogen_config.max_consecutive_auto_reply,
-                **kwargs
-            )
-        else:
-            return ConversableAgent(
-                name=self.base_agent.name,
-                system_message=self.base_agent.system_prompt,
-                llm_config=llm_config,
-                max_consecutive_auto_reply=self.autogen_config.max_consecutive_auto_reply,
-                **kwargs
-            )
+        return FallbackAgent(
+            name=self.base_agent.name,
+            system_message=self.base_agent.system_prompt,
+            llm_config=self._convert_ai_to_llm_config(),
+            max_consecutive_auto_reply=self.autogen_config.max_consecutive_auto_reply,
+            **kwargs
+        )
     
     def _convert_ai_to_llm_config(self) -> Dict[str, Any]:
         """Convert our AI wrapper to AutoGen LLM config format."""
@@ -179,16 +290,47 @@ class AutoGenAgentWrapper:
         logger.info(f"Created LLM config for {ai.provider} with model {ai.model}")
         return config
     
+    def _convert_ai_to_model_client(self):
+        """Convert our AI wrapper to AutoGen model client."""
+        ai = self.base_agent.ai
+        
+        try:
+            if ai.provider == "anthropic":
+                from autogen_ext.models.anthropic import AnthropicChatCompletionClient
+                return AnthropicChatCompletionClient(
+                    api_key=ai.api_key,
+                    model=ai.model
+                )
+            elif ai.provider == "openai":
+                from autogen_ext.models.openai import OpenAIChatCompletionClient
+                return OpenAIChatCompletionClient(
+                    api_key=ai.api_key,
+                    model=ai.model
+                )
+            else:
+                logger.warning(f"Unknown provider: {ai.provider}, using fallback")
+                return None
+        except ImportError as e:
+            logger.warning(f"Could not import model client for {ai.provider}: {e}")
+            return None
+    
     async def process_message(self, message: Dict[str, Any]) -> Dict[str, Any]:
         """Process message through both systems."""
         # First, process through our domain logic
         domain_response = await self.base_agent.process_message(message)
         
         # Then, if AutoGen is enabled, process through AutoGen
-        if self.autogen_config.enable_autogen:
-            autogen_response = await self._process_autogen_message(message)
-            # Merge responses
-            return self._merge_responses(domain_response, autogen_response)
+        if self.autogen_config.enable_autogen and AUTOGEN_AVAILABLE:
+            try:
+                autogen_response = await self._process_autogen_message(message)
+                # Merge responses
+                return self._merge_responses(domain_response, autogen_response)
+            except Exception as e:
+                if self.autogen_config.fallback_on_error:
+                    logger.warning(f"AutoGen processing failed: {e}, using domain response only")
+                    return domain_response
+                else:
+                    raise
         
         return domain_response
     
@@ -236,9 +378,12 @@ class AutoGenAgentWrapper:
             base_status = self.base_agent.get_status()
         
         base_status["autogen_enabled"] = self.autogen_config.enable_autogen
+        base_status["autogen_available"] = AUTOGEN_AVAILABLE
+        base_status["autogen_core_available"] = AUTOGEN_CORE_AVAILABLE
         base_status["autogen_agent_type"] = type(self.autogen_agent).__name__
         base_status["llm_provider"] = self.base_agent.ai.provider
         base_status["llm_model"] = self.base_agent.ai.model
+        base_status["python_interpreter"] = sys.executable
         return base_status
 
 class MessageBridge:
