@@ -30,7 +30,14 @@ import json
 # Load environment variables from .env file
 try:
     from dotenv import load_dotenv
-    load_dotenv()
+    # Find and load .env file from project root
+    project_root = Path(__file__).parent.parent.parent
+    env_path = project_root / '.env'
+    if env_path.exists():
+        load_dotenv(env_path)
+    else:
+        # Fallback to current directory
+        load_dotenv()
 except ImportError:
     pass
 
@@ -92,6 +99,7 @@ from engine.agents.autogen_integration.sandbox_executor import (
     SandboxConfig, SandboxExecutor, SandboxAgent,
     create_sandbox_executor, create_sandbox_agent, execute_in_sandbox
 )
+
 
 # Restore stderr and stdout after imports
 sys.stderr.close()
@@ -673,16 +681,21 @@ class Legacy2ModernCLI:
         
         self.console.print(f"\n[dim]{status_text}[/dim]")
         
-    async def start_modernization_workflow(self, input_path: str, output_dir: str, target_stack: str = "react") -> bool:
-        """Start a modernization workflow using the agents system."""
+    async def start_modernization_workflow(self, input_path: str, target_stack: str = "react") -> bool:
+        """Start a modernization workflow using the agents system and sandbox."""
         try:
             if not os.path.exists(input_path):
                 self.console.print(f"[red]Error: Input path not found: {input_path}[/red]")
                 return False
             
-            # Create output directory
-            output_path = Path(output_dir)
-            output_path.mkdir(parents=True, exist_ok=True)
+            # Output to output directory - no user choice
+            project_name = Path(input_path).stem
+            output_dir = f"output/modernized-{project_name}"
+            
+            self.console.print(f"[#00D4AA]Modernizing: {input_path}[/#00D4AA]")
+            self.console.print(f"[#00D4AA]Target Framework: {target_stack}[/#00D4AA]")
+            self.console.print(f"[#00D4AA]Output Location: {output_dir}[/#00D4AA]")
+            self.console.print()
             
             with Progress(
                 SpinnerColumn(),
@@ -694,7 +707,7 @@ class Legacy2ModernCLI:
                 
                 # Configure project
                 self.config.set_target_stack(target_stack)
-                self.config.set_project_name(Path(input_path).name)
+                self.config.set_project_name(project_name)
                 
                 progress.update(task, description="Analyzing project structure...")
                 
@@ -717,7 +730,7 @@ class Legacy2ModernCLI:
                 modernization_task = {
                     "type": "full_modernization",
                     "input_path": input_path,
-                    "output_path": str(output_path),
+                    "output_path": output_dir,
                     "target_stack": target_stack,
                     "analysis_data": analysis_result.get('project_map', {}),
                     "description": f"Modernize the project to {target_stack}"
@@ -732,10 +745,13 @@ class Legacy2ModernCLI:
                 self.console.print(f"[#0053D6]Framework: {target_stack.upper()}[/#0053D6]")
                 
                 # Write generated files to output directory
-                await self._write_modernization_files(modernization_result, output_path)
+                await self._write_modernization_files(modernization_result, Path(output_dir))
                 
                 # Show modernization results
                 self._display_modernization_results(modernization_result)
+                
+                # Deploy to sandbox and start development server (optional)
+                await self._deploy_to_sandbox(output_dir, target_stack, project_name, modernization_result)
                 
                 return True
             else:
@@ -746,6 +762,102 @@ class Legacy2ModernCLI:
         except Exception as e:
             self.console.print(f"\n[#FF6B6B]❌ Error during modernization: {e}[/#FF6B6B]")
             return False
+    
+    async def _deploy_to_sandbox(self, output_dir: str, target_stack: str, project_name: str, modernization_result: Dict[str, Any]):
+        """Deploy the modernized project to the sandbox and start development server."""
+        if not self.sandbox_executor:
+            self.console.print("[#FF6B6B]Sandbox not available - skipping deployment[/#FF6B6B]")
+            return
+        
+        self.console.print(f"\n[#00D4AA]🚀 Deploying to sandbox and starting development server...[/#00D4AA]")
+        
+        try:
+            # Use the sandbox executor to run the modernized project
+            self.console.print(f"[#00D4AA]📁 Using generated files from: {output_dir}[/#00D4AA]")
+            
+            # Check if the output directory exists and has files
+            output_path = Path(output_dir)
+            if not output_path.exists():
+                self.console.print(f"[#FF6B6B]❌ Output directory not found: {output_dir}[/#FF6B6B]")
+                return
+            
+            # Get the absolute path for Docker mounting
+            abs_output_path = output_path.absolute()
+            
+            # Configure sandbox to mount the output directory
+            from engine.agents.autogen_integration.sandbox_executor import SandboxConfig
+            sandbox_config = SandboxConfig(
+                mount_host_path=str(abs_output_path),
+                mount_container_path="/workspace/modernized-project",
+                work_dir="/workspace/modernized-project"
+            )
+            
+            self.console.print(f"[#00D4AA]🔗 Mounting: {abs_output_path} → /workspace/modernized-project[/#00D4AA]")
+            
+            # Use direct Docker commands for deployment
+            self.console.print(f"[#00D4AA]📦 Installing dependencies...[/#00D4AA]")
+            
+            # Install dependencies using Docker
+            install_cmd = [
+                "docker", "run", "--rm",
+                "-v", f"{abs_output_path}:/workspace/modernized-project",
+                "-w", "/workspace/modernized-project",
+                "sandbox:latest",
+                "npm", "install"
+            ]
+            
+            import subprocess
+            install_result = subprocess.run(install_cmd, capture_output=True, text=True, timeout=300)
+            
+            if install_result.returncode != 0:
+                self.console.print(f"[#FF6B6B]❌ Failed to install dependencies: {install_result.stderr}[/#FF6B6B]")
+                # Try with legacy peer deps
+                install_cmd = [
+                    "docker", "run", "--rm",
+                    "-v", f"{abs_output_path}:/workspace/modernized-project",
+                    "-w", "/workspace/modernized-project",
+                    "sandbox:latest",
+                    "npm", "install", "--legacy-peer-deps"
+                ]
+                install_result = subprocess.run(install_cmd, capture_output=True, text=True, timeout=300)
+                
+                if install_result.returncode != 0:
+                    self.console.print(f"[#FF6B6B]❌ Failed to install dependencies with legacy peer deps[/#FF6B6B]")
+                    self.console.print(f"[#FFA500]💡 You can still access the generated files at: {output_dir}[/#FFA500]")
+                    self.console.print(f"[#FFA500]💡 Try running manually: cd {output_dir} && npm install && npm start[/#FFA500]")
+                    return
+            
+            self.console.print(f"[#00D4AA]✅ Dependencies installed successfully[/#00D4AA]")
+            
+            # Start the development server
+            self.console.print(f"[#00D4AA]🚀 Starting development server...[/#00D4AA]")
+            
+            # Start the server in the background
+            server_cmd = [
+                "docker", "run", "--rm", "-d",
+                "-v", f"{abs_output_path}:/workspace/modernized-project",
+                "-w", "/workspace/modernized-project",
+                "-p", "3000:3000",
+                "sandbox:latest",
+                "npm", "start", "--", "--port", "3000", "--host", "0.0.0.0"
+            ]
+            
+            server_result = subprocess.run(server_cmd, capture_output=True, text=True, timeout=30)
+            
+            if server_result.returncode == 0:
+                self.console.print(f"[#00D4AA]✅ Development server started successfully![/#00D4AA]")
+                self.console.print(f"[#00D4AA]🌐 Access your modernized website at: http://localhost:3000[/#00D4AA]")
+                self.console.print(f"[#00D4AA]📁 Project location: {output_dir}[/#00D4AA]")
+                self.console.print(f"[#00D4AA]🔄 Container ID: {server_result.stdout.strip()}[/#00D4AA]")
+            else:
+                self.console.print(f"[#FF6B6B]❌ Failed to start development server: {server_result.stderr}[/#FF6B6B]")
+                self.console.print(f"[#FFA500]💡 You can still access the generated files at: {output_dir}[/#FFA500]")
+                self.console.print(f"[#FFA500]💡 Try running manually: cd {output_dir} && npm install && npm start[/#FFA500]")
+                
+        except Exception as e:
+            self.console.print(f"[#FF6B6B]❌ Sandbox deployment error: {e}[/#FF6B6B]")
+            self.console.print(f"[#FFA500]💡 You can still access the generated files at: {output_dir}[/#FFA500]")
+            self.console.print(f"[#FFA500]💡 Try running manually: cd {output_dir} && npm install && npm start[/#FFA500]")
 
     def _display_workflow_results(self, result: Dict[str, Any]):
         """Display workflow results."""
@@ -1091,12 +1203,13 @@ class Legacy2ModernCLI:
         if cmd == 'help':
             self.show_help()
         elif cmd == 'modernize':
-            if len(parts) < 3:
-                self.console.print("[red]Usage: /modernize <input_path> <output_dir> [framework][/red]")
+            if len(parts) < 2:
+                self.console.print("[red]Usage: /modernize <input_path> [framework][/red]")
                 self.console.print("[red]Frameworks: react, nextjs, astro, vue, svelte, angular[/red]")
+                self.console.print("[red]Output will be automatically placed in sandbox[/red]")
             else:
-                framework = parts[3] if len(parts) > 3 else 'react'
-                await self.start_modernization_workflow(parts[1], parts[2], framework)
+                framework = parts[2] if len(parts) > 2 else 'react'
+                await self.start_modernization_workflow(parts[1], framework)
         elif cmd == 'analyze':
             if len(parts) < 2:
                 self.console.print("[red]Usage: /analyze <input_path>[/red]")
@@ -1108,8 +1221,6 @@ class Legacy2ModernCLI:
         elif cmd == 'agents':
             status = await self.get_agent_status()
             self.display_agent_status(status)
-        elif cmd == 'sandbox':
-            await self.handle_sandbox_command(parts[1:] if len(parts) > 1 else [])
         elif cmd == 'exit':
             self.console.print("[#0053D6]Goodbye![/#0053D6]")
             sys.exit(0)
@@ -1130,19 +1241,16 @@ class Legacy2ModernCLI:
             
             # Find input path
             input_path = None
-            output_dir = None
             framework = 'react'
             
             for i, word in enumerate(words):
                 # Check for file paths
                 if os.path.exists(word) or word.endswith(('.html', '.htm', '.js', '.css')):
                     input_path = word
-                    output_dir = f"output/modernized-{Path(word).stem}"
                     break
                 # Check for directories
                 elif os.path.isdir(word):
                     input_path = word
-                    output_dir = f"output/modernized-{Path(word).name}"
                     break
             
             # Check for framework specification
@@ -1151,20 +1259,15 @@ class Legacy2ModernCLI:
                     framework = word.lower()
                     break
             
-            # Check for explicit output directory
-            for i, word in enumerate(words):
-                if word == 'output' and i + 1 < len(words):
-                    output_dir = words[i + 1]
-                    break
-            
             if input_path:
-                await self.start_modernization_workflow(input_path, output_dir, framework)
+                await self.start_modernization_workflow(input_path, framework)
                 return
             else:
                 self.console.print("[#FFA500]Please specify an input path to modernize[/#FFA500]")
                 self.console.print("[#FFA500]Examples:[/#FFA500]")
-                self.console.print("[#FFA500]  - modernize my-website.html output/modernized-site react[/#FFA500]")
-                self.console.print("[#FFA500]  - modernize legacy-project output/modernized-project nextjs[/#FFA500]")
+                self.console.print("[#FFA500]  - modernize my-website.html react[/#FFA500]")
+                self.console.print("[#FFA500]  - modernize legacy-project nextjs[/#FFA500]")
+                self.console.print("[#FFA500]Output will be automatically placed in sandbox[/#FFA500]")
             
         elif 'analyze' in query_lower or 'review' in query_lower:
             # Extract input from query
@@ -1185,68 +1288,20 @@ class Legacy2ModernCLI:
                 self.console.print("[#FFA500]  - analyze my-website.html[/#FFA500]")
                 self.console.print("[#FFA500]  - analyze legacy-project[/#FFA500]")
         
-        elif 'sandbox' in query_lower or 'docker' in query_lower or 'container' in query_lower:
-            if self.sandbox_executor:
-                self.console.print("[#00D4AA]Sandbox is available! Use /sandbox <command> to execute commands.[/#00D4AA]")
-                self.console.print("[#00D4AA]Examples:[/#00D4AA]")
-                self.console.print("[#00D4AA]  - /sandbox node --version[/#00D4AA]")
-                self.console.print("[#00D4AA]  - /sandbox npm install react[/#00D4AA]")
-                self.console.print("[#00D4AA]  - /sandbox create-react-app my-app[/#00D4AA]")
-            else:
-                self.console.print("[#FF6B6B]Sandbox is not available. Check Docker installation.[/#FF6B6B]")
-    
-    async def handle_sandbox_command(self, args: List[str]):
-        """Handle sandbox commands."""
-        if not self.sandbox_executor:
-            self.console.print("[#FF6B6B]Sandbox is not available. Check Docker installation.[/#FF6B6B]")
-            return
-        
-        if not args:
-            self.console.print("[#FFA500]Usage: /sandbox <command>[/#FFA500]")
-            self.console.print("[#FFA500]Examples:[/#FFA500]")
-            self.console.print("[#FFA500]  - /sandbox node --version[/#FFA500]")
-            self.console.print("[#FFA500]  - /sandbox npm install react[/#FFA500]")
-            self.console.print("[#FFA500]  - /sandbox npx create-react-app my-app --yes[/#FFA500]")
-            return
-        
-        command = " ".join(args)
-        self.console.print(f"[#00D4AA]Executing in sandbox: {command}[/#00D4AA]")
-        
-        try:
-            result = self.sandbox_executor.execute(command)
-            
-            if result.get("success", False):
-                self.console.print(f"[#00D4AA]✅ Success:[/#00D4AA]")
-                if result.get("stdout"):
-                    self.console.print(result["stdout"])
-            else:
-                self.console.print(f"[#FF6B6B]❌ Error:[/#FF6B6B]")
-                if result.get("stderr"):
-                    self.console.print(result["stderr"])
-                    
-        except Exception as e:
-            self.console.print(f"[#FF6B6B]❌ Execution failed: {e}[/#FF6B6B]")
-            
     def show_help(self):
         """Show help information."""
         help_text = """
 [bold]Available Commands:[/bold]
 
 [bold blue]Modernization:[/bold blue]
-  /modernize <input> <output> [framework]  - Modernize a project using agents
-  /analyze <input>                         - Analyze a project using agents
-  /status                                  - Show agent and workflow status
-  /agents                                  - Show detailed agent status
+  /modernize <input> [framework]                     - Modernize a project
+  /analyze <input>                        - Analyze a project
+  /status                                 - Show agent and workflow status
+  /agents                                 - Show detailed agent status
 
 [bold blue]General Commands:[/bold blue]
-  /help                                    - Show this help message
+  /help                                   - Show this help message
   /exit, /quit                            - Exit the CLI
-
-[bold blue]Sandbox Commands:[/bold blue]
-  /sandbox <command>                       - Execute commands in isolated Docker sandbox
-  /sandbox node --version                  - Check Node.js version
-  /sandbox npm install react               - Install packages
-  /sandbox npx create-react-app my-app     - Create new projects
 
 [bold blue]Natural Language:[/bold blue]
   "modernize my-website.html"             - Modernize a specific project
@@ -1255,8 +1310,8 @@ class Legacy2ModernCLI:
   "help"                                  - Show help
 
 [bold blue]Examples:[/bold blue]
-  > modernize examples/website/legacy-site.html output/modernized-site react
-  > /modernize examples/website/legacy-site.html output/modernized-site nextjs
+  > modernize examples/website/legacy-site.html react
+  > /modernize examples/website/legacy-site.html nextjs
   > analyze examples/website/legacy-site.html
   > /analyze examples/website/legacy-site.html
   > status
@@ -1325,7 +1380,6 @@ class Legacy2ModernCLI:
         except Exception as e:
             self.console.print(f"[red]❌ Test failed: {e}[/red]")
 
-
 async def main():
     """Main CLI entry point."""
     cli = Legacy2ModernCLI()
@@ -1348,11 +1402,9 @@ async def main():
     # Start interactive mode
     await cli.interactive_mode()
 
-
 def run_cli():
     """Run the CLI with proper async handling."""
     asyncio.run(main())
-
 
 if __name__ == "__main__":
     run_cli() 

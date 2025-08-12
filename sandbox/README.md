@@ -1,72 +1,155 @@
-# Sandbox Environment
+# Sandbox Environment Setup Guide
 
-This directory contains the Docker sandbox environment for Autogen's `LocalCommandLineCodeExecutor`. The sandbox provides an isolated environment for running Node.js applications, development servers, and build processes.
+This guide will walk you through setting up and using the Docker sandbox environment for your own projects. The sandbox provides an isolated environment for running Node.js applications, development servers, and build processes.
 
-## Features
+## Prerequisites
 
-- **Node.js 20 LTS** - Latest LTS version with full npm/yarn/pnpm support
-- **Git** - Version control for cloning repositories and managing code
-- **Build Tools** - Essential tools for compiling and building applications
-- **Development Tools** - Pre-installed common development packages
-- **Security** - Runs as non-root user for better security
-- **Port Exposure** - Common development ports (3000, 3001, 8080, 8000, 5173, 4173)
+Before you begin, ensure you have the following installed:
+- **Docker Desktop** or **Docker Engine** (version 20.10 or later)
+- **Git** (for cloning repositories)
+- **Python 3.8+** (for running the integration scripts)
 
-## Pre-installed Tools
+## Step 1: Build the Docker Image
 
-### Package Managers
-- npm (latest)
-- yarn
-- pnpm
+First, build the sandbox Docker image:
 
-### Development Tools
-- TypeScript
-- ESLint
-- Prettier
-- Nodemon
-- Concurrently
-- Cross-env
+```bash
+# Navigate to the sandbox directory
+cd sandbox
 
-### Framework CLI Tools
-- create-react-app
-- create-next-app
-- @vue/cli
-- @angular/cli
-- Vite
-- Webpack CLI
+# Build the Docker image
+docker build -t sandbox:latest .
+```
 
-### System Tools
-- Git
-- Python 3 (with pip and venv)
-- Build essentials
-- curl, wget, unzip
+This will create a Docker image with:
+- Node.js 20 LTS
+- npm, yarn, pnpm package managers
+- Git for version control
+- Common development tools (TypeScript, ESLint, Prettier, etc.)
+- Framework CLI tools (create-react-app, create-next-app, etc.)
 
-## Usage with Autogen
+## Step 2: Test the Sandbox Environment
 
-The sandbox can be used with Autogen's `LocalCommandLineCodeExecutor` to run commands in an isolated Docker container:
+Verify that the sandbox is working correctly:
 
-### Basic Usage
+```bash
+# Test basic Node.js functionality
+docker run --rm sandbox:latest node --version
+
+# Test npm functionality
+docker run --rm sandbox:latest npm --version
+
+# Test Git functionality
+docker run --rm sandbox:latest git --version
+```
+
+## Step 3: Set Up Your Project
+
+### Option A: Using an Existing Project
+
+If you have an existing project, you can mount it into the sandbox:
+
+```bash
+# Navigate to your project directory
+cd /path/to/your/project
+
+# Run the sandbox with your project mounted
+docker run -it --rm \
+  -v $(pwd):/workspace \
+  -p 3000:3000 \
+  -p 3001:3001 \
+  -p 8080:8080 \
+  -p 8000:8000 \
+  -p 5173:5173 \
+  -p 4173:4173 \
+  sandbox:latest bash
+```
+
+### Option B: Creating a New Project
+
+Start with a fresh workspace and create a new project:
+
+```bash
+# Run the sandbox with a fresh workspace
+docker run -it --rm \
+  -v $(pwd)/my-new-project:/workspace \
+  -p 3000:3000 \
+  -p 3001:3001 \
+  -p 8080:8080 \
+  -p 8000:8000 \
+  -p 5173:5173 \
+  -p 4173:4173 \
+  sandbox:latest bash
+```
+
+## Step 4: Working Inside the Sandbox
+
+Once inside the sandbox container, you can:
+
+### Install Dependencies
+```bash
+# Using npm
+npm install
+
+# Using yarn
+yarn install
+
+# Using pnpm
+pnpm install
+```
+
+### Start Development Servers
+```bash
+# React development server
+npm start
+
+# Next.js development server
+npm run dev
+
+# Vite development server
+npm run dev
+
+# Webpack development server
+npm run start
+```
+
+### Run Build Commands
+```bash
+# Build for production
+npm run build
+
+# Run tests
+npm test
+
+# Lint code
+npm run lint
+```
+
+## Step 5: Using with Autogen (Optional)
+
+If you're using this sandbox with Autogen for AI-powered development:
+
+### Basic Autogen Integration
 
 ```python
 from autogen import LocalCommandLineCodeExecutor
 
 # Initialize the executor with the sandbox
 executor = LocalCommandLineCodeExecutor(
-    docker_image="sandbox:latest",  # Build from the Dockerfile
+    docker_image="sandbox:latest",
     work_dir="/workspace"
 )
 
-# Run commands in the sandbox
+# Run commands in your project
 result = executor.execute("npm install")
 result = executor.execute("npm run dev")
 ```
 
-### Enhanced Integration
-
-For more advanced usage, use the integrated `SandboxExecutor`:
+### Advanced Integration
 
 ```python
 from engine.agents.autogen_integration.sandbox_executor import (
-    SandboxConfig, SandboxExecutor, SandboxAgent
+    SandboxConfig, SandboxExecutor
 )
 
 # Create a configured sandbox executor
@@ -81,162 +164,131 @@ result = executor.execute("npm install")
 executor.cleanup()
 ```
 
-### Agent Integration
+## Step 6: Development Workflow
 
-Integrate with existing agents:
+### Typical Development Session
 
-```python
-from engine.agents.autogen_integration.sandbox_executor import create_sandbox_agent
+1. **Start the sandbox** with your project mounted
+2. **Install dependencies** if needed
+3. **Start development server** (npm start, npm run dev, etc.)
+4. **Access your app** at `http://localhost:3000` (or other configured port)
+5. **Make changes** to your code
+6. **See live updates** in your browser
+7. **Stop the server** with Ctrl+C when done
 
-# Create a sandbox agent
-agent = create_sandbox_agent("development-agent")
-
-# Execute development tasks
-task = {
-    "type": "sequence",
-    "commands": [
-        "npx create-react-app my-app --yes",
-        "cd my-app",
-        "npm install",
-        "npm start"
-    ]
-}
-
-result = agent.execute_task(task)
-agent.cleanup()
-```
-
-### Quick Testing
-
-Use the CLI test script for quick testing:
+### Example: React App Development
 
 ```bash
-cd tests
-python test_sandbox_cli.py "node --version"
-python test_sandbox_cli.py "npm install react"
+# Inside the sandbox container
+npx create-react-app my-app --yes
+cd my-app
+npm start
 ```
 
-### Full Demo
+Then open `http://localhost:3000` in your browser.
 
-Run the comprehensive integration demo:
-
-```bash
-cd sandbox
-python integration_example.py
-```
-
-### All Tests
-
-Run all sandbox tests:
+### Example: Next.js App Development
 
 ```bash
-cd tests
-python run_sandbox_tests.py
-```
-
-## Building the Sandbox
-
-To build the Docker image:
-
-```bash
-cd sandbox
-docker build -t sandbox:latest .
-```
-
-## Example Commands
-
-The sandbox can run various development commands:
-
-```bash
-# Node.js development
-npm install
+# Inside the sandbox container
+npx create-next-app@latest my-next-app --yes --typescript --tailwind --eslint
+cd my-next-app
 npm run dev
-npm run build
-npm test
-
-# Package management
-yarn install
-pnpm install
-
-# Framework-specific commands
-npx create-react-app my-app
-npx create-next-app my-app
-npx @vue/cli create my-app
-
-# Git operations
-git clone https://github.com/user/repo.git
-git add .
-git commit -m "Update"
-git push
-
-# Build tools
-npx tsc
-npx webpack
-npx vite build
 ```
 
-## Security Considerations
+Then open `http://localhost:3000` in your browser.
 
-- The container runs as a non-root user (`developer`)
-- The workspace directory is owned by the developer user
-- System packages are installed as root but runtime operations are as developer
-- The container is isolated from the host system
+## Port Configuration
 
-## Port Mapping
+The sandbox exposes these common development ports:
+- **3000**: React development server (default)
+- **3001**: Alternative React port
+- **8080**: Webpack dev server
+- **8000**: Python development server
+- **5173**: Vite development server
+- **4173**: Vite preview server
 
-Common development ports are exposed:
-- 3000: React development server
-- 3001: Alternative React port
-- 8080: Webpack dev server
-- 8000: Python development server
-- 5173: Vite development server
-- 4173: Vite preview server
+To use a different port, modify the port mapping in the docker run command:
+
+```bash
+docker run -it --rm \
+  -v $(pwd):/workspace \
+  -p 4000:3000 \  # Map host port 4000 to container port 3000
+  sandbox:latest bash
+```
 
 ## Environment Variables
 
+The sandbox comes with these default environment variables:
 - `NODE_ENV=development`
 - `PATH` includes local node_modules/.bin
 - Working directory: `/workspace`
 
-## Integration Features
+You can add custom environment variables:
 
-The sandbox integration provides several advanced features:
-
-### 🚀 **Enhanced Executor**
-- **Automatic Image Building**: Automatically builds the sandbox image if not found
-- **Command History**: Tracks all executed commands with timestamps
-- **Error Handling**: Robust error handling and recovery mechanisms
-- **Resource Management**: Configurable timeouts and resource limits
-- **Environment Variables**: Custom environment variable injection
-
-### 🤖 **Agent Integration**
-- **SandboxAgent**: AI-powered agent for intelligent development tasks
-- **Task Execution**: Execute complex multi-step development workflows
-- **Project Management**: Automated project setup and configuration
-- **Dependency Management**: Intelligent package installation and management
-
-### 🛡️ **Security & Isolation**
-- **Docker Isolation**: Complete isolation from the host system
-- **Non-root Execution**: Runs as non-root user for enhanced security
-- **Resource Limits**: Configurable memory and CPU limits
-- **Auto-cleanup**: Automatic resource cleanup after execution
-
-### 📊 **Monitoring & Logging**
-- **Command Tracking**: Detailed logging of all executed commands
-- **Performance Metrics**: Execution time and resource usage tracking
-- **Error Reporting**: Comprehensive error reporting and debugging
-- **Status Monitoring**: Real-time status updates during execution
+```bash
+docker run -it --rm \
+  -v $(pwd):/workspace \
+  -e NODE_ENV=production \
+  -e API_KEY=your-api-key \
+  sandbox:latest bash
+```
 
 ## Troubleshooting
 
-If you encounter permission issues, ensure the container is running as the developer user. The Dockerfile automatically sets up the correct permissions.
+### Common Issues and Solutions
 
-For persistent data, consider mounting volumes or using Docker volumes to persist node_modules and other generated files between container runs.
+1. **Docker not running**
+   ```bash
+   # Start Docker Desktop or Docker daemon
+   sudo systemctl start docker  # Linux
+   # Or start Docker Desktop application
+   ```
 
-### Common Issues
+2. **Permission denied errors**
+   ```bash
+   # Ensure Docker has proper permissions
+   sudo usermod -aG docker $USER
+   # Log out and back in, or restart your terminal
+   ```
 
-1. **Docker not available**: Install Docker Desktop or Docker Engine
-2. **Image build fails**: Check Docker daemon is running and has sufficient resources
-3. **Permission denied**: Ensure Docker has proper permissions to build and run containers
-4. **Port conflicts**: Change exposed ports in the configuration if needed
-5. **Timeout errors**: Increase timeout values in SandboxConfig for long-running commands 
+3. **Port already in use**
+   ```bash
+   # Use a different port mapping
+   -p 4000:3000  # Instead of -p 3000:3000
+   ```
+
+4. **Container exits immediately**
+   ```bash
+   # Use -it flag for interactive mode
+   docker run -it --rm sandbox:latest bash
+   ```
+
+5. **Changes not persisting**
+   ```bash
+   # Ensure you're mounting the correct directory
+   -v $(pwd):/workspace  # Mount current directory
+   ```
+
+### Getting Help
+
+If you encounter issues:
+1. Check that Docker is running and accessible
+2. Verify the image was built successfully
+3. Ensure you have sufficient disk space
+4. Check Docker logs: `docker logs <container_id>`
+
+## Security Notes
+
+- The sandbox runs as a non-root user (`developer`)
+- The container is isolated from your host system
+- No persistent data is stored unless you mount volumes
+- Always use `--rm` flag to automatically clean up containers
+
+## Next Steps
+
+Once you're comfortable with the basic setup, you can:
+- Explore the advanced Autogen integration features
+- Set up automated workflows
+- Configure custom development environments
+- Integrate with your CI/CD pipeline 

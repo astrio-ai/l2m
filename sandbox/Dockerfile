@@ -16,6 +16,22 @@ RUN apt-get update && apt-get install -y \
     python3-venv \
     && rm -rf /var/lib/apt/lists/*
 
+# Install Python dependencies for AutoGen
+RUN python3 -m venv /opt/venv && \
+    . /opt/venv/bin/activate && \
+    pip install --no-cache-dir \
+    autogen-core \
+    autogen-agentchat \
+    autogen-ext[openai] \
+    python-dotenv \
+    requests \
+    beautifulsoup4 \
+    lxml \
+    jinja2
+
+# Add virtual environment to PATH
+ENV PATH="/opt/venv/bin:$PATH"
+
 # Install global npm packages commonly used in development
 RUN npm install -g \
     npm@latest \

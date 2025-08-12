@@ -12,6 +12,11 @@ from .sandbox_executor import (
     SandboxConfig, SandboxExecutor, SandboxAgent,
     create_sandbox_executor, create_sandbox_agent, execute_in_sandbox
 )
+
+from .autogen_sandbox_agent import (
+    WebsiteSpec, GenerationResult, AutoGenSandboxAgent,
+    create_autogen_sandbox_agent, generate_website_async
+)
 # debug_autogen.py is a standalone script
 # from .demo_group_chat import demo_group_chat
 # from .migration_example import run_migration_example
@@ -25,6 +30,11 @@ __all__ = [
     'create_sandbox_executor',
     'create_sandbox_agent',
     'execute_in_sandbox',
+    'WebsiteSpec',
+    'GenerationResult',
+    'AutoGenSandboxAgent',
+    'create_autogen_sandbox_agent',
+    'generate_website_async',
     # 'debug_autogen_setup',  # debug_autogen.py is a standalone script
     # 'demo_group_chat',
     # 'run_migration_example'
