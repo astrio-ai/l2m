@@ -88,6 +88,10 @@ from engine.agents.core_agents.base_agent import AgentRole
 # Import AutoGen integration modules (with stderr redirected to suppress warnings)
 from engine.agents.autogen_integration.autogen_wrapper import AutoGenAgentWrapper, AutoGenConfig
 from engine.agents.autogen_integration.group_chat_coordinator import GroupChatCoordinator
+from engine.agents.autogen_integration.sandbox_executor import (
+    SandboxConfig, SandboxExecutor, SandboxAgent,
+    create_sandbox_executor, create_sandbox_agent, execute_in_sandbox
+)
 
 # Restore stderr and stdout after imports
 sys.stderr.close()
@@ -439,6 +443,11 @@ class Legacy2ModernCLI:
         self.use_autogen = os.getenv('USE_AUTOGEN', 'false').lower() == 'true'
         self.autogen_agents = {}
         
+        # Add Sandbox support
+        self.use_sandbox = os.getenv('USE_SANDBOX', 'true').lower() == 'true'
+        self.sandbox_executor = None
+        self.sandbox_agent = None
+        
     def display_banner(self):
         """Display the Legacy2Modern banner with pixel-art style similar to Gemini."""
         
@@ -507,6 +516,12 @@ class Legacy2ModernCLI:
                 success = await self._initialize_autogen_agents()
             else:
                 success = await self._initialize_traditional_agents()
+            
+            # Initialize sandbox if enabled
+            if self.use_sandbox:
+                sandbox_success = await self._initialize_sandbox()
+                if not sandbox_success:
+                    self.console.print("[#FF6B6B]Warning: Sandbox initialization failed[/#FF6B6B]")
             
             return success
                 
@@ -600,6 +615,33 @@ class Legacy2ModernCLI:
         )
         
         self.console.print("[green]AutoGen agents initialized successfully[/green]")
+    
+    async def _initialize_sandbox(self):
+        """Initialize sandbox environment."""
+        try:
+            # Create sandbox configuration
+            config = SandboxConfig(
+                docker_image="sandbox:latest",
+                work_dir="/workspace",
+                command_timeout=300,
+                env_vars={
+                    "NODE_ENV": "development",
+                    "CI": "false"
+                }
+            )
+            
+            # Initialize sandbox executor
+            self.sandbox_executor = SandboxExecutor(config)
+            
+            # Initialize sandbox agent
+            self.sandbox_agent = SandboxAgent("cli-sandbox-agent", config)
+            
+            self.console.print("[#00D4AA]✅ Sandbox environment initialized successfully[/#00D4AA]")
+            return True
+            
+        except Exception as e:
+            self.console.print(f"[#FF6B6B]Error initializing sandbox: {e}[/#FF6B6B]")
+            return False
     
     def get_status_info(self):
         """Get current status information."""
@@ -1066,6 +1108,8 @@ class Legacy2ModernCLI:
         elif cmd == 'agents':
             status = await self.get_agent_status()
             self.display_agent_status(status)
+        elif cmd == 'sandbox':
+            await self.handle_sandbox_command(parts[1:] if len(parts) > 1 else [])
         elif cmd == 'exit':
             self.console.print("[#0053D6]Goodbye![/#0053D6]")
             sys.exit(0)
@@ -1140,16 +1184,48 @@ class Legacy2ModernCLI:
                 self.console.print("[#FFA500]Examples:[/#FFA500]")
                 self.console.print("[#FFA500]  - analyze my-website.html[/#FFA500]")
                 self.console.print("[#FFA500]  - analyze legacy-project[/#FFA500]")
+        
+        elif 'sandbox' in query_lower or 'docker' in query_lower or 'container' in query_lower:
+            if self.sandbox_executor:
+                self.console.print("[#00D4AA]Sandbox is available! Use /sandbox <command> to execute commands.[/#00D4AA]")
+                self.console.print("[#00D4AA]Examples:[/#00D4AA]")
+                self.console.print("[#00D4AA]  - /sandbox node --version[/#00D4AA]")
+                self.console.print("[#00D4AA]  - /sandbox npm install react[/#00D4AA]")
+                self.console.print("[#00D4AA]  - /sandbox create-react-app my-app[/#00D4AA]")
+            else:
+                self.console.print("[#FF6B6B]Sandbox is not available. Check Docker installation.[/#FF6B6B]")
+    
+    async def handle_sandbox_command(self, args: List[str]):
+        """Handle sandbox commands."""
+        if not self.sandbox_executor:
+            self.console.print("[#FF6B6B]Sandbox is not available. Check Docker installation.[/#FF6B6B]")
+            return
+        
+        if not args:
+            self.console.print("[#FFA500]Usage: /sandbox <command>[/#FFA500]")
+            self.console.print("[#FFA500]Examples:[/#FFA500]")
+            self.console.print("[#FFA500]  - /sandbox node --version[/#FFA500]")
+            self.console.print("[#FFA500]  - /sandbox npm install react[/#FFA500]")
+            self.console.print("[#FFA500]  - /sandbox npx create-react-app my-app --yes[/#FFA500]")
+            return
+        
+        command = " ".join(args)
+        self.console.print(f"[#00D4AA]Executing in sandbox: {command}[/#00D4AA]")
+        
+        try:
+            result = self.sandbox_executor.execute(command)
             
-        elif 'status' in query_lower or 'agents' in query_lower:
-            status = await self.get_agent_status()
-            self.display_agent_status(status)
-            
-        elif 'help' in query_lower:
-            self.show_help()
-            
-        else:
-            self.console.print("[#FFA500]I'm not sure how to help with that. Try /help for available commands.[/#FFA500]")
+            if result.get("success", False):
+                self.console.print(f"[#00D4AA]✅ Success:[/#00D4AA]")
+                if result.get("stdout"):
+                    self.console.print(result["stdout"])
+            else:
+                self.console.print(f"[#FF6B6B]❌ Error:[/#FF6B6B]")
+                if result.get("stderr"):
+                    self.console.print(result["stderr"])
+                    
+        except Exception as e:
+            self.console.print(f"[#FF6B6B]❌ Execution failed: {e}[/#FF6B6B]")
             
     def show_help(self):
         """Show help information."""
@@ -1165,6 +1241,12 @@ class Legacy2ModernCLI:
 [bold blue]General Commands:[/bold blue]
   /help                                    - Show this help message
   /exit, /quit                            - Exit the CLI
+
+[bold blue]Sandbox Commands:[/bold blue]
+  /sandbox <command>                       - Execute commands in isolated Docker sandbox
+  /sandbox node --version                  - Check Node.js version
+  /sandbox npm install react               - Install packages
+  /sandbox npx create-react-app my-app     - Create new projects
 
 [bold blue]Natural Language:[/bold blue]
   "modernize my-website.html"             - Modernize a specific project
