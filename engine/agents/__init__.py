@@ -20,7 +20,9 @@ from .utilities import (
 
 # AutoGen integration
 from .autogen_integration import (
-    AutoGenAgentWrapper, GroupChatCoordinator
+    AutoGenAgentWrapper, GroupChatCoordinator,
+    SandboxConfig, SandboxExecutor, SandboxAgent,
+    create_sandbox_executor, create_sandbox_agent, execute_in_sandbox
 )
 
 __all__ = [
@@ -51,6 +53,12 @@ __all__ = [
     # AutoGen integration
     'AutoGenAgentWrapper',
     'GroupChatCoordinator',
+    'SandboxConfig',
+    'SandboxExecutor',
+    'SandboxAgent',
+    'create_sandbox_executor',
+    'create_sandbox_agent',
+    'execute_in_sandbox',
     # 'debug_autogen_setup',  # debug_autogen.py is a standalone script
     # 'demo_group_chat',
     # 'run_migration_example'

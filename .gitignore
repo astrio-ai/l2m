@@ -266,6 +266,9 @@ test_output/*.js
 test_output/*.jsx
 test_output/*.tsx
 
+# Session-specific memory files
+memory/
+
 # Utility scripts (optional)
 clean_output.py
 
