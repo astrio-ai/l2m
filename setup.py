@@ -20,7 +20,7 @@ setup(
     version="0.1.0",
     author="Naing Oo Lwin",
     author_email="naingoolwin.astrio@gmail.com",
-    description="AI-Powered Legacy Code Transpilation Engine with Modern CLI",
+    description="AI-Powered Legacy COBOL Transpilation Engine with Modern CLI",
     long_description=read_readme(),
     long_description_content_type="text/markdown",
     url="https://github.com/astrio-ai/legacy2modern",
@@ -42,8 +42,8 @@ setup(
     install_requires=read_requirements(),
     entry_points={
         "console_scripts": [
-            "legacy2modern=engine.cli.cli:run_cli",
-            "l2m=engine.cli.cli:run_cli",
+            "legacy2modern=engine.cli.cli:main",
+            "l2m=engine.cli.cli:main",
         ],
     },
     scripts=[
@@ -52,7 +52,7 @@ setup(
     ],
     include_package_data=True,
     zip_safe=False,
-    keywords="website, modernization, react, nextjs, astro, legacy, cli, transpiler",
+    keywords="cobol, transpiler, legacy, modernization, python, cli",
     project_urls={
         "Bug Reports": "https://github.com/astrio-ai/legacy2modern/issues",
         "Source": "https://github.com/astrio-ai/legacy2modern",

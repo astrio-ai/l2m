@@ -11,7 +11,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # Import and run the CLI
-from engine.cli.cli import run_cli
+from engine.cli.cli import main
 
 if __name__ == "__main__":
-    run_cli() 
+    main() 

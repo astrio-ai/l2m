@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "legacy2modern"
 version = "0.1.0"
-description = "AI-Powered Website Modernization Engine with Modern CLI"
+description = "AI-Powered Legacy COBOL Transpilation Engine with Modern CLI"
 readme = "README.md"
 license = {text = "Apache-2.0"}
 authors = [
@@ -14,7 +14,7 @@ authors = [
 maintainers = [
     {name = "Naing Oo Lwin", email = "naingoolwin.astrio@gmail.com"}
 ]
-keywords = ["website", "modernization", "react", "nextjs", "astro", "legacy", "cli", "transpiler"]
+keywords = ["cobol", "transpiler", "legacy", "modernization", "python", "cli"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -25,8 +25,8 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Software Development :: Code Generators",
+    "Topic :: Software Development :: Compilers",
     "Topic :: Software Development :: Libraries :: Python Modules",
-    "Topic :: Internet :: WWW/HTTP :: Site Management",
 ]
 requires-python = ">=3.10"
 dependencies = [
@@ -42,6 +42,7 @@ dependencies = [
     "requests>=2.31.0",
     "beautifulsoup4>=4.12.0",
     "lxml>=4.9.0",
+    "antlr4-python3-runtime>=4.9.0",
     "jinja2>=3.0.0",
     "colorlog>=6.0.0",
 ]
@@ -62,8 +63,8 @@ Repository = "https://github.com/astrio-ai/legacy2modern"
 "Bug Tracker" = "https://github.com/astrio-ai/legacy2modern/issues"
 
 [project.scripts]
-legacy2modern = "engine.cli.cli:run_cli"
-l2m = "engine.cli.cli:run_cli"
+legacy2modern = "engine.cli.cli:main"
+l2m = "engine.cli.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
