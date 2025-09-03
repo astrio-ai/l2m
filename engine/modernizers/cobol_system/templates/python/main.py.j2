@@ -1,0 +1,73 @@
+# Generated Python code from {{ program_name }}
+
+{% if has_variables %}
+# Variable declarations
+{% for var in variables %}
+{{ var.name | python_name }} = {{ var.type | python_value(var.type) }}
+{% endfor %}
+
+{% endif %}
+{% for func in functions %}
+def {{ func.name | python_name }}({% if func.params %}{{ func.params | join(', ') }}{% endif %}):
+{% for stmt in func.body %}
+{% if stmt.type == 'assignment' %}
+    {{ stmt.target | python_name }} = {{ stmt.value | render_expression }}
+{% elif stmt.type == 'output' %}
+{% if stmt.output_values and stmt.output_values | length == 1 %}
+    print({{ stmt.output_values[0] | render_expression }})
+{% elif stmt.output_values %}
+    print({% for val in stmt.output_values %}{{ val | render_expression }}{% if not loop.last %} + {% endif %}{% endfor %})
+{% else %}
+    print()
+{% endif %}
+{% elif stmt.type == 'input' %}
+{% if stmt.input_type == 'int' %}
+    {{ stmt.target | python_name }} = int(input())
+{% elif stmt.input_type == 'float' %}
+    {{ stmt.target | python_name }} = float(input())
+{% else %}
+    {{ stmt.target | python_name }} = input()
+{% endif %}
+{% elif stmt.type == 'loop' %}
+    while {{ stmt.condition | render_expression }}:
+{% for body_stmt in stmt.body %}
+{% if body_stmt.type == 'assignment' %}
+        {{ body_stmt.target | python_name }} = {{ body_stmt.value | render_expression }}
+{% elif body_stmt.type == 'output' %}
+{% if body_stmt.output_values and body_stmt.output_values | length == 1 %}
+        print({{ body_stmt.output_values[0] | render_expression }})
+{% elif body_stmt.output_values %}
+        print({% for val in body_stmt.output_values %}{{ val | render_expression }}{% if not loop.last %} + {% endif %}{% endfor %})
+{% else %}
+        print()
+{% endif %}
+{% elif body_stmt.type == 'input' %}
+{% if body_stmt.input_type == 'int' %}
+        {{ body_stmt.target | python_name }} = int(input())
+{% elif body_stmt.input_type == 'float' %}
+        {{ body_stmt.target | python_name }} = float(input())
+{% else %}
+        {{ body_stmt.target | python_name }} = input()
+{% endif %}
+{% elif body_stmt.type == 'return' %}
+{% if body_stmt.value %}
+        return {{ body_stmt.value | render_expression }}
+{% else %}
+        return
+{% endif %}
+{% endif %}
+{% endfor %}
+{% elif stmt.type == 'return' %}
+{% if stmt.value %}
+    return {{ stmt.value | render_expression }}
+{% else %}
+    return
+{% endif %}
+{% endif %}
+{% endfor %}
+
+{% endfor %}
+{% if has_functions %}
+if __name__ == '__main__':
+    main()
+{% endif %} 
