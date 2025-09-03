@@ -1,52 +1,16 @@
 """
-Modern CLI Interface for Legacy2Modern Agents
+Modern CLI Interface for Legacy2Modern
 
-A beautiful, interactive command-line interface for the AutoGen-based
-multi-agent modernization system.
+A beautiful, interactive command-line interface similar to Gemini CLI
+that provides an intuitive way to transpile legacy code to modern languages.
 """
-
-# Suppress warnings early
-import warnings
-import sys
-import os
-
-# Temporarily redirect stderr and stdout to suppress import warnings
-original_stderr = sys.stderr
-original_stdout = sys.stdout
-sys.stderr = open(os.devnull, 'w')
-sys.stdout = open(os.devnull, 'w')
-
-warnings.filterwarnings('ignore', category=UserWarning)
-warnings.filterwarnings('ignore', message='AutoGen import failed')
-warnings.filterwarnings('ignore', message='TextAnalyzerAgent not available')
 
 import os
 import sys
 import asyncio
 from pathlib import Path
-from typing import Optional, List, Dict, Any
+from typing import Optional, List
 import json
-
-# Load environment variables from .env file
-try:
-    from dotenv import load_dotenv
-    # Find and load .env file from project root
-    project_root = Path(__file__).parent.parent.parent
-    env_path = project_root / '.env'
-    if env_path.exists():
-        load_dotenv(env_path)
-    else:
-        # Fallback to current directory
-        load_dotenv()
-except ImportError:
-    pass
-
-# Suppress OpenSSL warnings
-try:
-    import urllib3
-    warnings.filterwarnings('ignore', category=urllib3.exceptions.NotOpenSSLWarning)
-except ImportError:
-    pass
 
 try:
     import click
@@ -81,380 +45,24 @@ except ImportError:
 # Add the project root to sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-# Import agents system components (with stderr redirected to suppress warnings)
-sys.stderr = open(os.devnull, 'w')
-from engine.agents import (
-    AI, BaseAgent, BaseExecutionEnv, ChatToFiles, DiffProcessor,
-    FilesDict, GitManager, LintingManager, PrepromptsHolder, ProjectConfig,
-    PromptBuilder, TokenUsageTracker, VersionManager, ParserAgent,
-    ModernizerAgent, RefactorAgent, QAAgent, CoordinatorAgent
-)
-from engine.agents.core_agents.base_memory import FileMemory
-from engine.agents.core_agents.base_agent import AgentRole
-
-# Import AutoGen integration modules (with stderr redirected to suppress warnings)
-from engine.agents.autogen_integration.autogen_wrapper import AutoGenAgentWrapper, AutoGenConfig
-from engine.agents.autogen_integration.group_chat_coordinator import GroupChatCoordinator
-from engine.agents.autogen_integration.sandbox_executor import (
-    SandboxConfig, SandboxExecutor, SandboxAgent,
-    create_sandbox_executor, create_sandbox_agent, execute_in_sandbox
-)
-
-
-# Restore stderr and stdout after imports
-sys.stderr.close()
-sys.stdout.close()
-sys.stderr = original_stderr
-sys.stdout = original_stdout
-
-"""
-AutoGen integration layer for legacy2modern agents.
-
-This module provides wrapper classes to integrate existing agents with AutoGen's
-ConversableAgent framework while preserving domain-specific logic.
-"""
-
-import asyncio
-import logging
-from typing import Dict, List, Optional, Any, Union, Callable
-from dataclasses import dataclass, field
-
-# AutoGen imports
-try:
-    import autogen
-    from autogen import ConversableAgent, AssistantAgent, UserProxyAgent
-    try:
-        from autogen.agentchat.contrib.text_analyzer_agent import TextAnalyzerAgent
-    except ImportError:
-        TextAnalyzerAgent = None
-    AUTOGEN_AVAILABLE = True
-except ImportError:
-    AUTOGEN_AVAILABLE = False
-    TextAnalyzerAgent = None
-    # Fallback classes for when AutoGen is not available
-    class ConversableAgent:
-        def __init__(self, *args, **kwargs):
-            raise ImportError("AutoGen not installed. Run: pip install -U 'autogen-agentchat' 'autogen-ext[openai]'")
-    
-    class AssistantAgent:
-        def __init__(self, *args, **kwargs):
-            raise ImportError("AutoGen not installed. Run: pip install -U 'autogen-agentchat' 'autogen-ext[openai]'")
-    
-    class UserProxyAgent:
-        def __init__(self, *args, **kwargs):
-            raise ImportError("AutoGen not installed. Run: pip install -U 'autogen-agentchat' 'autogen-ext[openai]'")
-
-# These imports are already handled above, removing duplicates
-
-logger = logging.getLogger(__name__)
-
-@dataclass
-class AutoGenConfig:
-    """Configuration for AutoGen integration."""
-    enable_autogen: bool = True
-    use_group_chat: bool = False
-    human_in_the_loop: bool = False
-    max_consecutive_auto_reply: int = 10
-    llm_config: Optional[Dict[str, Any]] = None
-
-class AutoGenAgentWrapper:
-    """
-    Wrapper class that adapts existing BaseAgent to AutoGen's ConversableAgent.
-    
-    This allows gradual migration to AutoGen while preserving existing domain logic.
-    """
-    
-    def __init__(
-        self,
-        base_agent: BaseAgent,
-        autogen_config: Optional[AutoGenConfig] = None,
-        **kwargs
-    ):
-        self.base_agent = base_agent
-        self.autogen_config = autogen_config or AutoGenConfig()
-        
-        # Create AutoGen agent
-        self.autogen_agent = self._create_autogen_agent(**kwargs)
-        
-        # Bridge between systems
-        self.message_bridge = MessageBridge()
-        
-        logger.info(f"Created AutoGen wrapper for {base_agent.name} ({base_agent.role.value})")
-        
-    def _create_autogen_agent(self, **kwargs) -> ConversableAgent:
-        """Create the underlying AutoGen agent."""
-        if not AUTOGEN_AVAILABLE:
-            raise ImportError("AutoGen not available. Install with: pip install -U 'autogen-agentchat' 'autogen-ext[openai]'")
-        
-        # Convert our AI wrapper to AutoGen LLM config
-        llm_config = self._convert_ai_to_llm_config()
-        
-        # Create agent based on role
-        if self.base_agent.role == AgentRole.COORDINATOR:
-            return AssistantAgent(
-                name=self.base_agent.name,
-                system_message=self.base_agent.system_prompt,
-                llm_config=llm_config,
-                max_consecutive_auto_reply=self.autogen_config.max_consecutive_auto_reply,
-                **kwargs
-            )
-        else:
-            return ConversableAgent(
-                name=self.base_agent.name,
-                system_message=self.base_agent.system_prompt,
-                llm_config=llm_config,
-                max_consecutive_auto_reply=self.autogen_config.max_consecutive_auto_reply,
-                **kwargs
-            )
-    
-    def _convert_ai_to_llm_config(self) -> Dict[str, Any]:
-        """Convert our AI wrapper to AutoGen LLM config format."""
-        ai = self.base_agent.ai
-        
-        # Base config
-        config = {
-            "config_list": [{
-                "model": ai.model,
-                "api_key": ai.api_key,
-            }],
-            "temperature": ai.temperature,
-            "max_tokens": ai.max_tokens,
-        }
-        
-        # Add provider-specific settings
-        if ai.provider == "openai":
-            config["config_list"][0]["api_base"] = "https://api.openai.com/v1"
-        elif ai.provider == "anthropic":
-            config["config_list"][0]["api_base"] = "https://api.anthropic.com"
-            config["config_list"][0]["api_type"] = "anthropic"
-        
-        return config
-    
-    async def process_message(self, message: Dict[str, Any]) -> Dict[str, Any]:
-        """Process message through both systems."""
-        # First, process through our domain logic
-        domain_response = await self.base_agent.process_message(message)
-        
-        # Then, if AutoGen is enabled, process through AutoGen
-        if self.autogen_config.enable_autogen:
-            autogen_response = await self._process_autogen_message(message)
-            # Merge responses
-            return self._merge_responses(domain_response, autogen_response)
-        
-        return domain_response
-    
-    async def _process_autogen_message(self, message: Dict[str, Any]) -> Dict[str, Any]:
-        """Process message through AutoGen system."""
-        try:
-            # Convert our message format to AutoGen format
-            autogen_message = self.message_bridge.to_autogen_format(message)
-            
-            # Process through AutoGen
-            response = await self.autogen_agent.a_generate_reply(
-                messages=[autogen_message],
-                sender=None
-            )
-            
-            # Convert back to our format
-            return self.message_bridge.from_autogen_format(response)
-            
-        except Exception as e:
-            logger.error(f"AutoGen processing failed: {e}")
-            return {"error": str(e)}
-    
-    def _merge_responses(self, domain_response: Dict[str, Any], autogen_response: Dict[str, Any]) -> Dict[str, Any]:
-        """Merge responses from both systems."""
-        merged = domain_response.copy()
-        
-        # Add AutoGen insights if available
-        if "content" in autogen_response:
-            merged["autogen_insights"] = autogen_response["content"]
-        
-        if "suggestions" in autogen_response:
-            merged["autogen_suggestions"] = autogen_response["suggestions"]
-        
-        return merged
-    
-    async def execute_task(self, task: Dict[str, Any]) -> Dict[str, Any]:
-        """Execute task through the base agent."""
-        return await self.base_agent.execute_task(task)
-    
-    def get_status(self) -> Dict[str, Any]:
-        """Get combined status from both systems."""
-        base_status = self.base_agent.get_status()
-        base_status["autogen_enabled"] = self.autogen_config.enable_autogen
-        base_status["autogen_agent_type"] = type(self.autogen_agent).__name__
-        return base_status
-
-class MessageBridge:
-    """Bridges message formats between our system and AutoGen."""
-    
-    def to_autogen_format(self, message: Dict[str, Any]) -> Dict[str, Any]:
-        """Convert our message format to AutoGen format."""
-        return {
-            "role": "user",
-            "content": self._format_content_for_autogen(message),
-            "name": message.get("sender", "unknown")
-        }
-    
-    def from_autogen_format(self, response: Any) -> Dict[str, Any]:
-        """Convert AutoGen response to our format."""
-        if hasattr(response, 'content'):
-            return {
-                "type": "response",
-                "content": response.content,
-                "sender": getattr(response, 'name', 'autogen_agent')
-            }
-        elif isinstance(response, dict):
-            return response
-        else:
-            return {
-                "type": "response",
-                "content": str(response),
-                "sender": "autogen_agent"
-            }
-    
-    def _format_content_for_autogen(self, message: Dict[str, Any]) -> str:
-        """Format message content for AutoGen consumption."""
-        message_type = message.get("type", "unknown")
-        
-        if message_type == "task":
-            return f"Task: {message.get('task_type', 'unknown')}\nDetails: {message.get('details', {})}"
-        elif message_type == "analysis":
-            return f"Analysis Request: {message.get('content', '')}"
-        elif message_type == "response":
-            return f"Response: {message.get('content', '')}"
-        else:
-            return str(message)
-
-class AutoGenCoordinator:
-    """
-    Coordinator that manages AutoGen group chats and agent interactions.
-    """
-    
-    def __init__(
-        self,
-        agents: List[AutoGenAgentWrapper],
-        config: Optional[AutoGenConfig] = None
-    ):
-        self.agents = agents
-        self.config = config or AutoGenConfig()
-        self.group_chat = None
-        
-        if self.config.use_group_chat:
-            self._setup_group_chat()
-    
-    def _setup_group_chat(self):
-        """Set up AutoGen group chat."""
-        if not AUTOGEN_AVAILABLE:
-            logger.warning("AutoGen not available, group chat disabled")
-            return
-        
-        # Create group chat with all agents
-        autogen_agents = [agent.autogen_agent for agent in self.agents]
-        
-        self.group_chat = autogen.GroupChat(
-            agents=autogen_agents,
-            messages=[],
-            max_round=50
-        )
-        
-        # Create manager
-        self.manager = autogen.GroupChatManager(
-            groupchat=self.group_chat,
-            llm_config=self._get_manager_llm_config()
-        )
-    
-    def _get_manager_llm_config(self) -> Dict[str, Any]:
-        """Get LLM config for the group chat manager."""
-        # Use the first agent's config as default
-        if self.agents:
-            return self.agents[0]._convert_ai_to_llm_config()
-        return {}
-    
-    async def coordinate_task(self, task: Dict[str, Any]) -> Dict[str, Any]:
-        """Coordinate a task across all agents using AutoGen."""
-        if not self.group_chat:
-            # Fallback to traditional coordination
-            return await self._traditional_coordination(task)
-        
-        try:
-            # Convert task to AutoGen message
-            bridge = MessageBridge()
-            autogen_message = bridge.to_autogen_format({
-                "type": "task",
-                "task_type": task.get("type", "unknown"),
-                "details": task
-            })
-            
-            # Run group chat
-            response = await self.manager.a_run(
-                messages=[autogen_message],
-                sender=None
-            )
-            
-            return bridge.from_autogen_format(response)
-            
-        except Exception as e:
-            logger.error(f"AutoGen coordination failed: {e}")
-            return await self._traditional_coordination(task)
-    
-    async def _traditional_coordination(self, task: Dict[str, Any]) -> Dict[str, Any]:
-        """Fallback to traditional agent coordination."""
-        # Find coordinator agent
-        coordinator = next(
-            (agent for agent in self.agents 
-             if agent.base_agent.role == AgentRole.COORDINATOR),
-            None
-        )
-        
-        if coordinator:
-            return await coordinator.execute_task(task)
-        else:
-            return {"error": "No coordinator agent found"}
-
-# Factory function for easy agent creation
-def create_autogen_wrapped_agent(
-    base_agent: BaseAgent,
-    enable_autogen: bool = True,
-    **kwargs
-) -> AutoGenAgentWrapper:
-    """Create an AutoGen-wrapped agent."""
-    config = AutoGenConfig(enable_autogen=enable_autogen)
-    return AutoGenAgentWrapper(base_agent, config, **kwargs)
+from engine.modernizers.cobol_system.transpilers.hybrid_transpiler import HybridTranspiler
+from engine.modernizers.static_site.transpilers.transpiler import StaticSiteTranspiler as WebsiteTranspiler
+from engine.modernizers.static_site.transpilers.agent import WebsiteAgent
+from engine.modernizers.cobol_system.transpilers.llm_augmentor import LLMConfig
+from engine.agents.agent import LLMAgent
 
 
 class Legacy2ModernCLI:
-    """Modern CLI interface for Legacy2Modern agents system."""
+    """Modern CLI interface for Legacy2Modern transpilation engine."""
     
     def __init__(self):
         self.console = Console()
-        
-        # Agent system components
-        self.ai = None
-        self.memory = None
-        self.config = None
-        self.coordinator = None
-        self.parser_agent = None
-        self.modernizer_agent = None
-        self.refactor_agent = None
-        self.qa_agent = None
-        
-        # Comment out modernizer components - not using them
-        # self.llm_config = None
-        # self.hybrid_transpiler = None
-        # self.website_transpiler = None
-        # self.website_modernizer = None
-        # self.llm_agent = None
-        
-        # Add AutoGen support
-        self.use_autogen = os.getenv('USE_AUTOGEN', 'false').lower() == 'true'
-        self.autogen_agents = {}
-        
-        # Add Sandbox support
-        self.use_sandbox = os.getenv('USE_SANDBOX', 'true').lower() == 'true'
-        self.sandbox_executor = None
-        self.sandbox_agent = None
+        self.session = PromptSession() if PromptSession else None
+        self.llm_config = None
+        self.hybrid_transpiler = None
+        self.website_transpiler = None
+        self.website_modernizer = None
+        self.llm_agent = None
         
     def display_banner(self):
         """Display the Legacy2Modern banner with pixel-art style similar to Gemini."""
@@ -483,10 +91,10 @@ class Legacy2ModernCLI:
     def display_tips(self):
         """Display helpful tips for getting started."""
         tips = [
-            "🤖 Multi-agent modernization system powered by AutoGen",
+            "💡 Transpile COBOL files to modern Python code",
+            "💡 Modernize legacy websites (HTML + Bootstrap + jQuery + PHP)",
             "💡 Use natural language to describe your transformation needs", 
             "💡 Get AI-powered analysis and optimization suggestions",
-            "💡 Coordinate multiple specialized agents for complex tasks",
             "💡 Type /help for more information"
         ]
         
@@ -499,158 +107,22 @@ class Legacy2ModernCLI:
         )
         self.console.print(panel)
         
-    async def initialize_components(self):
+    def initialize_components(self):
         """Initialize all CLI components."""
         try:
-            # Initialize AI configuration
-            api_key = os.getenv('LLM_API_KEY') or os.getenv('OPENAI_API_KEY') or os.getenv('ANTHROPIC_API_KEY')
-            if not api_key:
-                self.console.print("[#FF6B6B]Warning: No LLM API key found. Set LLM_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY[/#FF6B6B]")
-                return False
+            # Initialize LLM configuration
+            self.llm_config = LLMConfig.from_env()
             
-            # Determine provider and model
-            provider = "anthropic" if os.getenv('ANTHROPIC_API_KEY') else "openai"
-            model = os.getenv('LLM_MODEL', 'claude-3-sonnet-20240229' if provider == "anthropic" else 'gpt-4')
-            
-            # Initialize AI
-            self.ai = AI(api_key=api_key, provider=provider, model=model)
-            
-            # Initialize memory and configuration
-            self.memory = FileMemory()
-            self.config = ProjectConfig()
-            
-            # Initialize agents based on configuration
-            if self.use_autogen:
-                success = await self._initialize_autogen_agents()
-            else:
-                success = await self._initialize_traditional_agents()
-            
-            # Initialize sandbox if enabled
-            if self.use_sandbox:
-                sandbox_success = await self._initialize_sandbox()
-                if not sandbox_success:
-                    self.console.print("[#FF6B6B]Warning: Sandbox initialization failed[/#FF6B6B]")
-            
-            return success
-                
+            # Initialize transpilers and agents
+            self.hybrid_transpiler = HybridTranspiler(self.llm_config)
+            self.website_transpiler = WebsiteTranspiler()
+            self.website_modernizer = WebsiteAgent()
+            self.llm_agent = LLMAgent(self.llm_config)
+            return True
         except Exception as e:
             self.console.print(f"[#FF6B6B]Error initializing components: {e}[/#FF6B6B]")
             return False
             
-    async def _initialize_traditional_agents(self):
-        """Initialize traditional agents (existing system)."""
-        # Initialize AI configuration
-        api_key = os.getenv('LLM_API_KEY') or os.getenv('OPENAI_API_KEY') or os.getenv('ANTHROPIC_API_KEY')
-        if not api_key:
-            self.console.print("[#FF6B6B]Warning: No LLM API key found. Set LLM_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY[/#FF6B6B]")
-            return False
-        
-        # Determine provider and model
-        provider = "anthropic" if os.getenv('ANTHROPIC_API_KEY') else "openai"
-        model = os.getenv('LLM_MODEL', 'claude-3-sonnet-20240229' if provider == "anthropic" else 'gpt-4')
-        
-        # Initialize AI
-        self.ai = AI(api_key=api_key, provider=provider, model=model)
-        
-        # Initialize memory and configuration
-        self.memory = FileMemory()
-        self.config = ProjectConfig()
-        
-        # Initialize agents
-        self.coordinator = CoordinatorAgent(
-            name="coordinator",
-            ai=self.ai,
-            memory=self.memory,
-            config=self.config
-        )
-        
-        self.parser_agent = ParserAgent(
-            ai=self.ai,
-            memory=self.memory,
-            config=self.config
-        )
-        
-        self.modernizer_agent = ModernizerAgent(
-            ai=self.ai,
-            memory=self.memory,
-            config=self.config
-        )
-        
-        self.refactor_agent = RefactorAgent(
-            ai=self.ai,
-            memory=self.memory,
-            config=self.config
-        )
-        
-        self.qa_agent = QAAgent(
-            ai=self.ai,
-            memory=self.memory,
-            config=self.config
-        )
-        
-        # Register agents with coordinator
-        await self.coordinator.register_agent(self.parser_agent)
-        await self.coordinator.register_agent(self.modernizer_agent)
-        await self.coordinator.register_agent(self.refactor_agent)
-        await self.coordinator.register_agent(self.qa_agent)
-        
-        return True
-    
-    async def _initialize_autogen_agents(self):
-        """Initialize AutoGen-wrapped agents."""
-        from .agents.autogen_wrapper import AutoGenAgentWrapper, AutoGenCoordinator, AutoGenConfig
-        
-        # Create base agents
-        base_agents = {
-            "parser": ParserAgent(ai=self.ai, memory=self.memory, config=self.config),
-            "modernizer": ModernizerAgent(ai=self.ai, memory=self.memory, config=self.config),
-            "refactor": RefactorAgent(ai=self.ai, memory=self.memory, config=self.config),
-            "qa": QAAgent(ai=self.ai, memory=self.memory, config=self.config),
-            "coordinator": CoordinatorAgent(name="coordinator", ai=self.ai, memory=self.memory, config=self.config)
-        }
-        
-        # Wrap with AutoGen
-        for name, agent in base_agents.items():
-            self.autogen_agents[name] = AutoGenAgentWrapper(
-                agent,
-                AutoGenConfig(enable_autogen=True)
-            )
-        
-        # Create coordinator
-        self.coordinator = AutoGenCoordinator(
-            list(self.autogen_agents.values()),
-            AutoGenConfig(enable_autogen=True, use_group_chat=True)
-        )
-        
-        self.console.print("[green]AutoGen agents initialized successfully[/green]")
-    
-    async def _initialize_sandbox(self):
-        """Initialize sandbox environment."""
-        try:
-            # Create sandbox configuration
-            config = SandboxConfig(
-                docker_image="sandbox:latest",
-                work_dir="/workspace",
-                command_timeout=300,
-                env_vars={
-                    "NODE_ENV": "development",
-                    "CI": "false"
-                }
-            )
-            
-            # Initialize sandbox executor
-            self.sandbox_executor = SandboxExecutor(config)
-            
-            # Initialize sandbox agent
-            self.sandbox_agent = SandboxAgent("cli-sandbox-agent", config)
-            
-            self.console.print("[#00D4AA]✅ Sandbox environment initialized successfully[/#00D4AA]")
-            return True
-            
-        except Exception as e:
-            self.console.print(f"[#FF6B6B]Error initializing sandbox: {e}[/#FF6B6B]")
-            return False
-    
     def get_status_info(self):
         """Get current status information."""
         status_items = []
@@ -666,11 +138,11 @@ class Legacy2ModernCLI:
         except:
             pass
             
-        # Check AI availability
-        if self.ai:
-            status_items.append(f"🤖 {self.ai.provider} ({self.ai.model})")
+        # Check LLM availability
+        if self.llm_config and (self.llm_config.api_key or self.llm_config.provider == "local"):
+            status_items.append(f"🤖 {self.llm_config.provider} ({self.llm_config.model})")
         else:
-            status_items.append("🤖 no AI (see /docs)")
+            status_items.append("🤖 no LLM (see /docs)")
 
         return status_items
         
@@ -681,21 +153,21 @@ class Legacy2ModernCLI:
         
         self.console.print(f"\n[dim]{status_text}[/dim]")
         
-    async def start_modernization_workflow(self, input_path: str, target_stack: str = "react") -> bool:
-        """Start a modernization workflow using the agents system and sandbox."""
+    def transpile_file(self, input_file: str, output_file: Optional[str] = None) -> bool:
+        """Transpile a COBOL file to Python."""
         try:
-            if not os.path.exists(input_path):
-                self.console.print(f"[red]Error: Input path not found: {input_path}[/red]")
+            if not os.path.exists(input_file):
+                self.console.print(f"[red]Error: File not found: {input_file}[/red]")
                 return False
             
-            # Output to output directory - no user choice
-            project_name = Path(input_path).stem
-            output_dir = f"output/modernized-{project_name}"
-            
-            self.console.print(f"[#00D4AA]Modernizing: {input_path}[/#00D4AA]")
-            self.console.print(f"[#00D4AA]Target Framework: {target_stack}[/#00D4AA]")
-            self.console.print(f"[#00D4AA]Output Location: {output_dir}[/#00D4AA]")
-            self.console.print()
+            # Create output file path if not provided
+            if output_file is None:
+                input_path = Path(input_file)
+                # Create output directory
+                output_dir = Path("output/modernized-python")
+                output_dir.mkdir(parents=True, exist_ok=True)
+                # Set output file path
+                output_file = output_dir / input_path.with_suffix('.py').name
             
             with Progress(
                 SpinnerColumn(),
@@ -703,308 +175,89 @@ class Legacy2ModernCLI:
                 console=self.console
             ) as progress:
                 
-                task = progress.add_task("Starting modernization workflow...", total=None)
+                task = progress.add_task("Transpiling COBOL to Python...", total=None)
                 
-                # Configure project
-                self.config.set_target_stack(target_stack)
-                self.config.set_project_name(project_name)
+                # Read source code
+                with open(input_file, 'r') as f:
+                    source_code = f.read()
                 
-                progress.update(task, description="Analyzing project structure...")
+                # Transpile
+                target_code = self.hybrid_transpiler.transpile_source(source_code, input_file)
                 
-                # Step 1: Analyze with ParserAgent
-                analysis_task = {
-                    "type": "full_analysis",
-                    "project_path": input_path,
-                    "description": "Analyze the project structure and create modernization plan"
-                }
+                # Write output
+                with open(output_file, 'w') as f:
+                    f.write(target_code)
                 
-                analysis_result = await self.parser_agent.execute_task(analysis_task)
+                progress.update(task, description="✅ Transpilation completed!")
                 
-                if not analysis_result.get('success', False):
-                    self.console.print(f"\n[#FF6B6B]❌ Analysis failed: {analysis_result.get('error', 'Unknown error')}[/#FF6B6B]")
+            # Display results
+            self.console.print(f"\n[#0053D6]✅ Successfully transpiled: {input_file} → {output_file}[/#0053D6]")
+            
+            # Show code preview
+            self.show_code_preview(source_code, target_code)
+            
+            return True
+            
+        except Exception as e:
+            self.console.print(f"[#FF6B6B]Error during transpilation: {e}[/#FF6B6B]")
+            return False
+
+    def transpile_website(self, input_file: str, output_dir: str, framework: str = 'react') -> bool:
+        """Transpile a legacy website to modern framework."""
+        try:
+            if not os.path.exists(input_file):
+                self.console.print(f"[red]Error: File not found: {input_file}[/red]")
+                return False
+            
+            # Validate framework
+            supported_frameworks = ['react', 'astro', 'nextjs']
+            if framework not in supported_frameworks:
+                self.console.print(f"[red]Error: Unsupported framework '{framework}'. Supported: {', '.join(supported_frameworks)}[/red]")
+                return False
+            
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                console=self.console
+            ) as progress:
+                
+                task = progress.add_task(f"Modernizing website to {framework.upper()}...", total=None)
+                
+                # Transpile website
+                result = self.website_transpiler.transpile_website(
+                    input_file, 
+                    output_dir, 
+                    framework
+                )
+                
+                if result['success']:
+                    progress.update(task, description="✅ Website modernization completed!")
+                    
+                    # Display results
+                    self.console.print(f"\n[#0053D6]✅ Successfully modernized: {input_file} → {output_dir}[/#0053D6]")
+                    self.console.print(f"[#0053D6]Framework: {framework.upper()}[/#0053D6]")
+                    self.console.print(f"[#0053D6]Files generated: {result.get('files_generated', 0)}[/#0053D6]")
+                    self.console.print(f"[#0053D6]Components: {result.get('components_count', 0)}[/#0053D6]")
+                    self.console.print(f"[#0053D6]Pages: {result.get('pages_count', 0)}[/#0053D6]")
+                    
+                    # Show next steps
+                    self.show_website_next_steps(output_dir, framework)
+                    
+                    return True
+                else:
+                    progress.update(task, description="❌ Modernization failed!")
+                    self.console.print(f"[#FF6B6B]Error: {result.get('error', 'Unknown error')}[/#FF6B6B]")
                     return False
-                
-                progress.update(task, description="Generating modern code...")
-                
-                # Step 2: Modernize with ModernizerAgent
-                modernization_task = {
-                    "type": "full_modernization",
-                    "input_path": input_path,
-                    "output_path": output_dir,
-                    "target_stack": target_stack,
-                    "analysis_data": analysis_result.get('project_map', {}),
-                    "description": f"Modernize the project to {target_stack}"
-                }
-                
-                modernization_result = await self.modernizer_agent.execute_task(modernization_task)
-                
-                progress.update(task, description="✅ Modernization completed!")
-                
-            if modernization_result.get('success', False):
-                self.console.print(f"\n[#0053D6]✅ Successfully modernized: {input_path} → {output_dir}[/#0053D6]")
-                self.console.print(f"[#0053D6]Framework: {target_stack.upper()}[/#0053D6]")
-                
-                # Write generated files to output directory
-                await self._write_modernization_files(modernization_result, Path(output_dir))
-                
-                # Show modernization results
-                self._display_modernization_results(modernization_result)
-                
-                # Deploy to sandbox and start development server (optional)
-                await self._deploy_to_sandbox(output_dir, target_stack, project_name, modernization_result)
-                
-                return True
-            else:
-                error_msg = modernization_result.get('error', 'Unknown error occurred')
-                self.console.print(f"\n[#FF6B6B]❌ Modernization failed: {error_msg}[/#FF6B6B]")
-                return False
-                
+                    
         except Exception as e:
-            self.console.print(f"\n[#FF6B6B]❌ Error during modernization: {e}[/#FF6B6B]")
+            self.console.print(f"[#FF6B6B]Error during website modernization: {e}[/#FF6B6B]")
             return False
-    
-    async def _deploy_to_sandbox(self, output_dir: str, target_stack: str, project_name: str, modernization_result: Dict[str, Any]):
-        """Deploy the modernized project to the sandbox and start development server."""
-        if not self.sandbox_executor:
-            self.console.print("[#FF6B6B]Sandbox not available - skipping deployment[/#FF6B6B]")
-            return
-        
-        self.console.print(f"\n[#00D4AA]🚀 Deploying to sandbox and starting development server...[/#00D4AA]")
-        
-        try:
-            # Use the sandbox executor to run the modernized project
-            self.console.print(f"[#00D4AA]📁 Using generated files from: {output_dir}[/#00D4AA]")
-            
-            # Check if the output directory exists and has files
-            output_path = Path(output_dir)
-            if not output_path.exists():
-                self.console.print(f"[#FF6B6B]❌ Output directory not found: {output_dir}[/#FF6B6B]")
-                return
-            
-            # Get the absolute path for Docker mounting
-            abs_output_path = output_path.absolute()
-            
-            # Configure sandbox to mount the output directory
-            from engine.agents.autogen_integration.sandbox_executor import SandboxConfig
-            sandbox_config = SandboxConfig(
-                mount_host_path=str(abs_output_path),
-                mount_container_path="/workspace/modernized-project",
-                work_dir="/workspace/modernized-project"
-            )
-            
-            self.console.print(f"[#00D4AA]🔗 Mounting: {abs_output_path} → /workspace/modernized-project[/#00D4AA]")
-            
-            # Use direct Docker commands for deployment
-            self.console.print(f"[#00D4AA]📦 Installing dependencies...[/#00D4AA]")
-            
-            # Install dependencies using Docker
-            install_cmd = [
-                "docker", "run", "--rm",
-                "-v", f"{abs_output_path}:/workspace/modernized-project",
-                "-w", "/workspace/modernized-project",
-                "sandbox:latest",
-                "npm", "install"
-            ]
-            
-            import subprocess
-            install_result = subprocess.run(install_cmd, capture_output=True, text=True, timeout=300)
-            
-            if install_result.returncode != 0:
-                self.console.print(f"[#FF6B6B]❌ Failed to install dependencies: {install_result.stderr}[/#FF6B6B]")
-                # Try with legacy peer deps
-                install_cmd = [
-                    "docker", "run", "--rm",
-                    "-v", f"{abs_output_path}:/workspace/modernized-project",
-                    "-w", "/workspace/modernized-project",
-                    "sandbox:latest",
-                    "npm", "install", "--legacy-peer-deps"
-                ]
-                install_result = subprocess.run(install_cmd, capture_output=True, text=True, timeout=300)
-                
-                if install_result.returncode != 0:
-                    self.console.print(f"[#FF6B6B]❌ Failed to install dependencies with legacy peer deps[/#FF6B6B]")
-                    self.console.print(f"[#FFA500]💡 You can still access the generated files at: {output_dir}[/#FFA500]")
-                    self.console.print(f"[#FFA500]💡 Try running manually: cd {output_dir} && npm install && npm start[/#FFA500]")
-                    return
-            
-            self.console.print(f"[#00D4AA]✅ Dependencies installed successfully[/#00D4AA]")
-            
-            # Start the development server
-            self.console.print(f"[#00D4AA]🚀 Starting development server...[/#00D4AA]")
-            
-            # Start the server in the background
-            server_cmd = [
-                "docker", "run", "--rm", "-d",
-                "-v", f"{abs_output_path}:/workspace/modernized-project",
-                "-w", "/workspace/modernized-project",
-                "-p", "3000:3000",
-                "sandbox:latest",
-                "npm", "start", "--", "--port", "3000", "--host", "0.0.0.0"
-            ]
-            
-            server_result = subprocess.run(server_cmd, capture_output=True, text=True, timeout=30)
-            
-            if server_result.returncode == 0:
-                self.console.print(f"[#00D4AA]✅ Development server started successfully![/#00D4AA]")
-                self.console.print(f"[#00D4AA]🌐 Access your modernized website at: http://localhost:3000[/#00D4AA]")
-                self.console.print(f"[#00D4AA]📁 Project location: {output_dir}[/#00D4AA]")
-                self.console.print(f"[#00D4AA]🔄 Container ID: {server_result.stdout.strip()}[/#00D4AA]")
-            else:
-                self.console.print(f"[#FF6B6B]❌ Failed to start development server: {server_result.stderr}[/#FF6B6B]")
-                self.console.print(f"[#FFA500]💡 You can still access the generated files at: {output_dir}[/#FFA500]")
-                self.console.print(f"[#FFA500]💡 Try running manually: cd {output_dir} && npm install && npm start[/#FFA500]")
-                
-        except Exception as e:
-            self.console.print(f"[#FF6B6B]❌ Sandbox deployment error: {e}[/#FF6B6B]")
-            self.console.print(f"[#FFA500]💡 You can still access the generated files at: {output_dir}[/#FFA500]")
-            self.console.print(f"[#FFA500]💡 Try running manually: cd {output_dir} && npm install && npm start[/#FFA500]")
 
-    def _display_workflow_results(self, result: Dict[str, Any]):
-        """Display workflow results."""
-        if 'stages' in result:
-            stages = result['stages']
-            
-            # Create a table for workflow summary
-            table = Table(title="Workflow Summary", show_header=True, header_style="bold magenta")
-            table.add_column("Stage", style="cyan", no_wrap=True)
-            table.add_column("Status", style="green")
-            table.add_column("Duration", style="yellow")
-            
-            for stage in stages:
-                status = stage.get('status', 'unknown')
-                duration = stage.get('duration', 'N/A')
-                table.add_row(stage.get('name', 'Unknown'), status, str(duration))
-            
-            self.console.print(table)
-        
-        if 'agents' in result:
-            agents = result['agents']
-            self.console.print("\n🤖 Agent Activity:", style="bold blue")
-            
-            agent_table = Table(show_header=True, header_style="bold magenta")
-            agent_table.add_column("Agent", style="cyan")
-            agent_table.add_column("Tasks Completed", style="green")
-            agent_table.add_column("Status", style="yellow")
-            
-            for agent_name, agent_data in agents.items():
-                tasks = agent_data.get('tasks_completed', 0)
-                status = agent_data.get('status', 'unknown')
-                agent_table.add_row(agent_name, str(tasks), status)
-            
-            self.console.print(agent_table)
-    
-    def _display_modernization_results(self, result: Dict[str, Any]):
-        """Display modernization results."""
-        modernization_result = result.get('modernization_result', {})
-        
-        if 'converted_files' in modernization_result:
-            files = modernization_result['converted_files']
-            self.console.print("\n📁 Generated Files:", style="bold blue")
-            
-            file_table = Table(show_header=True, header_style="bold magenta")
-            file_table.add_column("File", style="cyan")
-            file_table.add_column("Type", style="green")
-            file_table.add_column("Status", style="yellow")
-            
-            for file_path, file_data in files.items():
-                status = file_data.get('status', 'Unknown')
-                file_type = file_data.get('target_stack', 'Unknown')
-                file_table.add_row(file_path, file_type, status)
-            
-            self.console.print(file_table)
-        
-        if 'config_files' in modernization_result:
-            config_files = modernization_result['config_files']
-            self.console.print("\n⚙️  Configuration Files:", style="bold blue")
-            
-            config_table = Table(show_header=True, header_style="bold magenta")
-            config_table.add_column("File", style="cyan")
-            config_table.add_column("Status", style="green")
-            
-            for config_name, config_data in config_files.items():
-                status = config_data.get('status', 'Unknown')
-                config_table.add_row(config_name, status)
-            
-            self.console.print(config_table)
-        
-        if 'project_structure' in modernization_result:
-            structure = modernization_result['project_structure']
-            self.console.print("\n🏗️  Project Structure:", style="bold blue")
-            self.console.print(f"Status: {structure.get('status', 'Unknown')}", style="dim")
-    
-    async def _write_modernization_files(self, result: Dict[str, Any], output_path: Path):
-        """Write generated modernization files to the output directory."""
+    def analyze_website(self, input_file: str) -> bool:
+        """Analyze a legacy website without generating code."""
         try:
-            modernization_result = result.get('modernization_result', {})
-            
-            # Ensure output directory exists
-            output_path.mkdir(parents=True, exist_ok=True)
-            
-            # Write converted files (if any)
-            if 'converted_files' in modernization_result:
-                converted_files = modernization_result['converted_files']
-                for file_path, file_data in converted_files.items():
-                    if file_data.get('status') == 'success' and 'converted_content' in file_data:
-                        # Determine new file path
-                        new_file_path = file_data.get('new_file_path', file_path)
-                        if not new_file_path.startswith('/'):
-                            new_file_path = output_path / new_file_path
-                        else:
-                            new_file_path = output_path / Path(new_file_path).name
-                        
-                        # Create directory if needed
-                        new_file_path.parent.mkdir(parents=True, exist_ok=True)
-                        
-                        # Write file content
-                        with open(new_file_path, 'w', encoding='utf-8') as f:
-                            f.write(file_data['converted_content'])
-                        
-                        self.console.print(f"📝 Wrote: {new_file_path}", style="dim")
-            
-            # Write configuration files
-            if 'config_files' in modernization_result:
-                config_files = modernization_result['config_files']
-                for config_name, config_data in config_files.items():
-                    if config_data.get('status') == 'success' and 'content' in config_data:
-                        config_path = output_path / config_name
-                        
-                        # Ensure parent directories exist
-                        config_path.parent.mkdir(parents=True, exist_ok=True)
-                        
-                        with open(config_path, 'w', encoding='utf-8') as f:
-                            f.write(config_data['content'])
-                        
-                        self.console.print(f"⚙️  Wrote: {config_path}", style="dim")
-            
-            # Write components
-            if 'components' in modernization_result:
-                components = modernization_result['components']
-                if components.get('status') == 'success' and 'component_files' in components:
-                    # Write each component to its proper path
-                    component_files = components['component_files']
-                    for component_path, component_content in component_files.items():
-                        # Create full path relative to output directory
-                        full_path = output_path / component_path
-                        
-                        # Ensure parent directories exist
-                        full_path.parent.mkdir(parents=True, exist_ok=True)
-                        
-                        # Write the file
-                        with open(full_path, 'w', encoding='utf-8') as f:
-                            f.write(component_content)
-                        
-                        self.console.print(f"🧩 Wrote: {full_path}", style="dim")
-            
-            self.console.print(f"\n✅ All files written to: {output_path}", style="bold green")
-            
-        except Exception as e:
-            self.console.print(f"❌ Error writing files: {e}", style="bold red")
-
-    async def analyze_with_agents(self, input_path: str) -> bool:
-        """Analyze a project using the agents system."""
-        try:
-            if not os.path.exists(input_path):
-                self.console.print(f"[red]Error: Input path not found: {input_path}[/red]")
+            if not os.path.exists(input_file):
+                self.console.print(f"[red]Error: File not found: {input_file}[/red]")
                 return False
             
             with Progress(
@@ -1013,214 +266,310 @@ class Legacy2ModernCLI:
                 console=self.console
             ) as progress:
                 
-                task = progress.add_task("Analyzing project with agents...", total=None)
+                task = progress.add_task("Analyzing legacy website...", total=None)
                 
-                # Create analysis task
-                analysis_task = {
-                    "type": "full_analysis",
-                    "project_path": input_path,
-                    "agents": ["parser", "qa"],
-                    "analysis_type": "comprehensive"
-                }
+                # Analyze website
+                result = self.website_transpiler.analyze_website(input_file)
                 
-                # Execute analysis using parser agent directly
-                result = await self.parser_agent.execute_task(analysis_task)
-                
-                progress.update(task, description="✅ Analysis completed!")
-                
-            if result.get('success', False):
-                self.console.print(f"✅ Project analysis completed!", style="bold green")
-                
-                # Show analysis results
-                self.display_analysis_results(result)
-                
-                return True
-            else:
-                error_msg = result.get('error', 'Unknown error occurred')
-                self.console.print(f"❌ Analysis failed: {error_msg}", style="bold red")
-                return False
-                
+                if result['success']:
+                    progress.update(task, description="✅ Analysis completed!")
+                    
+                    # Display analysis results
+                    self.display_website_analysis(result)
+                    
+                    return True
+                else:
+                    progress.update(task, description="❌ Analysis failed!")
+                    self.console.print(f"[#FF6B6B]Error: {result.get('error', 'Unknown error')}[/#FF6B6B]")
+                    return False
+                    
         except Exception as e:
-            self.console.print(f"❌ Error during analysis: {e}", style="bold red")
+            self.console.print(f"[#FF6B6B]Error during website analysis: {e}[/#FF6B6B]")
             return False
 
-    def display_analysis_results(self, result: dict):
-        """Display analysis results."""
-        if not result.get('success', False):
-            self.console.print(f"❌ Analysis failed: {result.get('error', 'Unknown error')}", style="bold red")
-            return
+    def display_website_analysis(self, result: dict):
+        """Display website analysis results."""
+        analysis = result.get('analysis', {})
         
-        project_map = result.get('project_map', {})
-        if not project_map:
-            self.console.print("❌ No analysis data available", style="bold red")
-            return
+        # Create analysis table
+        table = Table(title="Website Analysis Results")
+        table.add_column("Metric", style="cyan")
+        table.add_column("Value", style="green")
         
-        # Create main analysis table
-        table = Table(title="Project Analysis Results", show_header=True, header_style="bold magenta")
-        table.add_column("Category", style="cyan", no_wrap=True)
-        table.add_column("Details", style="green")
+        # Add analysis data
+        table.add_row("Complexity Score", str(analysis.get('complexity_score', 0)))
+        table.add_row("Modernization Effort", analysis.get('modernization_effort', 'unknown').title())
+        table.add_row("Recommendations", str(len(analysis.get('recommendations', []))))
+        table.add_row("Risks", str(len(analysis.get('risks', []))))
         
-        # Project structure
-        structure = project_map.get('structure', {})
-        if structure:
-            table.add_row("Total Files", str(structure.get('total_files', 0)))
-            
-            categorized_files = structure.get('categorized_files', {})
-            if categorized_files:
-                for file_type, files in categorized_files.items():
-                    if files:
-                        table.add_row(f"{file_type.title()} Files", str(len(files)))
+        # Add framework detection
+        frameworks = result.get('parsed_data', {}).get('frameworks', {})
+        detected_frameworks = []
+        for framework, detection in frameworks.items():
+            if detection.get('detected'):
+                version = detection.get('version', '')
+                detected_frameworks.append(f"{framework.title()}{' ' + version if version else ''}")
         
-        # File analysis statistics
-        file_analyses = project_map.get('file_analyses', {})
-        if file_analyses:
-            successful_analyses = len([f for f in file_analyses.values() if f.get('status') == 'success'])
-            failed_analyses = len([f for f in file_analyses.values() if f.get('status') == 'failed'])
-            table.add_row("Successfully Analyzed", str(successful_analyses))
-            if failed_analyses > 0:
-                table.add_row("Failed Analyses", str(failed_analyses))
-        
-        # Dependencies
-        dependencies = project_map.get('dependencies', {})
-        if dependencies:
-            total_deps = sum(len(deps) for deps in dependencies.get('imports', {}).values())
-            table.add_row("Dependencies Found", str(total_deps))
-        
-        # Patterns
-        patterns = project_map.get('patterns', [])
-        if patterns:
-            table.add_row("Architecture Patterns", str(len(patterns)))
-        
-        # Summary statistics
-        summary = project_map.get('summary', {})
-        if summary and summary.get('status') == 'success':
-            stats = summary.get('statistics', {})
-            if stats:
-                table.add_row("Patterns Found", str(stats.get('patterns_found', 0)))
-                table.add_row("Dependencies Mapped", str(stats.get('dependencies_mapped', 0)))
+        table.add_row("Detected Frameworks", ", ".join(detected_frameworks) if detected_frameworks else "None")
         
         self.console.print(table)
         
-        # Show project summary
-        if summary and summary.get('status') == 'success' and summary.get('summary'):
-            self.console.print("\n📋 Project Summary:", style="bold blue")
-            summary_text = summary['summary']
-            # Truncate if too long
-            if len(summary_text) > 500:
-                summary_text = summary_text[:500] + "..."
-            self.console.print(summary_text, style="dim")
+        # Show recommendations
+        recommendations = analysis.get('recommendations', [])
+        if recommendations:
+            self.console.print("\n[bold cyan]Recommendations:[/bold cyan]")
+            for i, rec in enumerate(recommendations[:5], 1):  # Show first 5
+                self.console.print(f"{i}. {rec.get('description', '')}")
         
-        # Show file analysis highlights
-        if file_analyses:
-            self.console.print("\n📁 File Analysis Highlights:", style="bold blue")
-            for file_path, analysis in list(file_analyses.items())[:3]:  # Show first 3 files
-                if analysis.get('status') == 'success':
-                    file_name = file_path.split('/')[-1]
-                    content_length = analysis.get('content_length', 0)
-                    self.console.print(f"   • {file_name} ({content_length} chars)", style="dim")
-        
-        # Show patterns found
-        if patterns:
-            self.console.print("\n🏗️  Architecture Patterns:", style="bold blue")
-            for pattern in patterns[:3]:  # Show first 3 patterns
-                pattern_name = pattern.get('name', 'Unknown Pattern')
-                pattern_type = pattern.get('type', 'Unknown Type')
-                self.console.print(f"   • {pattern_name} ({pattern_type})", style="dim")
-        
-        # Show next steps
-        self.console.print("\n🚀 Next Steps:", style="bold green")
-        self.console.print("   • Use /modernize to start modernization process", style="dim")
-        self.console.print("   • Use /status to check agent status", style="dim")
-        self.console.print("   • Use /help for more commands", style="dim")
+        # Show risks
+        risks = analysis.get('risks', [])
+        if risks:
+            self.console.print("\n[bold red]Risks:[/bold red]")
+            for i, risk in enumerate(risks[:3], 1):  # Show first 3
+                self.console.print(f"{i}. {risk.get('description', '')}")
 
-    async def get_agent_status(self) -> Dict[str, Any]:
-        """Get status of all agents."""
+    def show_website_next_steps(self, output_dir: str, framework: str):
+        """Show next steps for the modernized website."""
+        self.console.print(f"\n[bold #0053D6]Next Steps:[/bold #0053D6]")
+        self.console.print(f"1. Navigate to the project: [cyan]cd {output_dir}[/cyan]")
+        self.console.print(f"2. Install dependencies: [cyan]npm install[/cyan]")
+        self.console.print(f"3. Start development server: [cyan]npm run dev[/cyan]")
+        self.console.print(f"4. Open in browser: [cyan]http://localhost:3000[/cyan]")
+        self.console.print(f"\n[bold]Deployment:[/bold]")
+        self.console.print(f"• Deploy to Netlify: [cyan]netlify deploy[/cyan]")
+        self.console.print(f"• Deploy to Vercel: [cyan]vercel[/cyan]")
+        self.console.print(f"• Deploy to GitHub Pages: [cyan]npm run build && gh-pages -d dist[/cyan]")
+        
+        # Offer to open in IDE
+        self.console.print(f"\n[bold #0053D6]Quick Actions:[/bold #0053D6]")
+        self.console.print(f"💻 Type '/open-ide {output_dir}' to open in your default IDE")
+        self.console.print(f"🚀 Type '/start-dev {output_dir}' to start development server")
+    
+    def open_project_in_ide(self, project_path: str, ide: str = 'auto') -> bool:
+        """Open project in IDE."""
         try:
-            status = await self.coordinator.get_status()
-            return status
-        except Exception as e:
-            self.console.print(f"[#FF6B6B]Error getting agent status: {e}[/#FF6B6B]")
-            return {}
-
-    def display_agent_status(self, status: Dict[str, Any]):
-        """Display agent status information."""
-        if not status:
-            self.console.print("[#FFA500]No agent status available[/#FFA500]")
-            return
-        
-        # Create agent status table
-        table = Table(title="Agent Status", show_header=True, header_style="bold magenta")
-        table.add_column("Agent", style="cyan", no_wrap=True)
-        table.add_column("Status", style="green")
-        table.add_column("Current Task", style="yellow")
-        table.add_column("Progress", style="blue")
-        
-        if 'agents' in status:
-            for agent_name, agent_data in status['agents'].items():
-                agent_status = agent_data.get('status', 'unknown')
-                current_task = agent_data.get('current_task', 'idle')
-                progress = f"{agent_data.get('progress', 0):.1f}%"
+            if not os.path.exists(project_path):
+                self.console.print(f"[red]Error: Project path does not exist: {project_path}[/red]")
+                return False
+            
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                console=self.console
+            ) as progress:
                 
-                table.add_row(agent_name, agent_status, current_task, progress)
+                task = progress.add_task("Opening project in IDE...", total=None)
+                
+                # Open in IDE
+                success = self.website_transpiler.open_in_ide(project_path, ide)
+                
+                if success:
+                    progress.update(task, description="✅ Project opened in IDE!")
+                    self.console.print(f"[#0053D6]✅ Opened project in IDE: {project_path}[/#0053D6]")
+                    return True
+                else:
+                    progress.update(task, description="❌ Failed to open in IDE!")
+                    self.console.print(f"[#FF6B6B]Error: Could not open project in IDE[/#FF6B6B]")
+                    return False
+                    
+        except Exception as e:
+            self.console.print(f"[#FF6B6B]Error opening project in IDE: {e}[/#FF6B6B]")
+            return False
+    
+    def start_dev_server(self, project_path: str, framework: str = 'react') -> bool:
+        """Start development server for the project."""
+        try:
+            if not os.path.exists(project_path):
+                self.console.print(f"[red]Error: Project path does not exist: {project_path}[/red]")
+                return False
+            
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                console=self.console
+            ) as progress:
+                
+                task = progress.add_task(f"Starting {framework.upper()} development server...", total=None)
+                
+                # Start dev server
+                success = self.website_transpiler.start_dev_server(project_path, framework)
+                
+                if success:
+                    progress.update(task, description="✅ Development server started!")
+                    self.console.print(f"[#0053D6]✅ Started {framework.upper()} development server[/#0053D6]")
+                    self.console.print(f"[#0053D6]🌐 View at: http://localhost:3000[/#0053D6]")
+                    return True
+                else:
+                    progress.update(task, description="❌ Failed to start dev server!")
+                    self.console.print(f"[#FF6B6B]Error: Could not start development server[/#FF6B6B]")
+                    return False
+                    
+        except Exception as e:
+            self.console.print(f"[#FF6B6B]Error starting development server: {e}[/#FF6B6B]")
+            return False
+        
+    def show_code_preview(self, source_code: str, target_code: str):
+        """Show a preview of the source and target code."""
+        layout = Layout()
+        
+        # Create source code panel
+        source_syntax = Syntax(source_code, "cobol", theme="monokai", line_numbers=True)
+        source_panel = Panel(source_syntax, title="[bold #0053D6]Source COBOL[/bold #0053D6]", width=60)
+        
+        # Create target code panel  
+        target_syntax = Syntax(target_code, "python", theme="monokai", line_numbers=True)
+        target_panel = Panel(target_syntax, title="[bold #0053D6]Generated Python[/bold #0053D6]", width=60)
+        
+        # Display side by side
+        self.console.print("\n[bold]Code Preview:[/bold]")
+        self.console.print(Panel.fit(
+            f"{source_panel}\n{target_panel}",
+            title="[bold]Transpilation Result[/bold]",
+            border_style="#0053D6"
+        ))
+        
+    def analyze_code(self, source_code: str, target_code: str):
+        """Analyze the transpiled code."""
+        if not self.llm_agent:
+            self.console.print("[#FFA500]LLM analysis not available[/#FFA500]")
+            return
+            
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=self.console
+        ) as progress:
+            
+            task = progress.add_task("Analyzing code transformation...", total=None)
+            
+            # Perform analysis
+            analysis_result = self.llm_agent.analyze_code(source_code, target_code, "cobol-python")
+            review_result = self.llm_agent.review_code(target_code, "python")
+            optimization_result = self.llm_agent.optimize_code(target_code, "python")
+            
+            progress.update(task, description="✅ Analysis completed!")
+            
+        # Display analysis results
+        self.display_analysis_results(analysis_result, review_result, optimization_result)
+        
+    def display_analysis_results(self, analysis_result, review_result, optimization_result):
+        """Display analysis results in a formatted table."""
+        table = Table(title="[bold]Code Analysis Results[/bold]")
+        table.add_column("Metric", style="#0053D6")
+        table.add_column("Value", style="#0053D6")
+        
+        table.add_row("Complexity Score", f"{analysis_result.complexity_score:.2f}")
+        table.add_row("Maintainability Score", f"{analysis_result.maintainability_score:.2f}")
+        table.add_row("Review Confidence", f"{review_result.confidence:.2f}")
+        table.add_row("Optimization Confidence", f"{optimization_result.confidence:.2f}")
         
         self.console.print(table)
         
-        # Show workflow status
-        if 'workflow' in status:
-            workflow = status['workflow']
-            self.console.print(f"\n📋 Workflow Status: {workflow.get('status', 'unknown')}")
-            self.console.print(f"📊 Overall Progress: {workflow.get('progress', 0):.1f}%")
-
-    async def interactive_mode(self):
+        # Show suggestions if any
+        if analysis_result.suggestions:
+            self.console.print("\n[bold #FFA500]Suggestions:[/bold #FFA500]")
+            for suggestion in analysis_result.suggestions:
+                self.console.print(f"  • {suggestion}")
+                
+    def interactive_mode(self):
         """Run in interactive mode with natural language commands."""
         self.console.print("\n[bold]Interactive Mode[/bold]")
         self.console.print("Type your commands or questions. Type /help for available commands.")
         
+        # Command completions
+        completions = WordCompleter([
+            '/help', '/transpile', '/analyze', '/optimize', '/exit', '/quit',
+            'transpile', 'analyze', 'optimize', 'help', 'exit', 'quit'
+        ]) if WordCompleter else None
+        
         while True:
             try:
-                # Get user input using regular input to avoid event loop conflicts
-                user_input = input("> ").strip()
+                # Get user input
+                if self.session:
+                    user_input = self.session.prompt(
+                        "> ",
+                        completer=completions
+                    ).strip()
+                else:
+                    user_input = input("> ").strip()
                 
                 if not user_input:
                     continue
                     
                 # Handle commands
                 if user_input.startswith('/'):
-                    await self.handle_command(user_input[1:])
+                    self.handle_command(user_input[1:])
                 else:
-                    await self.handle_natural_language(user_input)
+                    self.handle_natural_language(user_input)
                     
             except KeyboardInterrupt:
                 self.console.print("\n[#FFA500]Use /exit to quit[/#FFA500]")
             except EOFError:
                 break
                 
-    async def handle_command(self, command: str):
+    def handle_command(self, command: str):
         """Handle slash commands."""
         parts = command.split()
         cmd = parts[0].lower()
         
         if cmd == 'help':
             self.show_help()
-        elif cmd == 'modernize':
+        elif cmd == 'transpile':
             if len(parts) < 2:
-                self.console.print("[red]Usage: /modernize <input_path> [framework][/red]")
-                self.console.print("[red]Frameworks: react, nextjs, astro, vue, svelte, angular[/red]")
-                self.console.print("[red]Output will be automatically placed in sandbox[/red]")
+                self.console.print("[red]Usage: /transpile <filename>[/red]")
             else:
-                framework = parts[2] if len(parts) > 2 else 'react'
-                await self.start_modernization_workflow(parts[1], framework)
+                self.transpile_file(parts[1])
         elif cmd == 'analyze':
             if len(parts) < 2:
-                self.console.print("[red]Usage: /analyze <input_path>[/red]")
+                self.console.print("[red]Usage: /analyze <filename>[/red]")
             else:
-                await self.analyze_with_agents(parts[1])
-        elif cmd == 'status':
-            status = await self.get_agent_status()
-            self.display_agent_status(status)
-        elif cmd == 'agents':
-            status = await self.get_agent_status()
-            self.display_agent_status(status)
+                self.analyze_file(parts[1])
+        elif cmd == 'modernize':
+            if len(parts) < 3:
+                self.console.print("[red]Usage: /modernize <input_file> <output_dir> [framework][/red]")
+                self.console.print("[red]Frameworks: react, astro, nextjs[/red]")
+            else:
+                framework = parts[3] if len(parts) > 3 else 'react'
+                self.transpile_website(parts[1], parts[2], framework)
+        elif cmd == 'modernize-llm':
+            if len(parts) < 3:
+                self.console.print("[red]Usage: /modernize-llm <input_file> <output_dir>[/red]")
+                self.console.print("[red]Uses LLM to generate React TypeScript components[/red]")
+            else:
+                self.transpile_website_llm(parts[1], parts[2])
+        elif cmd == 'analyze-website':
+            if len(parts) < 2:
+                self.console.print("[red]Usage: /analyze-website <filename>[/red]")
+            else:
+                self.analyze_website(parts[1])
+        elif cmd == 'analyze-website-llm':
+            if len(parts) < 2:
+                self.console.print("[red]Usage: /analyze-website-llm <filename>[/red]")
+                self.console.print("[red]Uses LLM to analyze website structure[/red]")
+            else:
+                self.analyze_website_llm(parts[1])
+        elif cmd == 'check-llm':
+            self.check_llm_status()
+        elif cmd == 'open-ide':
+            if len(parts) < 2:
+                self.console.print("[red]Usage: /open-ide <project_path> [ide][/red]")
+                self.console.print("[red]IDEs: auto, vscode, webstorm, sublime, atom[/red]")
+            else:
+                ide = parts[2] if len(parts) > 2 else 'auto'
+                self.open_project_in_ide(parts[1], ide)
+        elif cmd == 'start-dev':
+            if len(parts) < 2:
+                self.console.print("[red]Usage: /start-dev <project_path> [framework][/red]")
+                self.console.print("[red]Frameworks: react, nextjs, astro[/red]")
+            else:
+                framework = parts[2] if len(parts) > 2 else 'react'
+                self.start_dev_server(parts[1], framework)
+        elif cmd == 'frameworks':
+            self.console.print("[bold cyan]Supported Frameworks:[/bold cyan]")
+            self.console.print("• [green]react[/green] - React with Vite and Tailwind CSS")
+            self.console.print("• [green]astro[/green] - Astro with Tailwind CSS")
+            self.console.print("• [green]nextjs[/green] - Next.js with TypeScript and Tailwind CSS")
+            self.console.print("• [green]react-llm[/green] - React TypeScript with LLM-powered generation")
         elif cmd == 'exit':
             self.console.print("[#0053D6]Goodbye![/#0053D6]")
             sys.exit(0)
@@ -1230,157 +579,346 @@ class Legacy2ModernCLI:
         else:
             self.console.print(f"[#FF6B6B]Unknown command: {cmd}[/#FF6B6B]")
             
-    async def handle_natural_language(self, query: str):
+    def handle_natural_language(self, query: str):
         """Handle natural language queries."""
         # Simple keyword-based parsing for now
         query_lower = query.lower()
         
-        if 'modernize' in query_lower or 'transform' in query_lower:
-            # Extract input and output from query
+        if 'transpile' in query_lower or 'convert' in query_lower:
+            # Extract filename from query
             words = query.split()
-            
-            # Find input path
-            input_path = None
-            framework = 'react'
-            
-            for i, word in enumerate(words):
-                # Check for file paths
-                if os.path.exists(word) or word.endswith(('.html', '.htm', '.js', '.css')):
-                    input_path = word
-                    break
-                # Check for directories
-                elif os.path.isdir(word):
-                    input_path = word
-                    break
-            
-            # Check for framework specification
             for word in words:
-                if word.lower() in ['react', 'nextjs', 'astro', 'vue', 'svelte', 'angular']:
-                    framework = word.lower()
-                    break
+                if word.endswith('.cobol') or word.endswith('.cob'):
+                    self.transpile_file(word)
+                    return
+            self.console.print("[#FFA500]Please specify a COBOL file to transpile[/#FFA500]")
             
-            if input_path:
-                await self.start_modernization_workflow(input_path, framework)
-                return
+        elif 'modernize' in query_lower or 'website' in query_lower:
+            # Check if user wants LLM-based modernization
+            if 'llm' in query_lower or 'ai' in query_lower:
+                # Extract filename from query
+                words = query.split()
+                html_files = [word for word in words if word.endswith(('.html', '.htm'))]
+                if html_files:
+                    input_file = html_files[0]
+                    output_dir = f"output/modernized-{input_file.replace('.html', '').replace('.htm', '')}-llm"
+                    self.transpile_website_llm(input_file, output_dir)
+                    return
+                self.console.print("[#FFA500]Please specify an HTML file to modernize with LLM[/#FFA500]")
             else:
-                self.console.print("[#FFA500]Please specify an input path to modernize[/#FFA500]")
-                self.console.print("[#FFA500]Examples:[/#FFA500]")
-                self.console.print("[#FFA500]  - modernize my-website.html react[/#FFA500]")
-                self.console.print("[#FFA500]  - modernize legacy-project nextjs[/#FFA500]")
-                self.console.print("[#FFA500]Output will be automatically placed in sandbox[/#FFA500]")
+                # Extract filename from query
+                words = query.split()
+                html_files = [word for word in words if word.endswith(('.html', '.htm'))]
+                if html_files:
+                    input_file = html_files[0]
+                    output_dir = f"output/modernized-{input_file.replace('.html', '').replace('.htm', '')}"
+                    self.transpile_website(input_file, output_dir)
+                    return
+                self.console.print("[#FFA500]Please specify an HTML file to modernize[/#FFA500]")
             
         elif 'analyze' in query_lower or 'review' in query_lower:
-            # Extract input from query
-            words = query.split()
-            input_path = None
-            
-            for word in words:
-                if os.path.exists(word) or os.path.isdir(word):
-                    input_path = word
-                    break
-            
-            if input_path:
-                await self.analyze_with_agents(input_path)
-                return
+            if 'website' in query_lower:
+                # Check if user wants LLM-based analysis
+                if 'llm' in query_lower or 'ai' in query_lower:
+                    # Extract filename from query
+                    words = query.split()
+                    html_files = [word for word in words if word.endswith(('.html', '.htm'))]
+                    if html_files:
+                        self.analyze_website_llm(html_files[0])
+                        return
+                    self.console.print("[#FFA500]Please specify an HTML file to analyze with LLM[/#FFA500]")
+                else:
+                    # Extract filename from query
+                    words = query.split()
+                    html_files = [word for word in words if word.endswith(('.html', '.htm'))]
+                    if html_files:
+                        self.analyze_website(html_files[0])
+                        return
+                    self.console.print("[#FFA500]Please specify an HTML file to analyze[/#FFA500]")
             else:
-                self.console.print("[#FFA500]Please specify an input path to analyze[/#FFA500]")
-                self.console.print("[#FFA500]Examples:[/#FFA500]")
-                self.console.print("[#FFA500]  - analyze my-website.html[/#FFA500]")
-                self.console.print("[#FFA500]  - analyze legacy-project[/#FFA500]")
-        
+                self.console.print("[#FFA500]Please use /analyze <filename> to analyze a file[/#FFA500]")
+            
+        elif 'check' in query_lower and 'llm' in query_lower:
+            self.check_llm_status()
+            
+        elif 'help' in query_lower:
+            self.show_help()
+            
+        else:
+            self.console.print("[#FFA500]I'm not sure how to help with that. Try /help for available commands.[/#FFA500]")
+            
     def show_help(self):
         """Show help information."""
         help_text = """
 [bold]Available Commands:[/bold]
 
-[bold blue]Modernization:[/bold blue]
-  /modernize <input> [framework]                     - Modernize a project
-  /analyze <input>                        - Analyze a project
-  /status                                 - Show agent and workflow status
-  /agents                                 - Show detailed agent status
+[bold blue]COBOL Transpilation:[/bold blue]
+  /transpile <file>               - Transpile a COBOL file to Python
+  /analyze <file>                 - Analyze and review transpiled code
+
+[bold blue]Website Modernization:[/bold blue]
+  /modernize <file> <output> [framework]     - Modernize legacy website
+  /modernize-llm <file> <output>  - Modernize legacy website using LLM
+  /analyze-website <file>         - Analyze legacy website
+  /analyze-website-llm <file>     - Analyze legacy website using LLM
+  /open-ide <project> [ide]            - Open project in IDE
+  /start-dev <project> [framework]           - Start development server
+  /frameworks                     - List supported frameworks
 
 [bold blue]General Commands:[/bold blue]
-  /help                                   - Show this help message
-  /exit, /quit                            - Exit the CLI
+  /help                           - Show this help message
+  /exit, /quit                    - Exit the CLI
 
 [bold blue]Natural Language:[/bold blue]
-  "modernize my-website.html"             - Modernize a specific project
-  "analyze legacy-project"                - Analyze a project
-  "show agent status"                     - Show agent status
-  "help"                                  - Show help
+  "transpile HELLO.cobol"         - Transpile a specific COBOL file
+  "modernize my-website.html"     - Modernize a website
+  "analyze my code"               - Analyze the last transpiled code
+  "help"                          - Show help
 
 [bold blue]Examples:[/bold blue]
-  > modernize examples/website/legacy-site.html react
-  > /modernize examples/website/legacy-site.html nextjs
-  > analyze examples/website/legacy-site.html
-  > /analyze examples/website/legacy-site.html
-  > status
-  > /status
+  > transpile examples/cobol/HELLO.cobol
+  > /transpile examples/cobol/HELLO.cobol
+  > modernize legacy-site.html output/modernized-site react
+  > /modernize legacy-site.html output/modernized-site astro
+  > analyze-website legacy-site.html
+  > /open-ide output/react vscode
+  > /start-dev output/nextjs nextjs
+  > analyze the generated Python code
 
 [bold blue]Supported Frameworks:[/bold blue]
-  • react   - React with modern tooling
-  • nextjs  - Next.js with TypeScript
-  • astro   - Astro with static generation
-  • vue     - Vue.js with Composition API
-  • svelte  - Svelte with SvelteKit
-  • angular - Angular with modern features
+  • react   - React with Vite and Tailwind CSS
+  • astro   - Astro with Tailwind CSS
+  • nextjs  - Next.js with TypeScript and Tailwind CSS
+  • react-llm - React TypeScript with LLM-powered generation
         """
         
         self.console.print(Panel(help_text, title="[bold]Help[/bold]", border_style="#0053D6"))
+        
+    def analyze_file(self, filename: str):
+        """Analyze a specific file."""
+        if not os.path.exists(filename):
+            self.console.print(f"[#FF6B6B]File not found: {filename}[/#FF6B6B]")
+            return
+            
+        # Check if it's a COBOL file
+        if filename.endswith(('.cobol', '.cob')):
+            self.console.print("[#FFA500]Please transpile the COBOL file first, then analyze the generated Python file[/#FFA500]")
+            return
+            
+        # Check if it's a Python file
+        if filename.endswith('.py'):
+            with open(filename, 'r') as f:
+                code = f.read()
+                
+            if self.llm_agent:
+                self.console.print(f"[#0053D6]Analyzing {filename}...[/#0053D6]")
+                review_result = self.llm_agent.review_code(code, "python")
+                optimization_result = self.llm_agent.optimize_code(code, "python")
+                self.display_analysis_results(None, review_result, optimization_result)
+            else:
+                self.console.print("[#FFA500]LLM analysis not available[/#FFA500]")
+        else:
+            self.console.print("[#FFA500]Please specify a Python file to analyze[/#FFA500]")
 
-    @click.command()
-    def test_autogen():
-        """Test AutoGen integration with ParserAgent."""
-        asyncio.run(cli._test_autogen_integration())
-    
-    async def _test_autogen_integration(self):
-        """Test AutoGen integration."""
+    def transpile_website_llm(self, input_file: str, output_dir: str) -> bool:
+        """Transpile a legacy website to React TypeScript using LLM."""
         try:
-            # Initialize components
-            if not await self.initialize_components():
-                self.console.print("[red]Failed to initialize components[/red]")
-                return
+            if not os.path.exists(input_file):
+                self.console.print(f"[red]Error: File not found: {input_file}[/red]")
+                return False
             
-            # Create AutoGen-wrapped ParserAgent
-            from .agents.autogen_wrapper import AutoGenAgentWrapper, AutoGenConfig
-            
-            autogen_parser = AutoGenAgentWrapper(
-                self.parser_agent,
-                AutoGenConfig(enable_autogen=True)
-            )
-            
-            self.console.print("[green]✓ AutoGen ParserAgent created successfully[/green]")
-            
-            # Test basic functionality
-            test_task = {
-                "type": "file_analysis",
-                "file_path": "test.html",
-                "content": """
-       <!DOCTYPE html>
-       <html>
-       <head>
-           <title>Test Page</title>
-       </head>
-       <body>
-           <h1>Hello, World!</h1>
-       </body>
-       </html>
-                """
-            }
-            
-            self.console.print("[blue]Testing AutoGen integration...[/blue]")
-            result = await autogen_parser.execute_task(test_task)
-            
-            self.console.print(f"[green]✓ Test completed: {result}[/green]")
-            self.console.print("[green]🎉 AutoGen integration test passed![/green]")
-            
-        except ImportError as e:
-            self.console.print(f"[red]❌ AutoGen not installed: {e}[/red]")
-            self.console.print("[yellow]Please run: pip install -U 'autogen-agentchat' 'autogen-ext[openai]'[/yellow]")
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                console=self.console
+            ) as progress:
+                
+                task = progress.add_task("Modernizing website with LLM...", total=None)
+                
+                # Modernize website using LLM
+                result = self.website_modernizer.modernize_website(input_file, output_dir)
+                
+                progress.update(task, description="✅ LLM website modernization completed!")
+                
+                # Display results
+                self.console.print(f"\n[#0053D6]✅ Successfully modernized: {input_file} → {output_dir}[/#0053D6]")
+                self.console.print(f"[#0053D6]Framework: React TypeScript[/#0053D6]")
+                self.console.print(f"[#0053D6]Components generated: {len(result.components)}[/#0053D6]")
+                self.console.print(f"[#0053D6]Confidence: {result.confidence:.2f}[/#0053D6]")
+                
+                # Show next steps
+                self.show_website_llm_next_steps(output_dir)
+                
+                return True
+                    
         except Exception as e:
-            self.console.print(f"[red]❌ Test failed: {e}[/red]")
+            self.console.print(f"[#FF6B6B]Error during LLM website modernization: {e}[/#FF6B6B]")
+            return False
 
-async def main():
+    def analyze_website_llm(self, input_file: str) -> bool:
+        """Analyze a legacy website using LLM without generating code."""
+        try:
+            if not os.path.exists(input_file):
+                self.console.print(f"[red]Error: File not found: {input_file}[/red]")
+                return False
+            
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                console=self.console
+            ) as progress:
+                
+                task = progress.add_task("Analyzing legacy website with LLM...", total=None)
+                
+                # Analyze website using LLM
+                analysis = self.website_modernizer._analyze_website(input_file)
+                
+                progress.update(task, description="✅ LLM analysis completed!")
+                
+                # Display analysis results
+                self.display_website_llm_analysis(analysis)
+                
+                return True
+                    
+        except Exception as e:
+            self.console.print(f"[#FF6B6B]Error during LLM website analysis: {e}[/#FF6B6B]")
+            return False
+
+    def display_website_llm_analysis(self, analysis):
+        """Display LLM website analysis results."""
+        # Create analysis table
+        table = Table(title="LLM Website Analysis Results")
+        table.add_column("Metric", style="cyan")
+        table.add_column("Value", style="green")
+        
+        # Add analysis data
+        components = analysis.components
+        styles = analysis.styles
+        scripts = analysis.scripts
+        
+        table.add_row("Components Found", str(len(components)))
+        table.add_row("Styles Found", str(len(styles)))
+        table.add_row("Scripts Found", str(len(scripts)))
+        
+        # Show component details
+        if components:
+            self.console.print("\n[bold cyan]Components:[/bold cyan]")
+            for i, component in enumerate(components[:5], 1):
+                component_type = component.get('type', 'unknown')
+                component_title = component.get('title', 'No title')
+                self.console.print(f"  {i}. {component_type} - {component_title}")
+            
+            if len(components) > 5:
+                self.console.print(f"  ... and {len(components) - 5} more components")
+        
+        self.console.print(table)
+
+    def show_website_llm_next_steps(self, output_dir: str):
+        """Show next steps for LLM modernized website."""
+        self.console.print(f"\n[bold green]🚀 Next Steps:[/bold green]")
+        self.console.print(f"1. [cyan]Navigate to project:[/cyan] cd {output_dir}")
+        self.console.print(f"2. [cyan]Install dependencies:[/cyan] npm install")
+        self.console.print(f"3. [cyan]Start development server:[/cyan] npm start")
+        self.console.print(f"4. [cyan]Open in browser:[/cyan] http://localhost:3000")
+        
+        # Ask if user wants to start the dev server
+        if Confirm.ask("Would you like to start the development server now?"):
+            self.start_dev_server(output_dir, 'react')
+
+    def check_llm_status(self) -> bool:
+        """Check if LLM is available and working."""
+        try:
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                console=self.console
+            ) as progress:
+                
+                task = progress.add_task("Checking LLM availability...", total=None)
+                
+                # Test LLM connection based on provider
+                if self.llm_config.provider == "anthropic":
+                    # Test Claude API
+                    from engine.modernizers.static_site.transpilers.llm_augmentor import StaticSiteClaudeProvider
+                    
+                    provider = StaticSiteClaudeProvider()
+                    test_messages = [
+                        {"role": "system", "content": "You are a helpful assistant."},
+                        {"role": "user", "content": "Say 'Hello, Claude is working!'"}
+                    ]
+                    
+                    response = provider.generate_response(test_messages, self.llm_config)
+                    
+                    if response:
+                        progress.update(task, description="✅ Claude API is available and working!")
+                        
+                        self.console.print(f"\n[#0053D6]✅ LLM Status Check[/#0053D6]")
+                        self.console.print(f"[#0053D6]Status: Available and working[/#0053D6]")
+                        self.console.print(f"[#0053D6]Provider: Claude API (Anthropic)[/#0053D6]")
+                        self.console.print(f"[#0053D6]Model: {self.llm_config.model}[/#0053D6]")
+                        self.console.print(f"[#0053D6]Test response: {response[:50]}...[/#0053D6]")
+                        
+                        return True
+                    else:
+                        progress.update(task, description="❌ Claude API is not responding!")
+                        self.console.print(f"\n[#FF6B6B]❌ LLM Status Check[/#FF6B6B]")
+                        self.console.print(f"[#FF6B6B]Status: Not available or not responding[/#FF6B6B]")
+                        self.console.print(f"[#FF6B6B]💡 Check your Claude API key: LLM_API_KEY[/#FF6B6B]")
+                        self.console.print(f"[#FF6B6B]💡 Make sure you have credits in your Anthropic account[/#FF6B6B]")
+                        
+                        return False
+                        
+                elif self.llm_config.provider == "local":
+                    # Test Ollama
+                    from engine.modernizers.static_site.transpilers.llm_augmentor import StaticSiteLocalProvider
+                    
+                    provider = StaticSiteLocalProvider()
+                    test_messages = [
+                        {"role": "system", "content": "You are a helpful assistant."},
+                        {"role": "user", "content": "Say 'Hello, LLM is working!'"}
+                    ]
+                    
+                    response = provider.generate_response(test_messages, self.llm_config)
+                    
+                    if response:
+                        progress.update(task, description="✅ Ollama is available and working!")
+                        
+                        self.console.print(f"\n[#0053D6]✅ LLM Status Check[/#0053D6]")
+                        self.console.print(f"[#0053D6]Status: Available and working[/#0053D6]")
+                        self.console.print(f"[#0053D6]Provider: Local (Ollama)[/#0053D6]")
+                        self.console.print(f"[#0053D6]Model: {self.llm_config.model}[/#0053D6]")
+                        self.console.print(f"[#0053D6]Test response: {response[:50]}...[/#0053D6]")
+                        
+                        return True
+                    else:
+                        progress.update(task, description="❌ Ollama is not responding!")
+                        self.console.print(f"\n[#FF6B6B]❌ LLM Status Check[/#FF6B6B]")
+                        self.console.print(f"[#FF6B6B]Status: Not available or not responding[/#FF6B6B]")
+                        self.console.print(f"[#FF6B6B]💡 Make sure Ollama is running: ollama serve[/#FF6B6B]")
+                        self.console.print(f"[#FF6B6B]💡 Make sure the model is installed: ollama pull llama2[/#FF6B6B]")
+                        
+                        return False
+                else:
+                    progress.update(task, description="❌ Unsupported provider!")
+                    self.console.print(f"\n[#FF6B6B]❌ LLM Status Check[/#FF6B6B]")
+                    self.console.print(f"[#FF6B6B]Error: Unsupported provider '{self.llm_config.provider}'[/#FF6B6B]")
+                    self.console.print(f"[#FF6B6B]Supported providers: anthropic, local[/#FF6B6B]")
+                    
+                    return False
+                    
+        except Exception as e:
+            self.console.print(f"\n[#FF6B6B]❌ LLM Status Check[/#FF6B6B]")
+            self.console.print(f"[#FF6B6B]Error: {e}[/#FF6B6B]")
+            if self.llm_config.provider == "anthropic":
+                self.console.print(f"[#FF6B6B]💡 Check your Claude API key: LLM_API_KEY[/#FF6B6B]")
+                self.console.print(f"[#FF6B6B]💡 Make sure you have credits in your Anthropic account[/#FF6B6B]")
+            else:
+                self.console.print(f"[#FF6B6B]💡 Make sure Ollama is running: ollama serve[/#FF6B6B]")
+                self.console.print(f"[#FF6B6B]💡 Make sure the model is installed: ollama pull llama2[/#FF6B6B]")
+            return False
+
+
+def main():
     """Main CLI entry point."""
     cli = Legacy2ModernCLI()
     
@@ -1388,23 +926,15 @@ async def main():
     cli.display_banner()
     cli.display_tips()
     
-    # Initialize components with progress indication
-    cli.console.print("\n[blue]Initializing agents...[/blue]")
-    agents_available = await cli.initialize_components()
-    
-    if not agents_available:
-        cli.console.print("[#FF6B6B]Failed to initialize agents. Please check your configuration.[/#FF6B6B]")
-        return
+    # Initialize components
+    llm_available = cli.initialize_components()
     
     # Display status
     cli.display_status()
     
     # Start interactive mode
-    await cli.interactive_mode()
+    cli.interactive_mode()
 
-def run_cli():
-    """Run the CLI with proper async handling."""
-    asyncio.run(main())
 
 if __name__ == "__main__":
-    run_cli() 
+    main() 
