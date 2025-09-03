@@ -1,0 +1,29 @@
+name: cobol_system
+input:
+  - *.cobol
+  - *.cbl
+  - *.cpy
+output:
+  type: python_application
+  stack: python + sqlalchemy + fastapi
+  alternatives:
+    - python + django
+    - python + flask
+description: >
+  Converts legacy COBOL systems into modern Python applications.
+  Transforms COBOL business logic, data structures, and file operations
+  into Python classes, functions, and database models.
+
+features:
+  - COBOL data division → Python classes and dataclasses
+  - COBOL procedure division → Python functions and methods
+  - File I/O operations → Database models and ORM
+  - COBOL arithmetic → Python mathematical operations
+  - Control flow conversion (PERFORM, IF-THEN-ELSE)
+  - Data validation and business logic preservation
+
+examples:
+  - COBOL data files → SQLite/PostgreSQL databases
+  - COBOL calculations → Python mathematical functions
+  - COBOL reports → Python data processing pipelines
+  - COBOL batch processing → Python scheduled tasks 
