@@ -36,32 +36,32 @@ class ExecutorAgent(BaseAgent):
             # Create backup of original code
             backup_path = await self.use_tool(
                 "create_backup",
-                source_path=state.codebase_path,
-                backup_location=state.backup_location
+                source_path=state["codebase_path"],
+                backup_location=state["backup_location"]
             )
             
             # Execute transformations according to plan
             transformation_results = []
-            for phase in state.modernization_plan.get("phases", []):
+            for phase in state["modernization_plan"].get("phases", []):
                 phase_result = await self.use_tool(
                     "transform_code_phase",
                     phase=phase,
-                    source_path=state.codebase_path,
-                    target_language=state.target_language
+                    source_path=state["codebase_path"],
+                    target_language=state["target_language"]
                 )
                 transformation_results.append(phase_result)
             
             # Apply pattern replacements
             pattern_results = await self.use_tool(
                 "apply_pattern_replacements",
-                patterns=state.modernization_plan.get("patterns", []),
-                source_path=state.codebase_path
+                patterns=state["modernization_plan"].get("patterns", []),
+                source_path=state["codebase_path"]
             )
             
             # Update state with execution results
-            state.transformation_results = transformation_results
-            state.pattern_results = pattern_results
-            state.backup_path = backup_path
+            state["transformation_results"] = transformation_results
+            state["pattern_results"] = pattern_results
+            state["backup_path"] = backup_path
             
             self.log_activity("Code transformation execution completed", {
                 "phases_executed": len(transformation_results),
@@ -71,7 +71,7 @@ class ExecutorAgent(BaseAgent):
             
         except Exception as e:
             self.logger.error(f"Error in executor agent: {e}")
-            state.error = str(e)
+            state["error"] = str(e)
         
         return state
     
