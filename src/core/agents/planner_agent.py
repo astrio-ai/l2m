@@ -35,16 +35,16 @@ class PlannerAgent(BaseAgent):
             # Create modernization plan
             modernization_plan = await self.use_tool(
                 "create_modernization_plan",
-                analysis_results=state.analysis_results,
-                target_language=state.target_language,
-                modernization_goals=state.modernization_goals
+                analysis_results=state["analysis_results"],
+                target_language=state["target_language"],
+                modernization_goals=state["modernization_goals"]
             )
             
             # Assess risks
             risk_assessment = await self.use_tool(
                 "assess_modernization_risks",
                 plan=modernization_plan,
-                codebase_complexity=state.analysis_results.get("structure", {})
+                codebase_complexity=state["analysis_results"].get("structure", {})
             )
             
             # Create implementation strategy
@@ -55,9 +55,9 @@ class PlannerAgent(BaseAgent):
             )
             
             # Update state with planning results
-            state.modernization_plan = modernization_plan
-            state.risk_assessment = risk_assessment
-            state.implementation_strategy = implementation_strategy
+            state["modernization_plan"] = modernization_plan
+            state["risk_assessment"] = risk_assessment
+            state["implementation_strategy"] = implementation_strategy
             
             self.log_activity("Modernization planning completed", {
                 "phases": len(modernization_plan.get("phases", [])),
@@ -67,7 +67,7 @@ class PlannerAgent(BaseAgent):
             
         except Exception as e:
             self.logger.error(f"Error in planner agent: {e}")
-            state.error = str(e)
+            state["error"] = str(e)
         
         return state
     
