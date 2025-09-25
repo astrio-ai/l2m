@@ -34,34 +34,34 @@ class ValidatorAgent(BaseAgent):
         try:
             # Perform final validation
             final_validation = await self.use_tool(
-                "validate_final_code",
-                transformed_code=state.transformation_results,
-                test_results=state.test_results,
-                quality_review=state.quality_review
+                "final_validation",
+                transformed_code=state["transformation_results"],
+                test_results=state["test_results"],
+                quality_review=state["quality_review"]
             )
             
             # Check compliance with requirements
             compliance_check = await self.use_tool(
                 "check_compliance",
-                code=state.transformation_results,
-                requirements=state.modernization_goals,
-                standards=state.target_language
+                code=state["transformation_results"],
+                requirements=state["modernization_goals"],
+                standards=state["target_language"]
             )
             
             # Run integration tests
             integration_tests = await self.use_tool(
                 "run_integration_tests",
-                transformed_code=state.transformation_results,
-                test_cases=state.test_cases
+                transformed_code=state["transformation_results"],
+                test_cases=state["test_cases"]
             )
             
             # Update state with validation results
-            state.final_validation = final_validation
-            state.compliance_check = compliance_check
-            state.integration_tests = integration_tests
+            state["final_validation"] = final_validation
+            state["compliance_check"] = compliance_check
+            state["integration_tests"] = integration_tests
             
             # Determine overall success
-            state.modernization_success = (
+            state["modernization_success"] = (
                 final_validation.get("passed", False) and
                 compliance_check.get("compliant", False) and
                 integration_tests.get("passed", False)
@@ -71,13 +71,13 @@ class ValidatorAgent(BaseAgent):
                 "validation_passed": final_validation.get("passed", False),
                 "compliance_met": compliance_check.get("compliant", False),
                 "integration_tests_passed": integration_tests.get("passed", False),
-                "overall_success": state.modernization_success
+                "overall_success": state["modernization_success"]
             })
             
         except Exception as e:
             self.logger.error(f"Error in validator agent: {e}")
-            state.error = str(e)
-            state.modernization_success = False
+            state["error"] = str(e)
+            state["modernization_success"] = False
         
         return state
     
