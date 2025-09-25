@@ -20,6 +20,7 @@ parts/
 sdist/
 var/
 wheels/
+pip-wheel-metadata/
 share/python-wheels/
 *.egg-info/
 .installed.cfg
@@ -49,7 +50,6 @@ coverage.xml
 *.py,cover
 .hypothesis/
 .pytest_cache/
-cover/
 
 # Translations
 *.mo
@@ -72,7 +72,6 @@ instance/
 docs/_build/
 
 # PyBuilder
-.pybuilder/
 target/
 
 # Jupyter Notebook
@@ -83,9 +82,7 @@ profile_default/
 ipython_config.py
 
 # pyenv
-#   For a library or package, you might want to ignore these files since the code is
-#   intended to run in multiple environments; otherwise, check them in:
-# .python-version
+.python-version
 
 # pipenv
 #   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
@@ -94,23 +91,7 @@ ipython_config.py
 #   install all needed dependencies.
 #Pipfile.lock
 
-# poetry
-#   Similar to Pipfile.lock, it is generally recommended to include poetry.lock in version control.
-#   This is especially recommended for binary packages to ensure reproducibility, and is more
-#   commonly ignored for libraries.
-
-#   https://python-poetry.org/docs/basic-usage/#commit-your-poetrylock-file-to-version-control
-#poetry.lock
-
-# pdm
-#   Similar to Pipfile.lock, it is generally recommended to include pdm.lock in version control.
-#pdm.lock
-#   pdm stores project-wide configurations in .pdm.toml, but it is recommended to not include it
-#   in version control.
-#   https://pdm.fming.dev/#use-with-ide
-.pdm.toml
-
-# PEP 582; used by e.g. github.com/David-OConnor/pyflow and github.com/pdm-project/pdm
+# PEP 582; used by e.g. github.com/David-OConnor/pyflow
 __pypackages__/
 
 # Celery stuff
@@ -147,137 +128,36 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# pytype static type analyzer
-.pytype/
+# Legacy2Modern specific
+output/
+backup/
+logs/
+temp/
+*.log
+.env.backup
 
-# Cython debug symbols
-cython_debug/
-
-# PyCharm
-#  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
-#  be added to the global gitignore or merged into this project gitignore.  For a PyCharm
-#  project, it is recommended to include the following files in version control:
-#  - .idea/modules.xml
-#  - .idea/*.iml
-#  - .idea/misc.xml
-#  - .idea/vcs.xml
-#  - .idea/workspace.xml
-#  - .idea/tasks.xml
-#  - .idea/usage.statistics.xml
-#  - .idea/shelf.xml
-#  - .idea/dictionaries/
-#  - .idea/shelf/
-#  - .idea/workspace.xml
-#  - .idea/tasks.xml
-#  - .idea/usage.statistics.xml
-#  - .idea/shelf.xml
-#  - .idea/dictionaries/
-#  - .idea/shelf/
-.idea/
-
-# VS Code
+# IDE
 .vscode/
-
-# macOS
-.DS_Store
-.AppleDouble
-.LSOverride
-
-# Icon must end with two \r
-Icon
-
-# Thumbnails
-._*
-
-# Files that might appear in the root of a volume
-.DocumentRevisions-V100
-.fseventsd
-.Spotlight-V100
-.TemporaryItems
-.Trashes
-.VolumeIcon.icns
-.com.apple.timemachine.donotpresent
-
-# Directories potentially created on remote AFP share
-.AppleDB
-.AppleDesktop
-Network Trash Folder
-Temporary Items
-.apdisk
-
-# Linux
+.idea/
+*.swp
+*.swo
 *~
 
-# temporary files which can be created if a process still has a handle open of a deleted file
-.fuse_hidden*
+# OS
+.DS_Store
+Thumbs.db
 
-# KDE directory preferences
-.directory
+# Docker
+.dockerignore
 
-# Linux trash folder which might appear on any partition or disk
-.Trash-*
+# Node.js (if using for frontend)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# .nfs files are created when an open file is removed but is still being accessed
-.nfs*
-
-# Project-specific ignores
-*.dot
-symbol_table.dot
-symbol_table.png
-
-# Ignore PNG files except in docs/assets
-*.png
-!docs/assets/*.png
-
-# ANTLR generated files (if not needed in version control)
-*.pyc
-*.pyo
-
-# Generated Python files from transpilation (specific patterns)
-examples/**/*.py
-*.transpiled.py
-*.generated.py
-*_output.py
-*_result.py
-
-# Root-level generated files (common COBOL program names)
-HELLO.py
-PERFORM_TEST.py
-*.cobol.py
-
-# Environment backup files
-.env.backup
-*.env.backup
-.env.*.backup
-
-# Output directories (generated files from transpilation)
-output/
-test_output/
-
-# Generated Python files from transpilation
-output/modernized-python/*.py
-output/modernized-astro/
-output/modernized-react/
-output/modernized-nextjs/
-
-# Test output files
-test_output/*.py
-test_output/*.js
-test_output/*.jsx
-test_output/*.tsx
-
-# Session-specific memory files
-memory/
-
-# Utility scripts (optional)
-clean_output.py
-
-# Parser output files
-parser_output.json
-*.parser_output.json
-
-# Legacy modernizers directory (kept locally but not pushed to public repo)
-# engine/modernizers/
-
-# Static site tests directory (kept locally but not pushed to public repo)
-tests-static/
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup

@@ -63,8 +63,8 @@ Repository = "https://github.com/astrio-ai/legacy2modern"
 "Bug Tracker" = "https://github.com/astrio-ai/legacy2modern/issues"
 
 [project.scripts]
-legacy2modern = "engine.cli.cli:main"
-l2m = "engine.cli.cli:main"
+legacy2modern = "src.cli.cli:cli"
+l2m = "src.cli.cli:cli"
 
 [tool.setuptools.packages.find]
 where = ["."]
