@@ -8,8 +8,10 @@ and ensure functionality preservation.
 from typing import Dict, Any, List
 from src.core.agents.base_agent import BaseAgent
 from src.core.state.agent_state import AgentState
-from src.core.tools.test_tools import TestRunnerTool, CoverageAnalyzerTool
+from src.core.tools.test_tools import TestRunnerTool, CoverageAnalyzerTool, TestGeneratorTool, IntegrationTestTool
 from src.core.tools.code_tools import TestValidatorTool
+from src.core.tools.file_tools import FileReaderTool, FileWriterTool, DirectoryScannerTool
+from src.core.tools.search_tools import PatternSearchTool, ReferenceFinderTool
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -23,7 +25,14 @@ class TesterAgent(BaseAgent):
         tools = [
             TestRunnerTool(),
             CoverageAnalyzerTool(),
-            TestValidatorTool()
+            TestValidatorTool(),
+            TestGeneratorTool(),
+            IntegrationTestTool(),
+            FileReaderTool(),
+            FileWriterTool(),
+            DirectoryScannerTool(),
+            PatternSearchTool(),
+            ReferenceFinderTool()
         ]
         super().__init__(settings, tools)
     

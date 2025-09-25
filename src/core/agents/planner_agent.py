@@ -9,7 +9,8 @@ from typing import Dict, Any, List
 from src.core.agents.base_agent import BaseAgent
 from src.core.state.agent_state import AgentState
 from src.core.tools.code_tools import ModernizationPlannerTool, RiskAssessmentTool
-from src.core.tools.search_tools import PatternSearchTool
+from src.core.tools.search_tools import PatternSearchTool, ReferenceFinderTool, CodeDiscoveryTool
+from src.core.tools.file_tools import FileReaderTool, DirectoryScannerTool
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -23,7 +24,11 @@ class PlannerAgent(BaseAgent):
         tools = [
             ModernizationPlannerTool(),
             RiskAssessmentTool(),
-            PatternSearchTool()
+            PatternSearchTool(),
+            ReferenceFinderTool(),
+            CodeDiscoveryTool(),
+            FileReaderTool(),
+            DirectoryScannerTool()
         ]
         super().__init__(settings, tools)
     
@@ -47,12 +52,13 @@ class PlannerAgent(BaseAgent):
                 codebase_complexity=state["analysis_results"].get("structure", {})
             )
             
-            # Create implementation strategy
-            implementation_strategy = await self.use_tool(
-                "create_implementation_strategy",
-                plan=modernization_plan,
-                risks=risk_assessment
-            )
+            # Create implementation strategy (using modernization plan as strategy)
+            implementation_strategy = {
+                "strategy_type": "phased_modernization",
+                "phases": modernization_plan.get("phases", []),
+                "risks": risk_assessment.get("risks", []),
+                "mitigation_plan": risk_assessment.get("mitigation_strategies", [])
+            }
             
             # Update state with planning results
             state["modernization_plan"] = modernization_plan

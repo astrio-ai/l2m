@@ -9,7 +9,9 @@ from typing import Dict, Any, List
 from src.core.agents.base_agent import BaseAgent
 from src.core.state.agent_state import AgentState
 from src.core.tools.code_tools import FinalValidatorTool, ComplianceCheckerTool
-from src.core.tools.test_tools import IntegrationTestTool
+from src.core.tools.test_tools import IntegrationTestTool, TestRunnerTool, CoverageAnalyzerTool, TestValidatorTool
+from src.core.tools.file_tools import FileReaderTool, FileWriterTool, DirectoryScannerTool
+from src.core.tools.search_tools import PatternSearchTool, ReferenceFinderTool, CodeDiscoveryTool
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -23,7 +25,16 @@ class ValidatorAgent(BaseAgent):
         tools = [
             FinalValidatorTool(),
             ComplianceCheckerTool(),
-            IntegrationTestTool()
+            IntegrationTestTool(),
+            TestRunnerTool(),
+            CoverageAnalyzerTool(),
+            TestValidatorTool(),
+            FileReaderTool(),
+            FileWriterTool(),
+            DirectoryScannerTool(),
+            PatternSearchTool(),
+            ReferenceFinderTool(),
+            CodeDiscoveryTool()
         ]
         super().__init__(settings, tools)
     
@@ -33,26 +44,30 @@ class ValidatorAgent(BaseAgent):
         
         try:
             # Perform final validation
+            transformation_results = state.get("transformation_results", [])
+            modernized_code = {
+                "files": [result.get("files_transformed", []) for result in transformation_results],
+                "transformations": [result.get("transformations_applied", []) for result in transformation_results],
+                "success": all(result.get("success", False) for result in transformation_results)
+            }
             final_validation = await self.use_tool(
                 "final_validation",
-                transformed_code=state["transformation_results"],
-                test_results=state["test_results"],
-                quality_review=state["quality_review"]
+                modernized_code=modernized_code,
+                validation_criteria=state.get("modernization_goals", [])
             )
             
             # Check compliance with requirements
             compliance_check = await self.use_tool(
                 "check_compliance",
-                code=state["transformation_results"],
-                requirements=state["modernization_goals"],
-                standards=state["target_language"]
+                code_path=state.get("codebase_path", ""),
+                standards=[state.get("target_language", "python")]
             )
             
             # Run integration tests
             integration_tests = await self.use_tool(
                 "run_integration_tests",
-                transformed_code=state["transformation_results"],
-                test_cases=state["test_cases"]
+                transformed_code=state.get("transformation_results", []),
+                test_cases=state.get("test_cases", {})
             )
             
             # Update state with validation results

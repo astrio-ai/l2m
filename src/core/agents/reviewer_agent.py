@@ -9,7 +9,9 @@ from typing import Dict, Any, List
 from src.core.agents.base_agent import BaseAgent
 from src.core.state.agent_state import AgentState
 from src.core.tools.code_tools import CodeReviewTool, QualityAnalyzerTool
-from src.core.tools.test_tools import TestGeneratorTool
+from src.core.tools.test_tools import TestGeneratorTool, TestRunnerTool, CoverageAnalyzerTool
+from src.core.tools.file_tools import FileReaderTool, FileWriterTool
+from src.core.tools.search_tools import PatternSearchTool, ReferenceFinderTool
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -23,7 +25,13 @@ class ReviewerAgent(BaseAgent):
         tools = [
             CodeReviewTool(),
             QualityAnalyzerTool(),
-            TestGeneratorTool()
+            TestGeneratorTool(),
+            TestRunnerTool(),
+            CoverageAnalyzerTool(),
+            FileReaderTool(),
+            FileWriterTool(),
+            PatternSearchTool(),
+            ReferenceFinderTool()
         ]
         super().__init__(settings, tools)
     

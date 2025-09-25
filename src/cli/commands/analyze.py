@@ -6,6 +6,7 @@ legacy codebases.
 """
 
 import asyncio
+import click
 from pathlib import Path
 from typing import Optional
 

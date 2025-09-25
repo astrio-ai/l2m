@@ -9,7 +9,8 @@ from typing import Dict, Any, List
 from src.core.agents.base_agent import BaseAgent
 from src.core.state.agent_state import AgentState
 from src.core.tools.code_tools import CodeTransformerTool, PatternReplacerTool
-from src.core.tools.file_tools import FileWriterTool, BackupTool
+from src.core.tools.file_tools import FileWriterTool, BackupTool, FileReaderTool, DirectoryScannerTool
+from src.core.tools.search_tools import PatternSearchTool, ReferenceFinderTool
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -24,7 +25,11 @@ class ExecutorAgent(BaseAgent):
             CodeTransformerTool(),
             PatternReplacerTool(),
             FileWriterTool(),
-            BackupTool()
+            BackupTool(),
+            FileReaderTool(),
+            DirectoryScannerTool(),
+            PatternSearchTool(),
+            ReferenceFinderTool()
         ]
         super().__init__(settings, tools)
     
@@ -34,10 +39,11 @@ class ExecutorAgent(BaseAgent):
         
         try:
             # Create backup of original code
+            backup_location = state.get("backup_location", "/tmp/legacy2modern_backup")
             backup_path = await self.use_tool(
                 "create_backup",
                 source_path=state["codebase_path"],
-                backup_location=state["backup_location"]
+                backup_location=backup_location
             )
             
             # Execute transformations according to plan
