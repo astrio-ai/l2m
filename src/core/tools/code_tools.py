@@ -82,26 +82,49 @@ class CodeAnalyzerTool(BaseAgentTool):
                 "total_files": 0
             }
             
-            # Scan files
-            for file_path in codebase_path.rglob('*'):
-                if file_path.is_file():
-                    # Check if file should be excluded
-                    if any(pattern in str(file_path) for pattern in exclude_patterns):
-                        continue
+            # Handle both single files and directories
+            files_to_analyze = []
+            
+            if codebase_path.is_file():
+                # Single file
+                files_to_analyze = [codebase_path]
+            else:
+                # Directory - scan for files
+                for file_path in codebase_path.rglob('*'):
+                    if file_path.is_file():
+                        # Check if file should be excluded
+                        if any(pattern in str(file_path) for pattern in exclude_patterns):
+                            continue
+                        
+                        # Check file extension
+                        if file_path.suffix.lower() in file_extensions:
+                            files_to_analyze.append(file_path)
+            
+            # Analyze each file
+            for file_path in files_to_analyze:
+                file_info = await self._analyze_file(file_path)
+                if file_info:
+                    analysis["files"].append(file_info)
+                    analysis["functions"].extend(file_info.get("functions", []))
+                    analysis["classes"].extend(file_info.get("classes", []))
+                    analysis["total_lines"] += file_info.get("lines", 0)
                     
-                    # Check file extension
-                    if file_path.suffix.lower() in file_extensions:
-                        file_info = await self._analyze_file(file_path)
-                        if file_info:
-                            analysis["files"].append(file_info)
-                            analysis["functions"].extend(file_info.get("functions", []))
-                            analysis["classes"].extend(file_info.get("classes", []))
-                            analysis["imports"].extend(file_info.get("imports", []))
-                            analysis["total_lines"] += file_info.get("lines", 0)
-                            
-                            # Track language distribution
-                            lang = file_path.suffix.lower()
-                            analysis["language_distribution"][lang] = analysis["language_distribution"].get(lang, 0) + 1
+                    # Include COBOL-specific data in analysis
+                    if "procedures" in file_info:
+                        analysis.setdefault("procedures", []).extend(file_info["procedures"])
+                    if "data_structures" in file_info:
+                        analysis.setdefault("data_structures", []).extend(file_info["data_structures"])
+                    if "file_dependencies" in file_info:
+                        analysis.setdefault("file_dependencies", []).extend(file_info["file_dependencies"])
+                    if "program_metadata" in file_info:
+                        analysis.setdefault("program_metadata", {}).update(file_info["program_metadata"])
+                    if "complexity_score" in file_info:
+                        analysis.setdefault("complexity_score", 0)
+                        analysis["complexity_score"] += file_info["complexity_score"]
+                    
+                    # Track language distribution
+                    lang = file_path.suffix.lower()
+                    analysis["language_distribution"][lang] = analysis["language_distribution"].get(lang, 0) + 1
             
             analysis["total_files"] = len(analysis["files"])
             analysis["complexity_metrics"] = self._calculate_complexity_metrics(analysis)
@@ -209,26 +232,136 @@ class CodeAnalyzerTool(BaseAgentTool):
         }
     
     def _analyze_cobol_file(self, content: str) -> Dict[str, Any]:
-        """Analyze COBOL file structure."""
+        """Analyze COBOL file structure with COBOL-aware parsing."""
         functions = []
         classes = []
         imports = []
+        procedures = []
+        data_structures = []
+        file_dependencies = []
+        program_metadata = {}
         
-        # COBOL-specific patterns
-        program_pattern = r'PROGRAM-ID\.\s+(\w+)'
-        section_pattern = r'(\w+)\s+SECTION\.'
+        lines = content.split('\n')
         
-        for match in re.finditer(program_pattern, content):
-            functions.append({"name": match.group(1), "line": content[:match.start()].count('\n') + 1})
+        # Parse program metadata
+        program_id_match = re.search(r'PROGRAM-ID\.\s+(\w+)', content)
+        if program_id_match:
+            program_metadata['program_id'] = program_id_match.group(1)
         
-        for match in re.finditer(section_pattern, content):
-            functions.append({"name": match.group(1), "line": content[:match.start()].count('\n') + 1})
+        author_match = re.search(r'AUTHOR\.\s+(.+)', content)
+        if author_match:
+            program_metadata['author'] = author_match.group(1).strip()
+        
+        # Parse procedures (paragraphs and sections in PROCEDURE DIVISION)
+        procedure_section = False
+        for i, line in enumerate(lines):
+            line = line.strip()
+            
+            # Check if we're in PROCEDURE DIVISION
+            if 'PROCEDURE DIVISION' in line:
+                procedure_section = True
+                continue
+            
+            # If we're in procedure section, look for paragraphs and sections
+            if procedure_section:
+                # Paragraphs - look for word(s) followed by period at start of line
+                # COBOL paragraphs can have hyphens in names like OPEN-FILES
+                if re.match(r'^\s*([A-Z0-9-]+)\s*\.\s*$', line) and 'SECTION' not in line and 'GOBACK' not in line:
+                    paragraph_name = re.match(r'^\s*([A-Z0-9-]+)\s*\.\s*$', line).group(1)
+                    procedures.append({
+                        "name": paragraph_name,
+                        "type": "paragraph",
+                        "line": i + 1
+                    })
+                
+                # Sections (with SECTION keyword)
+                elif re.search(r'(\w+)\s+SECTION\.', line):
+                    section_name = re.search(r'(\w+)\s+SECTION\.', line).group(1)
+                    procedures.append({
+                        "name": section_name,
+                        "type": "section", 
+                        "line": i + 1
+                    })
+        
+        # Parse file dependencies (SELECT statements)
+        select_pattern = r'SELECT\s+([A-Z0-9-]+)\s+ASSIGN\s+TO\s+([A-Z0-9-]+)'
+        for match in re.finditer(select_pattern, content):
+            file_dependencies.append({
+                "logical_name": match.group(1),
+                "physical_name": match.group(2),
+                "line": content[:match.start()].count('\n') + 1
+            })
+        
+        # Parse data structures (01 level items)
+        data_section = False
+        structure_counts = {}  # Track duplicate names
+        
+        for i, line in enumerate(lines):
+            line = line.strip()
+            
+            # Check if we're in DATA DIVISION
+            if 'DATA DIVISION' in line:
+                data_section = True
+                continue
+            
+            # Look for 01 level items (main data structures)
+            if data_section and re.match(r'^\s*01\s+(\w+)', line):
+                structure_name = re.match(r'^\s*01\s+(\w+)', line).group(1)
+                
+                # Handle duplicate names by adding suffix
+                if structure_name in structure_counts:
+                    structure_counts[structure_name] += 1
+                    disambiguated_name = f"{structure_name}-{structure_counts[structure_name]}"
+                else:
+                    structure_counts[structure_name] = 1
+                    disambiguated_name = structure_name
+                
+                data_structures.append({
+                    "name": disambiguated_name,
+                    "original_name": structure_name,
+                    "level": "01",
+                    "line": i + 1
+                })
+        
+        # Calculate COBOL-specific complexity
+        complexity_score = self._calculate_cobol_complexity(content, procedures)
         
         return {
-            "functions": functions,
+            "procedures": procedures,  # COBOL uses procedures, not functions
             "classes": classes,
-            "imports": imports
+            "data_structures": data_structures,
+            "file_dependencies": file_dependencies,  # Canonical location for file I/O dependencies
+            "program_metadata": program_metadata,
+            "complexity_score": complexity_score
         }
+    
+    def _calculate_cobol_complexity(self, content: str, procedures: list) -> float:
+        """Calculate COBOL-specific complexity metrics."""
+        complexity = 0.0
+        
+        # Base complexity from number of procedures
+        complexity += len(procedures) * 1.0
+        
+        # Add complexity for control structures
+        perform_count = len(re.findall(r'PERFORM', content))
+        if_count = len(re.findall(r'IF\s+', content))
+        until_count = len(re.findall(r'UNTIL', content))
+        at_end_count = len(re.findall(r'AT END', content))
+        
+        complexity += perform_count * 2.0
+        complexity += if_count * 1.5
+        complexity += until_count * 2.5
+        complexity += at_end_count * 1.0
+        
+        # Add complexity for file operations
+        open_count = len(re.findall(r'OPEN', content))
+        read_count = len(re.findall(r'READ', content))
+        write_count = len(re.findall(r'WRITE', content))
+        close_count = len(re.findall(r'CLOSE', content))
+        
+        complexity += (open_count + read_count + write_count + close_count) * 0.5
+        
+        return complexity
     
     def _calculate_complexity_metrics(self, analysis: Dict[str, Any]) -> Dict[str, Any]:
         """Calculate complexity metrics."""
@@ -242,14 +375,54 @@ class CodeAnalyzerTool(BaseAgentTool):
             function_lengths = [func.get("lines", 0) for func in analysis["functions"]]
             avg_function_length = sum(function_lengths) / len(function_lengths) if function_lengths else 0
         
-        return {
-            "total_functions": total_functions,
-            "total_classes": total_classes,
-            "total_imports": total_imports,
-            "avg_function_length": avg_function_length,
-            "cyclomatic_complexity": "N/A",  # Would need more sophisticated analysis
-            "maintainability_index": "N/A"   # Would need more sophisticated analysis
-        }
+        # COBOL-specific metrics
+        cobol_metrics = {}
+        if "complexity_score" in analysis:
+            cobol_metrics["cobol_complexity_score"] = analysis["complexity_score"]
+        if "procedures" in analysis:
+            cobol_metrics["total_procedures"] = len(analysis["procedures"])
+        if "data_structures" in analysis:
+            cobol_metrics["total_data_structures"] = len(analysis["data_structures"])
+        if "file_dependencies" in analysis:
+            cobol_metrics["total_file_dependencies"] = len(analysis["file_dependencies"])
+        
+        # For COBOL files, use COBOL-specific metrics instead of generic ones
+        if analysis.get("language_distribution", {}).get(".cobol", 0) > 0:
+            return {
+                "total_procedures": cobol_metrics.get("total_procedures", 0),
+                "total_data_structures": cobol_metrics.get("total_data_structures", 0),
+                "total_file_operations": cobol_metrics.get("total_file_dependencies", 0),
+                "complexity_score": cobol_metrics.get("cobol_complexity_score", 0),
+                "program_id": analysis.get("program_metadata", {}).get("program_id", ""),
+                "author": analysis.get("program_metadata", {}).get("author", ""),
+                "modernization_readiness": self._assess_cobol_readiness(cobol_metrics)
+            }
+        else:
+            # For non-COBOL files, use traditional metrics
+            base_metrics = {
+                "total_functions": total_functions,
+                "total_classes": total_classes,
+                "total_imports": total_imports,
+                "avg_function_length": avg_function_length,
+                "cyclomatic_complexity": "N/A",
+                "maintainability_index": "N/A"
+            }
+            base_metrics.update(cobol_metrics)
+            return base_metrics
+    
+    def _assess_cobol_readiness(self, cobol_metrics: Dict[str, Any]) -> str:
+        """Assess COBOL modernization readiness."""
+        complexity = cobol_metrics.get("cobol_complexity_score", 0)
+        procedures = cobol_metrics.get("total_procedures", 0)
+        data_structures = cobol_metrics.get("total_data_structures", 0)
+        file_ops = cobol_metrics.get("total_file_dependencies", 0)
+        
+        if complexity < 20 and procedures < 5 and data_structures < 10 and file_ops < 3:
+            return "HIGH - Simple COBOL program, straightforward modernization"
+        elif complexity < 50 and procedures < 15 and data_structures < 20 and file_ops < 8:
+            return "MEDIUM - Moderate COBOL complexity, requires careful planning"
+        else:
+            return "LOW - Complex COBOL program, requires extensive analysis and phased approach"
 
 
 class DependencyAnalyzerTool(BaseAgentTool):
@@ -273,7 +446,7 @@ class DependencyAnalyzerTool(BaseAgentTool):
                 raise ValueError(f"Codebase path does not exist: {codebase_path}")
             
             if file_extensions is None:
-                file_extensions = ['.py', '.js', '.ts', '.java', '.c', '.cpp']
+                file_extensions = ['.py', '.js', '.ts', '.java', '.c', '.cpp', '.cobol', '.cbl']
             
             if exclude_patterns is None:
                 exclude_patterns = ['__pycache__', '.git', 'node_modules', 'venv', 'env']
@@ -286,6 +459,10 @@ class DependencyAnalyzerTool(BaseAgentTool):
                 "dependency_tree": {},
                 "import_statistics": {}
             }
+            
+            # Handle single COBOL file case
+            if codebase_path.is_file() and codebase_path.suffix.lower() in ['.cobol', '.cbl']:
+                return await self._analyze_cobol_dependencies(codebase_path)
             
             # Build dependency graph
             dependency_graph = nx.DiGraph()
@@ -332,6 +509,64 @@ class DependencyAnalyzerTool(BaseAgentTool):
         except Exception as e:
             self.logger.error(f"Error analyzing dependencies: {e}")
             raise
+    
+    async def _analyze_cobol_dependencies(self, file_path: Path) -> Dict[str, Any]:
+        """Analyze COBOL file dependencies."""
+        try:
+            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                content = f.read()
+            
+            # Parse SELECT statements for file dependencies
+            file_deps = []
+            select_pattern = r'SELECT\s+([A-Z0-9-]+)\s+ASSIGN\s+TO\s+([A-Z0-9-]+)'
+            for match in re.finditer(select_pattern, content):
+                file_deps.append({
+                    "logical_name": match.group(1),
+                    "physical_name": match.group(2),
+                    "type": "file_io",
+                    "line": content[:match.start()].count('\n') + 1
+                })
+            
+            # Build dependency graph for COBOL
+            dependency_graph = nx.DiGraph()
+            dependency_graph.add_node(str(file_path))
+            
+            for dep in file_deps:
+                dependency_graph.add_node(dep["physical_name"])
+                dependency_graph.add_edge(str(file_path), dep["physical_name"], 
+                                       type="file_io", logical_name=dep["logical_name"])
+            
+            return {
+                "file_dependencies": file_deps,  # Canonical location for file I/O dependencies
+                "dependency_graph": {
+                    "nodes": list(dependency_graph.nodes()),
+                    "edges": [(u, v, data) for u, v, data in dependency_graph.edges(data=True)]
+                },
+                "circular_dependencies": [],
+                "dependency_tree": {str(file_path): [dep["physical_name"] for dep in file_deps]},
+                "import_statistics": {
+                    "total_imports": len(file_deps),
+                    "external_imports": len(file_deps),
+                    "internal_imports": 0,
+                    "external_ratio": 1.0 if file_deps else 0.0,
+                    "internal_ratio": 0.0
+                }
+            }
+        except Exception as e:
+            self.logger.error(f"Error analyzing COBOL dependencies: {e}")
+            return {
+                "file_dependencies": [], 
+                "dependency_graph": {"nodes": [], "edges": []},
+                "circular_dependencies": [],
+                "dependency_tree": {},
+                "import_statistics": {
+                    "total_imports": 0,
+                    "external_imports": 0,
+                    "internal_imports": 0,
+                    "external_ratio": 0.0,
+                    "internal_ratio": 0.0
+                }
+            }
     
     async def _analyze_file_dependencies(self, file_path: Path, codebase_path: Path) -> List[Dict[str, Any]]:
         """Analyze dependencies for a single file."""
