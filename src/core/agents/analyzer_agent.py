@@ -36,23 +36,23 @@ class AnalyzerAgent(BaseAgent):
             # Analyze the codebase structure
             structure_analysis = await self.use_tool(
                 "analyze_code_structure",
-                codebase_path=state.codebase_path
+                codebase_path=state["codebase_path"]
             )
             
             # Analyze dependencies
             dependency_analysis = await self.use_tool(
                 "analyze_dependencies",
-                codebase_path=state.codebase_path
+                codebase_path=state["codebase_path"]
             )
             
             # Scan for legacy patterns
             pattern_analysis = await self.use_tool(
                 "analyze_legacy_patterns",
-                codebase_path=state.codebase_path
+                codebase_path=state["codebase_path"]
             )
             
             # Update state with analysis results
-            state.analysis_results = {
+            state["analysis_results"] = {
                 "structure": structure_analysis,
                 "dependencies": dependency_analysis,
                 "patterns": pattern_analysis
@@ -66,7 +66,7 @@ class AnalyzerAgent(BaseAgent):
             
         except Exception as e:
             self.logger.error(f"Error in analyzer agent: {e}")
-            state.error = str(e)
+            state["error"] = str(e)
         
         return state
     
