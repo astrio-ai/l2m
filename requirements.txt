@@ -19,6 +19,9 @@ langgraph>=0.6.0
 langchain-core>=0.3.0
 pydantic-settings>=2.0.0
 
+# Additional dependencies for tools
+networkx>=3.0.0
+
 # AutoGen integration (supports both OpenAI and Anthropic)
 autogen-agentchat>=0.4.0
 autogen-ext[openai]>=0.4.0

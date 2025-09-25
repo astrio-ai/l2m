@@ -8,7 +8,7 @@ multi-agent modernization system.
 import os
 from typing import List, Optional, Dict, Any
 from pathlib import Path
-from pydantic import Field
+from pydantic import Field, ConfigDict
 from pydantic_settings import BaseSettings
 
 
@@ -37,6 +37,10 @@ class Settings(BaseSettings):
     llm_api_key: Optional[str] = Field(default=None, description="LLM API key")
     llm_temperature: float = Field(default=0.7, description="LLM temperature")
     llm_max_tokens: int = Field(default=4000, description="LLM max tokens")
+    
+    # Specific API keys
+    anthropic_api_key: Optional[str] = Field(default=None, alias="ANTHROPIC_API_KEY", description="Anthropic API key")
+    openai_api_key: Optional[str] = Field(default=None, alias="OPENAI_API_KEY", description="OpenAI API key")
     
     # Agent settings
     agent_timeout: int = Field(default=300, description="Agent timeout in seconds")
@@ -71,12 +75,13 @@ class Settings(BaseSettings):
     jwt_algorithm: str = Field(default="HS256", description="JWT algorithm")
     jwt_expiration: int = Field(default=3600, description="JWT expiration in seconds")
     
-    class Config:
-        """Pydantic configuration."""
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
-        extra = "ignore"
+    model_config = ConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",
+        populate_by_name=True
+    )
     
     def load_from_file(self, config_file: str):
         """Load settings from a configuration file."""
