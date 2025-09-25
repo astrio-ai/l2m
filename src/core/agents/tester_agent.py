@@ -35,29 +35,29 @@ class TesterAgent(BaseAgent):
             # Run generated test cases
             test_results = await self.use_tool(
                 "run_test_cases",
-                test_cases=state.test_cases,
-                transformed_code=state.transformation_results,
-                test_framework=state.test_framework
+                test_cases=state["test_cases"],
+                transformed_code=state["transformation_results"],
+                test_framework=state["test_framework"]
             )
             
             # Analyze test coverage
             coverage_analysis = await self.use_tool(
                 "analyze_test_coverage",
                 test_results=test_results,
-                transformed_code=state.transformation_results
+                transformed_code=state["transformation_results"]
             )
             
             # Validate test completeness
             test_validation = await self.use_tool(
-                "validate_test_completeness",
-                test_cases=state.test_cases,
-                original_functionality=state.analysis_results
+                "validate_tests",
+                test_cases=state["test_cases"],
+                original_functionality=state["analysis_results"]
             )
             
             # Update state with test results
-            state.test_results = test_results
-            state.coverage_analysis = coverage_analysis
-            state.test_validation = test_validation
+            state["test_results"] = test_results
+            state["coverage_analysis"] = coverage_analysis
+            state["test_validation"] = test_validation
             
             self.log_activity("Test generation and execution completed", {
                 "tests_passed": test_results.get("passed", 0),
@@ -68,7 +68,7 @@ class TesterAgent(BaseAgent):
             
         except Exception as e:
             self.logger.error(f"Error in tester agent: {e}")
-            state.error = str(e)
+            state["error"] = str(e)
         
         return state
     
