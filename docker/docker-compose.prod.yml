@@ -1,0 +1,102 @@
+# Production Docker Compose for Legacy2Modern multi-agent system
+
+version: '3.8'
+
+services:
+  legacy2modern:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONPATH=/app/src
+      - LOG_LEVEL=WARNING
+      - DEBUG=false
+      - API_KEY=${API_KEY}
+      - LLM_PROVIDER=${LLM_PROVIDER}
+      - LLM_MODEL=${LLM_MODEL}
+      - LLM_API_KEY=${LLM_API_KEY}
+      - SECRET_KEY=${SECRET_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+    volumes:
+      - ./logs:/app/logs
+      - ./output:/app/output
+      - ./backup:/app/backup
+      - ./temp:/app/temp
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 1G
+          cpus: '0.5'
+
+  # Production database
+  database:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: ${DB_NAME:-legacy2modern}
+      POSTGRES_USER: ${DB_USER:-legacy2modern}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
+
+  # Production Redis for caching
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.25'
+        reservations:
+          memory: 256M
+          cpus: '0.1'
+
+  # Nginx reverse proxy
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./ssl:/etc/nginx/ssl
+    depends_on:
+      - legacy2modern
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+        reservations:
+          memory: 128M
+          cpus: '0.1'
+
+volumes:
+  postgres_data:
+  redis_data:

@@ -1,0 +1,6 @@
+# Data directory contents
+*.log
+*.tmp
+temp/*
+backup/*
+output/*
