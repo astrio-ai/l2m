@@ -34,30 +34,30 @@ class ReviewerAgent(BaseAgent):
         try:
             # Review transformed code quality
             quality_review = await self.use_tool(
-                "review_code_quality",
-                transformed_code=state.transformation_results,
-                original_code=state.analysis_results,
-                target_language=state.target_language
+                "review_transformed_code",
+                transformed_code=state["transformation_results"],
+                original_code=state["analysis_results"],
+                target_language=state["target_language"]
             )
             
             # Analyze code standards compliance
             standards_analysis = await self.use_tool(
-                "analyze_standards_compliance",
-                code=state.transformation_results,
-                language=state.target_language
+                "analyze_code_quality",
+                code=state["transformation_results"],
+                language=state["target_language"]
             )
             
             # Generate test cases
             test_cases = await self.use_tool(
                 "generate_test_cases",
-                transformed_code=state.transformation_results,
-                original_functionality=state.analysis_results
+                transformed_code=state["transformation_results"],
+                original_functionality=state["analysis_results"]
             )
             
             # Update state with review results
-            state.quality_review = quality_review
-            state.standards_analysis = standards_analysis
-            state.test_cases = test_cases
+            state["quality_review"] = quality_review
+            state["standards_analysis"] = standards_analysis
+            state["test_cases"] = test_cases
             
             self.log_activity("Code review completed", {
                 "quality_score": quality_review.get("overall_score", 0),
@@ -67,7 +67,7 @@ class ReviewerAgent(BaseAgent):
             
         except Exception as e:
             self.logger.error(f"Error in reviewer agent: {e}")
-            state.error = str(e)
+            state["error"] = str(e)
         
         return state
     
