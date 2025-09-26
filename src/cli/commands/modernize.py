@@ -17,7 +17,6 @@ from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-
 async def modernize_command(ctx, codebase_path: str, target_language: str, output: Optional[str], goals: List[str], async_mode: bool):
     """Execute the modernize command."""
     try:
@@ -27,17 +26,14 @@ async def modernize_command(ctx, codebase_path: str, target_language: str, outpu
         
         # Show progress indicator
         with ProgressIndicator("Modernizing codebase...") as progress:
-            # Prepare modernization parameters
-            modernization_params = {
-                "codebase_path": codebase_path,
-                "target_language": target_language,
-                "modernization_goals": goals,
-                "options": {}
-            }
             
             # Run modernization
             progress.update("Running modernization workflow...")
-            result = await workflow.run(modernization_params)
+            result = await workflow.run(
+                codebase_path=codebase_path,
+                target_language=target_language,
+                modernization_goals=goals
+            )
             
             # Format and display results
             progress.update("Formatting results...")
