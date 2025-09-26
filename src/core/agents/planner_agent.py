@@ -52,8 +52,16 @@ class PlannerAgent(BaseAgent):
             )
             
             # Step 2: Use LLM to generate tactical transformation rules
+            # Get business goals for context
+            modernization_goals = state.get("modernization_goals", [])
+            business_context = f"""
+            BUSINESS GOALS: {modernization_goals if modernization_goals else "General modernization to Python"}
+            """
+            
             transformation_prompt = f"""
             You are a code transformation expert. Based on the COBOL analysis below, generate ONLY a JSON response with transformation rules.
+
+            {business_context}
 
             COBOL ANALYSIS:
             - Procedures: {state["analysis_results"]["structure"].get("procedures", [])}
@@ -67,6 +75,7 @@ class PlannerAgent(BaseAgent):
             CRITICAL: Respond with ONLY valid JSON in this exact format (no other text):
             {{
                 "phase": "Core Transformation",
+                "business_goals": {modernization_goals},
                 "rules": [
                     {{
                         "source": "OPEN-FILES",
@@ -79,7 +88,9 @@ class PlannerAgent(BaseAgent):
                 ]
             }}
 
-            Generate transformation rules for each COBOL procedure and data structure. Return ONLY the JSON object.
+            Generate transformation rules for each COBOL procedure and data structure. 
+            Consider the business goals when designing the transformation approach.
+            Return ONLY the JSON object.
             """
             
             # Use LLM to generate tactical transformation rules

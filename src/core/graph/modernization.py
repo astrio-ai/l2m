@@ -213,6 +213,10 @@ class ModernizationWorkflow:
             state["compliance_check"] = result.get("compliance_check")
             state["integration_tests"] = result.get("integration_tests")
             state["modernization_success"] = result.get("modernization_success")
+            state["workflow_id"] = result.get("workflow_id")
+            state["start_time"] = result.get("start_time")
+            state["end_time"] = result.get("end_time")
+            state["total_duration"] = result.get("total_duration")
             state["error"] = result.get("error")
             state["messages"] = result.get("messages", state.get("messages", []))
             
@@ -231,7 +235,10 @@ class ModernizationWorkflow:
             modernization_goals = []
         
         try:
-            # Initialize state
+            # Initialize state with start time
+            from datetime import datetime
+            start_time = datetime.utcnow()
+            
             state = {
                 "codebase_path": codebase_path,
                 "target_language": target_language,
@@ -258,7 +265,7 @@ class ModernizationWorkflow:
                 "error": None,
                 "messages": [],
                 "workflow_id": None,
-                "start_time": None,
+                "start_time": start_time,
                 "end_time": None,
                 "total_duration": None
             }
