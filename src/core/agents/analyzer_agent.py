@@ -11,6 +11,7 @@ from src.core.state.agent_state import AgentState
 from src.core.tools.code_tools import CodeAnalyzerTool, DependencyAnalyzerTool
 from src.core.tools.file_tools import FileReaderTool, DirectoryScannerTool
 from src.core.tools.search_tools import PatternSearchTool, ReferenceFinderTool, CodeDiscoveryTool
+from src.core.tools.handoff_tools import transfer_to_planner
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -28,7 +29,8 @@ class AnalyzerAgent(BaseAgent):
             DirectoryScannerTool(),
             PatternSearchTool(),
             ReferenceFinderTool(),
-            CodeDiscoveryTool()
+            CodeDiscoveryTool(),
+            transfer_to_planner
         ]
         super().__init__(settings, tools)
     
@@ -74,24 +76,27 @@ class AnalyzerAgent(BaseAgent):
             # Extract LLM insights
             llm_insights = llm_response[0].content if llm_response else "No LLM analysis available"
             
-            # Step 3: Combine tool data with LLM insights
-            state["analysis_results"] = {
+            # Step 3: Prepare analysis results for handoff
+            analysis_results = {
                 "structure": structure_analysis,
                 "dependencies": dependency_analysis,
                 "llm_insights": llm_insights,
                 "analysis_summary": {
                     "files_analyzed": len(structure_analysis.get("files", [])),
-                    "dependencies_found": len(dependency_analysis.get("dependencies", [])),
-                    "complexity_score": structure_analysis.get("complexity_metrics", {}).get("cobol_complexity_score", 0),
+                    "dependencies_found": len(dependency_analysis.get("file_dependencies", [])),
+                    "complexity_score": structure_analysis.get("complexity_metrics", {}).get("complexity_score", 0),
                     "modernization_readiness": self._assess_modernization_readiness(structure_analysis, dependency_analysis)
                 }
             }
             
+            # Step 4: Store analysis results in state
+            state["analysis_results"] = analysis_results
+            
             self.log_activity("Code analysis completed with LLM insights", {
                 "files_analyzed": len(structure_analysis.get("files", [])),
-                "dependencies_found": len(dependency_analysis.get("dependencies", [])),
+                "dependencies_found": len(dependency_analysis.get("file_dependencies", [])),
                 "llm_insights_length": len(llm_insights),
-                "modernization_readiness": state["analysis_results"]["analysis_summary"]["modernization_readiness"]
+                "modernization_readiness": analysis_results["analysis_summary"]["modernization_readiness"]
             })
             
         except Exception as e:

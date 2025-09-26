@@ -87,3 +87,7 @@ class BaseLLMProvider(ABC):
             "temperature": self.temperature,
             "max_tokens": self.max_tokens
         }
+    
+    def get_model(self) -> str:
+        """Get the model name for LangChain compatibility."""
+        return self.model
