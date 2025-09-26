@@ -11,7 +11,6 @@ from src.core.state.agent_state import AgentState
 from src.core.tools.code_tools import CodeAnalyzerTool, DependencyAnalyzerTool
 from src.core.tools.file_tools import FileReaderTool, DirectoryScannerTool
 from src.core.tools.search_tools import PatternSearchTool, ReferenceFinderTool, CodeDiscoveryTool
-from src.core.tools.handoff_tools import transfer_to_planner
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -29,8 +28,7 @@ class AnalyzerAgent(BaseAgent):
             DirectoryScannerTool(),
             PatternSearchTool(),
             ReferenceFinderTool(),
-            CodeDiscoveryTool(),
-            transfer_to_planner
+            CodeDiscoveryTool()
         ]
         super().__init__(settings, tools)
     

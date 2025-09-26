@@ -17,6 +17,8 @@ requests>=2.31.0
 # LangGraph for multi-agent workflows
 langgraph>=0.6.0
 langchain-core>=0.3.0
+langchain-anthropic>=0.2.0
+langchain-openai>=0.2.0
 pydantic-settings>=2.0.0
 
 # Additional dependencies for tools

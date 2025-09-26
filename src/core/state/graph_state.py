@@ -27,6 +27,7 @@ class GraphState(TypedDict):
     modernization_plan: Optional[Dict[str, Any]]
     risk_assessment: Optional[Dict[str, Any]]
     implementation_strategy: Optional[Dict[str, Any]]
+    transformation_plan: Optional[Dict[str, Any]]
     
     # Execution results
     transformation_results: Optional[List[Dict[str, Any]]]
