@@ -11,7 +11,6 @@ from src.core.state.agent_state import AgentState
 from src.core.tools.code_tools import ModernizationPlannerTool, RiskAssessmentTool
 from src.core.tools.search_tools import PatternSearchTool, ReferenceFinderTool, CodeDiscoveryTool
 from src.core.tools.file_tools import FileReaderTool, DirectoryScannerTool
-from src.core.tools.handoff_tools import transfer_to_executor
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -29,8 +28,7 @@ class PlannerAgent(BaseAgent):
             ReferenceFinderTool(),
             CodeDiscoveryTool(),
             FileReaderTool(),
-            DirectoryScannerTool(),
-            transfer_to_executor
+            DirectoryScannerTool()
         ]
         super().__init__(settings, tools)
     
@@ -55,9 +53,9 @@ class PlannerAgent(BaseAgent):
             
             # Step 2: Use LLM to generate tactical transformation rules
             transformation_prompt = f"""
-            Based on the following COBOL code analysis, generate specific transformation rules for converting to {state["target_language"]}:
+            You are a code transformation expert. Based on the COBOL analysis below, generate ONLY a JSON response with transformation rules.
 
-            COBOL ANALYSIS DATA:
+            COBOL ANALYSIS:
             - Procedures: {state["analysis_results"]["structure"].get("procedures", [])}
             - Data Structures: {state["analysis_results"]["structure"].get("data_structures", [])}
             - File Dependencies: {state["analysis_results"]["structure"].get("file_dependencies", [])}
@@ -66,57 +64,22 @@ class PlannerAgent(BaseAgent):
 
             TARGET LANGUAGE: {state["target_language"]}
 
-            Generate a JSON response with this exact structure:
+            CRITICAL: Respond with ONLY valid JSON in this exact format (no other text):
             {{
-                "transformation_rules": [
+                "phase": "Core Transformation",
+                "rules": [
                     {{
-                        "source_procedure": "OPEN-FILES",
-                        "target_function": "open_files",
-                        "transformation_type": "procedure_to_function",
-                        "target_code": "def open_files():\n    # Open input and output files\n    pass",
-                        "dependencies": ["file_operations"],
-                        "complexity": "low"
-                    }}
-                ],
-                "data_structure_mappings": [
-                    {{
-                        "source_structure": "PRINT-REC",
-                        "target_class": "PrintRecord",
-                        "transformation_type": "cobol_record_to_class",
-                        "target_code": "class PrintRecord:\n    def __init__(self):\n        self.acct_no = None\n        self.last_name = None\n        # ... other fields",
-                        "dependencies": ["data_models"]
-                    }}
-                ],
-                "file_io_transformations": [
-                    {{
-                        "source_file": "PRINT-LINE",
-                        "target_operation": "write_output",
-                        "transformation_type": "cobol_file_to_function",
-                        "target_code": "def write_output(data):\n    # Write data to output file\n    pass",
-                        "dependencies": ["file_operations"]
-                    }}
-                ],
-                "execution_order": ["data_structures", "file_operations", "procedures"],
-                "transformation_phases": [
-                    {{
-                        "phase_name": "data_structure_conversion",
-                        "rules": ["data_structure_mappings"],
-                        "output_files": ["models.py"]
+                        "source": "OPEN-FILES",
+                        "target": "def open_files():\\n    with open('acctrec.txt') as f:\\n        ..."
                     }},
                     {{
-                        "phase_name": "file_operations_conversion", 
-                        "rules": ["file_io_transformations"],
-                        "output_files": ["file_ops.py"]
-                    }},
-                    {{
-                        "phase_name": "business_logic_conversion",
-                        "rules": ["transformation_rules"],
-                        "output_files": ["main.py"]
+                        "source": "WRITE-HEADERS", 
+                        "target": "def write_headers():\\n    print('HEADER')"
                     }}
                 ]
             }}
 
-            Focus on generating concrete, executable transformation rules that map COBOL constructs to {state["target_language"]} code.
+            Generate transformation rules for each COBOL procedure and data structure. Return ONLY the JSON object.
             """
             
             # Use LLM to generate tactical transformation rules
@@ -127,21 +90,29 @@ class PlannerAgent(BaseAgent):
             # Extract LLM transformation rules
             llm_transformation_rules = llm_response[0].content if llm_response else "No transformation rules available"
             
+            # Debug: Log the LLM response for troubleshooting
+            self.logger.info(f"LLM response length: {len(llm_transformation_rules)} characters")
+            self.logger.debug(f"LLM response preview: {llm_transformation_rules[:200]}...")
+            
             # Step 3: Parse and structure the transformation rules
             transformation_plan = self._parse_transformation_rules(llm_transformation_rules, state["analysis_results"])
             
-            # Step 4: Store handoff information for workflow
+            # Store planning results in state (this is what the Executor Agent will use)
+            state["modernization_plan"] = modernization_plan
+            state["risk_assessment"] = risk_assessment
+            state["transformation_plan"] = transformation_plan
+            state["llm_transformation_rules"] = llm_transformation_rules
+            
+            # Debug: Log what we're storing
+            self.logger.info(f"Storing transformation_plan with {len(transformation_plan.get('rules', []))} rules")
+            self.logger.info(f"Transformation plan keys: {list(transformation_plan.keys())}")
+            
+            # Also store handoff information for compatibility
             state["handoff_to_executor"] = {
                 "transformation_plan": transformation_plan,
                 "source_code_path": state["codebase_path"],
                 "target_language": state["target_language"]
             }
-            
-            # Store planning results in state
-            state["modernization_plan"] = modernization_plan
-            state["risk_assessment"] = risk_assessment
-            state["transformation_plan"] = transformation_plan
-            state["llm_transformation_rules"] = llm_transformation_rules
             
             # Add tactical planning summary
             state["planning_summary"] = {
@@ -165,6 +136,20 @@ class PlannerAgent(BaseAgent):
             self.logger.error(f"Error in planner agent: {e}")
             state["error"] = str(e)
         
+        # Update the state directly and return it
+        state["modernization_plan"] = modernization_plan
+        state["risk_assessment"] = risk_assessment
+        state["transformation_plan"] = transformation_plan
+        state["llm_transformation_rules"] = llm_transformation_rules
+        state["planning_summary"] = state.get("planning_summary", {})
+        state["handoff_to_executor"] = state.get("handoff_to_executor", {})
+        
+        # Debug: Log what we're returning
+        self.logger.info(f"Planner returning state with keys: {list(state.keys())}")
+        self.logger.info(f"transformation_plan in result: {'transformation_plan' in state}")
+        if 'transformation_plan' in state:
+            self.logger.info(f"transformation_plan rules count: {len(state['transformation_plan'].get('rules', []))}")
+        
         return state
     
     def _parse_transformation_rules(self, llm_response: str, analysis: Dict[str, Any]) -> Dict[str, Any]:
@@ -173,15 +158,46 @@ class PlannerAgent(BaseAgent):
         import re
         
         try:
-            # Try to extract JSON from LLM response
-            json_match = re.search(r'\{.*\}', llm_response, re.DOTALL)
-            if json_match:
-                transformation_data = json.loads(json_match.group())
-                return transformation_data
-        except (json.JSONDecodeError, AttributeError):
-            pass
+            # Try multiple JSON extraction patterns
+            patterns = [
+                r'\{.*\}',  # Basic JSON object
+                r'```json\s*(\{.*?\})\s*```',  # JSON in code block
+                r'```\s*(\{.*?\})\s*```',  # JSON in generic code block
+            ]
+            
+            for pattern in patterns:
+                json_match = re.search(pattern, llm_response, re.DOTALL)
+                if json_match:
+                    json_str = json_match.group(1) if len(json_match.groups()) > 0 else json_match.group(0)
+                    try:
+                        transformation_data = json.loads(json_str)
+                        # Validate that we have the expected structure
+                        if "phase" in transformation_data and "rules" in transformation_data:
+                            self.logger.info(f"Successfully parsed JSON transformation rules: {len(transformation_data.get('rules', []))} rules")
+                            return transformation_data
+                    except json.JSONDecodeError:
+                        continue
+            
+            # Try to find JSON-like structure even if not perfectly formatted
+            if "phase" in llm_response and "rules" in llm_response:
+                # Extract just the JSON part more carefully
+                start_idx = llm_response.find('{')
+                end_idx = llm_response.rfind('}') + 1
+                if start_idx != -1 and end_idx > start_idx:
+                    json_str = llm_response[start_idx:end_idx]
+                    try:
+                        transformation_data = json.loads(json_str)
+                        if "phase" in transformation_data and "rules" in transformation_data:
+                            self.logger.info(f"Successfully parsed JSON transformation rules (extracted): {len(transformation_data.get('rules', []))} rules")
+                            return transformation_data
+                    except json.JSONDecodeError:
+                        pass
+                        
+        except Exception as e:
+            self.logger.warning(f"Error parsing JSON from LLM response: {e}")
         
         # Fallback: Generate transformation rules from analysis data
+        self.logger.warning("Using fallback transformation rules - LLM did not generate valid JSON")
         return self._generate_fallback_transformation_rules(analysis)
     
     def _generate_fallback_transformation_rules(self, analysis: Dict[str, Any]) -> Dict[str, Any]:
@@ -190,65 +206,36 @@ class PlannerAgent(BaseAgent):
         data_structures = analysis.get("structure", {}).get("data_structures", [])
         file_dependencies = analysis.get("structure", {}).get("file_dependencies", [])
         
-        # Generate transformation rules for procedures
-        transformation_rules = []
+        # Generate transformation rules in the expected JSON format
+        rules = []
+        
+        # Add procedure transformation rules
         for proc in procedures:
             rule = {
-                "source_procedure": proc["name"],
-                "target_function": proc["name"].lower().replace("-", "_"),
-                "transformation_type": "procedure_to_function",
-                "target_code": f"def {proc['name'].lower().replace('-', '_')}():\n    # Converted from COBOL {proc['name']}\n    pass",
-                "dependencies": ["file_operations"],
-                "complexity": "medium"
+                "source": proc["name"],
+                "target": f"def {proc['name'].lower().replace('-', '_')}():\n    # Converted from COBOL {proc['name']}\n    pass"
             }
-            transformation_rules.append(rule)
+            rules.append(rule)
         
-        # Generate data structure mappings
-        data_structure_mappings = []
+        # Add data structure transformation rules
         for struct in data_structures:
-            mapping = {
-                "source_structure": struct["name"],
-                "target_class": struct["name"].title().replace("-", ""),
-                "transformation_type": "cobol_record_to_class",
-                "target_code": f"class {struct['name'].title().replace('-', '')}:\n    def __init__(self):\n        # Converted from COBOL {struct['name']}\n        pass",
-                "dependencies": ["data_models"]
+            rule = {
+                "source": struct["name"],
+                "target": f"class {struct['name'].title().replace('-', '')}:\n    def __init__(self):\n        # Converted from COBOL {struct['name']}\n        pass"
             }
-            data_structure_mappings.append(mapping)
+            rules.append(rule)
         
-        # Generate file I/O transformations
-        file_io_transformations = []
+        # Add file I/O transformation rules
         for dep in file_dependencies:
-            transformation = {
-                "source_file": dep["logical_name"],
-                "target_operation": dep["logical_name"].lower().replace("-", "_"),
-                "transformation_type": "cobol_file_to_function",
-                "target_code": f"def {dep['logical_name'].lower().replace('-', '_')}():\n    # Converted from COBOL file {dep['logical_name']}\n    pass",
-                "dependencies": ["file_operations"]
+            rule = {
+                "source": dep["logical_name"],
+                "target": f"def {dep['logical_name'].lower().replace('-', '_')}():\n    # Converted from COBOL file {dep['logical_name']}\n    pass"
             }
-            file_io_transformations.append(transformation)
+            rules.append(rule)
         
         return {
-            "transformation_rules": transformation_rules,
-            "data_structure_mappings": data_structure_mappings,
-            "file_io_transformations": file_io_transformations,
-            "execution_order": ["data_structures", "file_operations", "procedures"],
-            "transformation_phases": [
-                {
-                    "phase_name": "data_structure_conversion",
-                    "rules": ["data_structure_mappings"],
-                    "output_files": ["models.py"]
-                },
-                {
-                    "phase_name": "file_operations_conversion",
-                    "rules": ["file_io_transformations"],
-                    "output_files": ["file_ops.py"]
-                },
-                {
-                    "phase_name": "business_logic_conversion",
-                    "rules": ["transformation_rules"],
-                    "output_files": ["main.py"]
-                }
-            ]
+            "phase": "Core Transformation",
+            "rules": rules
         }
     
     def _assess_planning_complexity(self, analysis: Dict[str, Any]) -> str:
@@ -276,6 +263,21 @@ class PlannerAgent(BaseAgent):
         3. Create executable transformation tasks for the Executor Agent
         4. Provide concrete code snippets and patterns for transformation
         
+        CRITICAL: You MUST output ONLY valid JSON in this exact format:
+        {
+            "phase": "Core Transformation",
+            "rules": [
+                {
+                    "source": "OPEN-FILES",
+                    "target": "def open_files():\n    with open('acctrec.txt') as f:\n        ..."
+                },
+                {
+                    "source": "WRITE-HEADERS", 
+                    "target": "def write_headers():\n    print('HEADER')"
+                }
+            ]
+        }
+        
         Focus on producing actionable transformation rules, not high-level strategy.
-        Output must be structured data that the Executor Agent can immediately execute.
+        Output must be structured JSON data that the Executor Agent can immediately execute.
         """
