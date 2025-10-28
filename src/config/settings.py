@@ -32,8 +32,8 @@ class Settings(BaseSettings):
     database_pool_size: int = Field(default=10, description="Database pool size")
     
     # LLM settings
-    llm_provider: str = Field(default="anthropic", description="LLM provider")
-    llm_model: str = Field(default="claude-3-sonnet", description="LLM model")
+    llm_provider: str = Field(default="openai", description="LLM provider")
+    llm_model: str = Field(default="gpt-4", description="LLM model")
     llm_api_key: Optional[str] = Field(default=None, description="LLM API key")
     llm_temperature: float = Field(default=0.7, description="LLM temperature")
     llm_max_tokens: int = Field(default=4000, description="LLM max tokens")

@@ -58,40 +58,57 @@ class PlannerAgent(BaseAgent):
             BUSINESS GOALS: {modernization_goals if modernization_goals else "General modernization to Python"}
             """
             
+            # Read the actual COBOL source code for better transformation
+            cobol_source = ""
+            try:
+                from pathlib import Path
+                cobol_path = Path(state["codebase_path"])
+                if cobol_path.exists():
+                    with open(cobol_path, 'r') as f:
+                        cobol_source = f.read()
+                        self.logger.debug(f"Read {len(cobol_source)} characters of COBOL source code")
+            except Exception as e:
+                self.logger.warning(f"Could not read COBOL source: {e}")
+            
             transformation_prompt = f"""
-            You are a code transformation expert. Based on the COBOL analysis below, generate ONLY a JSON response with transformation rules.
+You are a code transformation expert. Transform this COBOL program to {state["target_language"]} by generating transformation rules.
 
-            {business_context}
+COBOL SOURCE CODE:
+```cobol
+{cobol_source}
+```
 
-            COBOL ANALYSIS:
-            - Procedures: {state["analysis_results"]["structure"].get("procedures", [])}
-            - Data Structures: {state["analysis_results"]["structure"].get("data_structures", [])}
-            - File Dependencies: {state["analysis_results"]["structure"].get("file_dependencies", [])}
-            - Program Metadata: {state["analysis_results"]["structure"].get("program_metadata", {})}
-            - Complexity Score: {state["analysis_results"]["structure"].get("complexity_metrics", {}).get("complexity_score", 0)}
+COBOL ANALYSIS:
+- Procedures: {state["analysis_results"]["structure"].get("procedures", [])}
+- Data Structures: {state["analysis_results"]["structure"].get("data_structures", [])}
+- File Dependencies: {state["analysis_results"]["structure"].get("file_dependencies", [])}
+- Program ID: {state["analysis_results"]["structure"].get("program_metadata", {}).get("program_id", "UNKNOWN")}
 
-            TARGET LANGUAGE: {state["target_language"]}
+BUSINESS GOALS: {modernization_goals}
 
-            CRITICAL: Respond with ONLY valid JSON in this exact format (no other text):
-            {{
-                "phase": "Core Transformation",
-                "business_goals": {modernization_goals},
-                "rules": [
-                    {{
-                        "source": "OPEN-FILES",
-                        "target": "def open_files():\\n    with open('acctrec.txt') as f:\\n        ..."
-                    }},
-                    {{
-                        "source": "WRITE-HEADERS", 
-                        "target": "def write_headers():\\n    print('HEADER')"
-                    }}
-                ]
-            }}
+CRITICAL: Respond with ONLY valid JSON (no other text):
 
-            Generate transformation rules for each COBOL procedure and data structure. 
-            Consider the business goals when designing the transformation approach.
-            Return ONLY the JSON object.
-            """
+EXAMPLE INPUT (COBOL):
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. HELLO.
+       PROCEDURE DIVISION.
+           DISPLAY 'Hello World!'.
+           GOBACK.
+
+EXAMPLE OUTPUT (JSON):
+{{
+    "phase": "Core Transformation",
+    "business_goals": ["maintainability"],
+    "rules": [
+        {{
+            "source": "PROGRAM-ID. HELLO.",
+            "target": "def hello():\\n    print('Hello World!')"
+        }}
+    ]
+}}
+
+Now transform the COBOL code above and respond with ONLY the JSON object:
+"""
             
             # Use LLM to generate tactical transformation rules
             from langchain_core.messages import HumanMessage
@@ -103,6 +120,7 @@ class PlannerAgent(BaseAgent):
             
             # Debug: Log the LLM response for troubleshooting
             self.logger.info(f"LLM response length: {len(llm_transformation_rules)} characters")
+            self.logger.info(f"LLM response content: {llm_transformation_rules}")  # Full response for debugging
             self.logger.debug(f"LLM response preview: {llm_transformation_rules[:200]}...")
             
             # Step 3: Parse and structure the transformation rules
@@ -213,9 +231,18 @@ class PlannerAgent(BaseAgent):
     
     def _generate_fallback_transformation_rules(self, analysis: Dict[str, Any]) -> Dict[str, Any]:
         """Generate transformation rules from analysis data when LLM parsing fails."""
+        self.logger.info("Generating fallback transformation rules")
+        
         procedures = analysis.get("structure", {}).get("procedures", [])
         data_structures = analysis.get("structure", {}).get("data_structures", [])
         file_dependencies = analysis.get("structure", {}).get("file_dependencies", [])
+        program_metadata = analysis.get("structure", {}).get("program_metadata", {})
+        
+        # Log what we have to work with
+        self.logger.info(f"Procedures found: {len(procedures)}")
+        self.logger.info(f"Data structures found: {len(data_structures)}")
+        self.logger.info(f"File dependencies found: {len(file_dependencies)}")
+        self.logger.info(f"Program metadata: {program_metadata}")
         
         # Generate transformation rules in the expected JSON format
         rules = []
@@ -244,6 +271,67 @@ class PlannerAgent(BaseAgent):
             }
             rules.append(rule)
         
+        # If no procedures found but we have a program ID, create a basic rule
+        if len(rules) == 0 and program_metadata.get("program_id"):
+            program_id = program_metadata.get("program_id", "").lower()
+            program_name = program_metadata.get("program_id")
+            
+            # Try to read the actual COBOL file to get better transformation
+            from pathlib import Path
+            cobol_path = analysis.get("structure", {}).get("files", [{}])[0].get("path", "")
+            if cobol_path and Path(cobol_path).exists():
+                try:
+                    with open(cobol_path, 'r') as f:
+                        cobol_code = f.read()
+                    
+                    # Extract WORKING-STORAGE variables (PIC clauses)
+                    import re
+                    variables = re.findall(r'77\s+(\w+)\s+PIC', cobol_code)
+                    
+                    # Create a Python function with proper variable handling
+                    python_code = f"def {program_id}():\n"
+                    
+                    # Convert COBOL variables to Python
+                    if variables:
+                        python_code += "    # Converted from COBOL variables\n"
+                        for var in variables:
+                            var_py = var.lower().replace('-', '_')
+                            python_code += f"    {var_py} = None\n"
+                    
+                    # Extract DISPLAY statements
+                    displays = re.findall(r'DISPLAY\s+"([^"]+)"', cobol_code)
+                    if displays:
+                        python_code += "\n    # Display statements\n"
+                        for display_text in displays:
+                            python_code += f"    print('{display_text}')\n"
+                    
+                    # If we have variables, add a basic execution flow
+                    if variables:
+                        python_code += "\n    # Basic implementation\n"
+                        python_code += "    pass\n"
+                    
+                    python_code += "    return\n"
+                    
+                    rule = {
+                        "source": program_name,
+                        "target": python_code
+                    }
+                    rules.append(rule)
+                    self.logger.info(f"Created fallback rule with {len(variables)} variables for program: {program_name}")
+                except Exception as e:
+                    self.logger.warning(f"Failed to parse COBOL file for fallback: {e}")
+                    # Use simple fallback
+                    target_code = f"def {program_id}():\n    print('Generated from {program_name}')\n    return"
+                    rule = {"source": program_name, "target": target_code}
+                    rules.append(rule)
+            else:
+                # Simple fallback without file reading
+                target_code = f"def {program_id}():\n    print('Hello from {program_name}')\n    return"
+                rule = {"source": program_name, "target": target_code}
+                rules.append(rule)
+                self.logger.info(f"Created basic fallback rule for program: {program_name}")
+        
+        self.logger.info(f"Generated {len(rules)} fallback rules")
         return {
             "phase": "Core Transformation",
             "rules": rules
