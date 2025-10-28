@@ -54,108 +54,73 @@ Whether you're modernizing COBOL business systems, migrating legacy enterprise a
 ## 🚀 Quickstart
 
 ### Prerequisites
-
 - Python 3.10+
-- Git (for cloning the repository)
-- Homebrew (for Option 3)
+- OpenAI or Anthropic API Key
 
-### Option 1: PyPI Installation (Recommended)
-
-```bash
-# Install from PyPI
-pip install legacy2modern
-
-# Run the CLI
-legacy2modern
-```
-
-### Option 2: Quick Install (Development)
+### Installation
 
 ```bash
-# Clone the repository
+# Clone and install
 git clone https://github.com/astrio-ai/legacy2modern.git
 cd legacy2modern
-
-# Run the installation script
-./install.sh
-```
-
-### Option 3: Manual Installation
-
-```bash
-# Clone the repository
-git clone https://github.com/astrio-ai/legacy2modern.git
-cd legacy2modern
-
-# Install dependencies
 pip install -r requirements.txt
 
-# Install the CLI
-pip install -e .
+# Set API key
+export OPENAI_API_KEY="your-api-key-here"
 ```
 
-### Option 4: Homebrew Installation (macOS)
+### Modernize COBOL to Python
 
 ```bash
-# Install via Homebrew
-brew install legacy2modern
+# Step 1: Modernize a COBOL file
+python -m src.cli.cli modernize examples/cobol/HELLO.cobol python
 
-# Run the CLI
-legacy2modern
+# Step 2: Run the generated code
+python output/python/transformed_code.py
 ```
 
-### Option 5: Run Directly (No Installation)
-
-```bash
-# Clone the repository
-git clone https://github.com/astrio-ai/legacy2modern.git
-cd legacy2modern
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Run the CLI directly
-python run_cli.py
+**Output:**
+```
+Transformed legacy application starting...
+Calling transformed function: hello
+HELLO WORLD!
+Transformation completed successfully!
 ```
 
-### Using the CLI
-
-Once installed, you can use the CLI in several ways:
+## 📋 CLI Commands
 
 ```bash
-# Start the interactive CLI
-legacy2modern
+# Analyze COBOL structure
+python -m src.cli.cli analyze examples/cobol/HELLO.cobol
 
-# Or use the short command
-l2m
+# Modernize to Python
+python -m src.cli.cli modernize examples/cobol/HELLO.cobol python
 
-# Run directly without installation
-python run_cli.py
-```
+# With options
+python -m src.cli.cli modernize examples/cobol/HELLO.cobol python \
+  -o my_output/ -g "maintainability,readability"
 
-**Note**: PyPI installation provides the most convenient way to install and use the CLI across all platforms.
+# Test generated code
+python output/python/transformed_code.py
 
-### Examples
-
-```bash
-# Start the CLI
-legacy2modern
-
-# In the interactive mode:
-> transpile examples/cobol/HELLO.cobol
-> analyze the generated Python code
-> /help
-```
-
-### Run Tests
-
-```bash
-# Run all tests
+# Run tests
 pytest tests/
-
-# Run specific test
-pytest tests/cobol_system/test_basic_transpilation.py
 ```
+
+## ⚙️ Configuration
+
+```bash
+# Environment variables
+export OPENAI_API_KEY="sk-your-key"
+export LLM_PROVIDER="openai"  # or "anthropic"
+export LLM_MODEL="gpt-4"
+```
+
+## 🐛 Troubleshooting
+
+**No API key**: `export OPENAI_API_KEY="your-key"`  
+**Syntax errors**: Check logs with `-v` flag  
+**Module errors**: Run `pip install -r requirements.txt`
 
 ## 📋 Supported Languages & Frameworks
 
@@ -278,13 +243,6 @@ This project is licensed under the Apache-2.0 License. See the [LICENSE](./LICEN
 ## 🤝 Contributing
 We welcome all contributions — from fixing typos to adding new language support!
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for setup instructions, coding guidelines, and how to submit PRs.
-
-### Good First Issues
-* Add support for more COBOL constructs
-* Add support for more website frameworks
-* Create templates for other target languages (JavaScript, C++)
-* Improve error handling and reporting
-* Add more comprehensive test cases
 
 ## 💬 Community & Support
 * 📢 Follow our project updates on [X](https://x.com/nolan-lwin)
