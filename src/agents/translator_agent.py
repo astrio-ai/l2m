@@ -4,7 +4,8 @@ Translator Agent - Converts COBOL to Python.
 Transforms analyzed COBOL code into modern Python equivalents.
 """
 
-from agents import Agent, Runner, function_tool, ModelConfig
+from agents import Agent, Runner, function_tool
+from agents.model_settings import ModelSettings
 from typing import Optional
 from src.config import get_settings
 from src.utils.logger import get_logger
@@ -42,9 +43,8 @@ class TranslatorAgent:
         """Initialize the translator agent."""
         self.settings = get_settings()
         
-        # Create model config
-        model_config = ModelConfig(
-            model=self.settings.openai_model,
+        # Create model settings
+        model_settings = ModelSettings(
             temperature=self.settings.openai_temperature,
         )
         
@@ -60,7 +60,8 @@ class TranslatorAgent:
 
 Generate clean, modern Python code that preserves the original COBOL functionality.
 Use type hints, docstrings, and follow PEP 8 style guidelines.""",
-            model_config=model_config,
+            model=self.settings.openai_model,
+            model_settings=model_settings,
             tools=[translate_to_python],
         )
     

@@ -7,6 +7,9 @@ pydantic>=2.0.0
 # Environment Variables
 python-dotenv>=1.0.0
 
+# Type evaluation backport for Python < 3.10 (if needed)
+# eval-type-backport>=0.1.0  # Uncomment if using Python 3.9
+
 # Async Support (included in Python 3.10+, but explicit for clarity)
 # asyncio is built-in
 
