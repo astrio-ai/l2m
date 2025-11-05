@@ -4,7 +4,7 @@ Tester Agent - Creates and runs unit tests.
 Generates and executes unit tests for translated Python code.
 """
 
-from agents import Agent, Runner, function_tool
+from agents import Agent, Runner, function_tool, ModelConfig
 from typing import Optional
 from src.config import get_settings
 from src.utils.logger import get_logger
@@ -54,8 +54,16 @@ class TesterAgent:
     def __init__(self):
         """Initialize the tester agent."""
         self.settings = get_settings()
+        
+        # Create model config
+        model_config = ModelConfig(
+            model=self.settings.openai_model,
+            temperature=self.settings.openai_temperature,
+        )
+        
         self.agent = Agent(
             name="Test Generator",
+            handoff_description="Specialist agent for generating and running unit tests",
             instructions="""You are a test generation agent. Your task is to:
 1. Generate comprehensive unit tests for Python code
 2. Ensure test coverage for all functions and edge cases
@@ -64,8 +72,7 @@ class TesterAgent:
 5. Include both positive and negative test cases
 
 Generate well-structured, maintainable test code.""",
-            model=self.settings.openai_model,
-            temperature=self.settings.openai_temperature,
+            model_config=model_config,
             tools=[create_tests, execute_tests],
         )
     

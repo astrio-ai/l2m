@@ -5,7 +5,7 @@ Coordinates all agents for complete COBOL to Python modernization workflow.
 """
 
 from typing import Optional, Dict, Any
-from agents import SQLiteSession
+from agents import SQLiteSession, Agent
 from src.config import get_settings
 from src.utils.logger import get_logger
 from src.agents.analyzer_agent import AnalyzerAgent
@@ -13,6 +13,7 @@ from src.agents.translator_agent import TranslatorAgent
 from src.agents.reviewer_agent import ReviewerAgent
 from src.agents.tester_agent import TesterAgent
 from src.agents.refactor_agent import RefactorAgent
+from src.agents.orchestrator_agent import OrchestratorAgent
 
 logger = get_logger(__name__)
 
@@ -20,14 +21,16 @@ logger = get_logger(__name__)
 class ModernizationPipeline:
     """Orchestrates the complete modernization workflow."""
     
-    def __init__(self, session_id: Optional[str] = None):
+    def __init__(self, session_id: Optional[str] = None, use_handoffs: bool = True):
         """Initialize the modernization pipeline.
         
         Args:
             session_id: Optional session ID for maintaining conversation history
+            use_handoffs: Whether to use agent handoffs (orchestrator) or sequential execution
         """
         self.settings = get_settings()
         self.session_id = session_id or "default"
+        self.use_handoffs = use_handoffs
         
         # Initialize agents
         self.analyzer = AnalyzerAgent()
@@ -38,6 +41,19 @@ class ModernizationPipeline:
         
         # Create session if needed
         self.session = SQLiteSession(self.session_id, str(self.settings.db_path)) if self.session_id else None
+        
+        # Set up orchestrator with handoffs if enabled
+        if use_handoffs:
+            handoff_agents = [
+                self.analyzer.agent,
+                self.translator.agent,
+                self.reviewer.agent,
+                self.tester.agent,
+                self.refactor.agent,
+            ]
+            self.orchestrator = OrchestratorAgent(handoff_agents=handoff_agents)
+        else:
+            self.orchestrator = None
     
     async def run(self, cobol_file_path: str) -> Dict[str, Any]:
         """Run the complete modernization pipeline.
@@ -60,30 +76,50 @@ class ModernizationPipeline:
         }
         
         try:
-            # Step 1: Analyze COBOL
-            logger.info("Step 1: Analyzing COBOL code")
-            analysis_prompt = f"Analyze this COBOL file: {cobol_file_path}"
-            results["analysis"] = await self.analyzer.run(analysis_prompt, session=self.session)
-            
-            # Step 2: Translate to Python
-            logger.info("Step 2: Translating to Python")
-            translation_prompt = f"Translate the analyzed COBOL code to modern Python:\n{results['analysis']}"
-            results["translation"] = await self.translator.run(translation_prompt, session=self.session)
-            
-            # Step 3: Review code
-            logger.info("Step 3: Reviewing translated code")
-            review_prompt = f"Review this Python code for quality:\n{results['translation']}"
-            results["review"] = await self.reviewer.run(review_prompt, session=self.session)
-            
-            # Step 4: Generate tests
-            logger.info("Step 4: Generating tests")
-            test_prompt = f"Generate comprehensive tests for this Python code:\n{results['translation']}"
-            results["tests"] = await self.tester.run(test_prompt, session=self.session)
-            
-            # Step 5: Refactor (optional)
-            logger.info("Step 5: Refactoring code")
-            refactor_prompt = f"Refactor this code to improve readability and maintainability:\n{results['translation']}"
-            results["refactored"] = await self.refactor.run(refactor_prompt, session=self.session)
+            if self.use_handoffs and self.orchestrator:
+                # Use orchestrator with handoffs
+                logger.info("Using orchestrator with agent handoffs")
+                prompt = f"""Modernize this COBOL file to Python: {cobol_file_path}
+                
+                The workflow should be:
+                1. Analyze the COBOL code structure
+                2. Translate to Python
+                3. Review the translated code
+                4. Generate tests
+                5. Refactor if needed
+                
+                Coordinate the handoffs between agents as needed."""
+                
+                output = await self.orchestrator.run(prompt, session=self.session)
+                results["orchestrator_output"] = output
+            else:
+                # Sequential execution without handoffs
+                logger.info("Using sequential agent execution")
+                
+                # Step 1: Analyze COBOL
+                logger.info("Step 1: Analyzing COBOL code")
+                analysis_prompt = f"Analyze this COBOL file: {cobol_file_path}"
+                results["analysis"] = await self.analyzer.run(analysis_prompt, session=self.session)
+                
+                # Step 2: Translate to Python
+                logger.info("Step 2: Translating to Python")
+                translation_prompt = f"Translate the analyzed COBOL code to modern Python:\n{results['analysis']}"
+                results["translation"] = await self.translator.run(translation_prompt, session=self.session)
+                
+                # Step 3: Review code
+                logger.info("Step 3: Reviewing translated code")
+                review_prompt = f"Review this Python code for quality:\n{results['translation']}"
+                results["review"] = await self.reviewer.run(review_prompt, session=self.session)
+                
+                # Step 4: Generate tests
+                logger.info("Step 4: Generating tests")
+                test_prompt = f"Generate comprehensive tests for this Python code:\n{results['translation']}"
+                results["tests"] = await self.tester.run(test_prompt, session=self.session)
+                
+                # Step 5: Refactor (optional)
+                logger.info("Step 5: Refactoring code")
+                refactor_prompt = f"Refactor this code to improve readability and maintainability:\n{results['translation']}"
+                results["refactored"] = await self.refactor.run(refactor_prompt, session=self.session)
             
             logger.info("Modernization pipeline completed successfully")
             return results
