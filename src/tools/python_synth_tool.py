@@ -48,6 +48,9 @@ def validate_python_syntax(code: str) -> bool:
     Returns:
         True if syntax is valid, False otherwise
     """
+    if not code or not code.strip():
+        return False
+    
     try:
         ast.parse(code)
         return True
