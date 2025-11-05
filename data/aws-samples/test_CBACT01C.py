@@ -396,6 +396,8 @@ class TestMainFunction:
             handler_instance.file_status = "23"
             handler_instance.display_io_status = MagicMock()
             handler_instance.end_of_file = False
+            handler_instance.read_next = MagicMock(return_value=(None, 16))  # Mock read_next
+            handler_instance.close_file = MagicMock(return_value=0)  # Mock close_file
             mock_handler.return_value = handler_instance
             
             with patch('CBACT01C.abend_program') as mock_abend:
@@ -405,7 +407,6 @@ class TestMainFunction:
                     pass  # Expected when abend_program calls sys.exit
                 
                 # Should call abend_program when file open fails
-                # (may be called multiple times if close also fails)
                 assert mock_abend.call_count >= 1
     
     def test_abend_program(self):
