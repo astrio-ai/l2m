@@ -39,13 +39,57 @@ async def main():
         print(f"\n❌ Error: {results['error']}")
         sys.exit(1)
     
-    print("\n✅ Analysis Complete")
-    print(f"✅ Translation Complete")
-    print(f"✅ Review Complete")
-    print(f"✅ Tests Generated")
-    print(f"✅ Refactoring Complete")
+    # Print analysis results
+    if results.get("analysis"):
+        print("\n" + "-"*70)
+        print("📊 ANALYSIS")
+        print("-"*70)
+        analysis_text = str(results["analysis"])
+        print(analysis_text[:1000] + "..." if len(analysis_text) > 1000 else analysis_text)
+    
+    # Print translation results
+    if results.get("translation"):
+        print("\n" + "-"*70)
+        print("🐍 TRANSLATION (Python Code)")
+        print("-"*70)
+        translation_text = str(results["translation"])
+        print(translation_text[:2000] + "..." if len(translation_text) > 2000 else translation_text)
+    
+    # Print review results
+    if results.get("review"):
+        print("\n" + "-"*70)
+        print("📝 REVIEW")
+        print("-"*70)
+        review_text = str(results["review"])
+        print(review_text[:1000] + "..." if len(review_text) > 1000 else review_text)
+    
+    # Print test results
+    if results.get("tests"):
+        print("\n" + "-"*70)
+        print("🧪 TESTS")
+        print("-"*70)
+        tests_text = str(results["tests"])
+        print(tests_text[:1000] + "..." if len(tests_text) > 1000 else tests_text)
+    
+    # Print refactored code
+    if results.get("refactored"):
+        print("\n" + "-"*70)
+        print("🔧 REFACTORED CODE")
+        print("-"*70)
+        refactored_text = str(results["refactored"])
+        print(refactored_text[:2000] + "..." if len(refactored_text) > 2000 else refactored_text)
+    
+    # Print orchestrator output if using handoffs
+    if results.get("orchestrator_output"):
+        print("\n" + "-"*70)
+        print("🎯 ORCHESTRATOR OUTPUT")
+        print("-"*70)
+        orchestrator_text = str(results["orchestrator_output"])
+        print(orchestrator_text[:2000] + "..." if len(orchestrator_text) > 2000 else orchestrator_text)
     
     print("\n" + "="*70)
+    print("✅ Modernization Complete!")
+    print("="*70)
 
 
 if __name__ == "__main__":
