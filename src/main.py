@@ -105,11 +105,12 @@ async def main():
         if python_code:
             output_file = save_python_file(settings.output_path, cobol_file, python_code)
             print(f"\n💾 Saved Python code to: {output_file}")
-    elif results.get("orchestrator_output"):
+    elif results.get("orchestrator_output") and not results.get("refactored"):
         # Try to extract Python code from orchestrator output if translation not available
+        # (but only if we don't have refactored code, which will be saved later)
         orchestrator_text = str(results["orchestrator_output"])
         python_code = extract_python_code(orchestrator_text)
-        if python_code and "def " in python_code or "print(" in python_code:
+        if python_code and ("def " in python_code or "print(" in python_code):
             output_file = save_python_file(settings.output_path, cobol_file, python_code)
             print(f"\n💾 Saved Python code to: {output_file}")
     
