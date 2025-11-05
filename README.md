@@ -83,6 +83,9 @@ If you see `ModuleNotFoundError: No module named 'agents'`, it means the virtual
 ## License
 This project is licensed under the Apache-2.0 License. See the [LICENSE](./LICENSE) file for details.
 
+## Security
+For security vulnerabilities, please email [naingoolwin.astrio@gmail.com](mailto:naingoolwin.astrio@gmail.com) instead of using the issue tracker. See [SECURITY.md](.github/SECURITY.md) for details.
+
 ## Contributing
 We welcome all contributions — from fixing typos to adding new language support!
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for setup instructions, coding guidelines, and how to submit PRs.
