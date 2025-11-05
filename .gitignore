@@ -75,3 +75,6 @@ dist/
 build/
 *.whl
 
+# Lock files (if not using uv as primary package manager)
+uv.lock
+

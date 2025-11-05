@@ -72,9 +72,6 @@ source .venv/bin/activate
 
 # Then run tests (use python -m pytest to ensure venv Python is used)
 python -m pytest tests/
-
-# Or use the convenience script
-./scripts/run_tests.sh
 ```
 
 If you see `ModuleNotFoundError: No module named 'agents'`, it means the virtual environment isn't activated. Make sure to run `source .venv/bin/activate` first.
