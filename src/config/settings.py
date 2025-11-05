@@ -9,6 +9,10 @@ import logging
 from pathlib import Path
 from typing import Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from dotenv import load_dotenv
+
+# Load .env file before anything else
+load_dotenv()
 
 
 class Settings(BaseSettings):

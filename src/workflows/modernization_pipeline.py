@@ -96,29 +96,111 @@ class ModernizationPipeline:
                 # Sequential execution without handoffs
                 logger.info("Using sequential agent execution")
                 
+                # Read COBOL file content
+                from pathlib import Path
+                cobol_file = Path(cobol_file_path)
+                if not cobol_file.exists():
+                    results["error"] = f"COBOL file not found: {cobol_file_path}"
+                    return results
+                
+                cobol_content = cobol_file.read_text(encoding="utf-8", errors="ignore")
+                logger.info(f"Read COBOL file: {len(cobol_content)} characters")
+                
                 # Step 1: Analyze COBOL
                 logger.info("Step 1: Analyzing COBOL code")
-                analysis_prompt = f"Analyze this COBOL file: {cobol_file_path}"
+                analysis_prompt = f"""Analyze this COBOL program:
+
+File: {cobol_file_path}
+
+COBOL Code:
+```
+{cobol_content}
+```
+
+Use the analyze_cobol tool to extract the structure, then provide a detailed analysis of:
+- Program structure (PROGRAM-ID, divisions)
+- Variable declarations (WORKING-STORAGE)
+- Procedures and logic flow
+- Dependencies between sections"""
                 results["analysis"] = await self.analyzer.run(analysis_prompt, session=self.session)
                 
                 # Step 2: Translate to Python
                 logger.info("Step 2: Translating to Python")
-                translation_prompt = f"Translate the analyzed COBOL code to modern Python:\n{results['analysis']}"
+                translation_prompt = f"""Translate this COBOL code to modern Python:
+
+Original COBOL:
+```
+{cobol_content}
+```
+
+Analysis Results:
+{results['analysis']}
+
+Generate clean, modern Python code that:
+- Preserves the original functionality
+- Uses type hints and docstrings
+- Follows PEP 8 style guidelines
+- Includes a main() function if appropriate"""
                 results["translation"] = await self.translator.run(translation_prompt, session=self.session)
                 
                 # Step 3: Review code
                 logger.info("Step 3: Reviewing translated code")
-                review_prompt = f"Review this Python code for quality:\n{results['translation']}"
+                review_prompt = f"""Review this Python code for quality and correctness:
+
+Python Code:
+```
+{results['translation']}
+```
+
+Original COBOL for reference:
+```
+{cobol_content}
+```
+
+Check for:
+- Correctness (does it match COBOL logic?)
+- PEP 8 compliance
+- Code quality and best practices
+- Potential bugs or improvements"""
                 results["review"] = await self.reviewer.run(review_prompt, session=self.session)
                 
                 # Step 4: Generate tests
                 logger.info("Step 4: Generating tests")
-                test_prompt = f"Generate comprehensive tests for this Python code:\n{results['translation']}"
+                test_prompt = f"""Generate comprehensive unit tests for this Python code:
+
+Python Code:
+```
+{results['translation']}
+```
+
+Original COBOL:
+```
+{cobol_content}
+```
+
+Generate pytest tests that:
+- Test all functions
+- Verify correct behavior matches COBOL logic
+- Include edge cases
+- Use pytest conventions"""
                 results["tests"] = await self.tester.run(test_prompt, session=self.session)
                 
                 # Step 5: Refactor (optional)
                 logger.info("Step 5: Refactoring code")
-                refactor_prompt = f"Refactor this code to improve readability and maintainability:\n{results['translation']}"
+                refactor_prompt = f"""Refactor this Python code to improve readability and maintainability:
+
+Python Code:
+```
+{results['translation']}
+```
+
+Improve:
+- Code structure and organization
+- Add/improve type hints and docstrings
+- Extract patterns if needed
+- Optimize where appropriate
+
+Maintain functional equivalence."""
                 results["refactored"] = await self.refactor.run(refactor_prompt, session=self.session)
             
             logger.info("Modernization pipeline completed successfully")
