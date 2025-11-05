@@ -56,6 +56,10 @@ data/test_cases/
 temp/
 tmp/
 
+# Generated Python files from modernization
+*.modernized.py
+data/output/**/*.py
+
 # OS
 .DS_Store
 Thumbs.db
