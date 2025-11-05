@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Code of Conduct and Contributing guidelines
 - Security policy
 
-## [0.1.0] - 2024-11-05
+## [0.1.0] - 2025-11-05
 
 ### Added
 - Initial release of Legacy2Modern (L2M)

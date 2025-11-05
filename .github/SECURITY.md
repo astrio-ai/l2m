@@ -14,7 +14,7 @@ Please report (suspected) security vulnerabilities to **[naingoolwin.astrio@gmai
 
 ## Security Best Practices
 
-When using Legacy2Modern:
+When using L2M:
 
 1. **API Keys**: Never commit your OpenAI API key to version control. Use environment variables or `.env` files (which are gitignored).
 
