@@ -1,7 +1,0 @@
-# These templates are heavily inspired by the ones from trpc.io
-
-blank_issues_enabled: false
-contact_links:
-  - name: 💬 Ask a question
-    url: https://github.com/astrio-ai/openlegacy/discussions
-    about: Ask questions and discuss with other community members in our GitHub Discussions

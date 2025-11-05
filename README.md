@@ -1,256 +1,109 @@
-# Legacy2Modern (L2M) — AI Legacy COBOL Transpilation Engine
+# Legacy2Modern (L2M)
 
-<div align="center">
+**AI-Powered COBOL to Python Modernization System**
 
-<!-- Keep the gap above this line, otherwise they won't render correctly! -->
-[![GitHub Repo stars](https://img.shields.io/github/stars/astrio-ai/openlegacy)](https://github.com/astrio-ai/openlegacy) 
-[![Join us on Discord](https://img.shields.io/discord/1396038465002405948?logo=discord&logoColor=white&label=discord)](https://discord.gg/2BVwAUzW)
-[![Contributing Guide](https://img.shields.io/badge/Contributing-Guide-informational)](https://github.com/openrewrite/.github/blob/main/CONTRIBUTING.md)
-</div>
+[![GitHub Repo stars](https://img.shields.io/github/stars/astrio-ai/legacy2modern)](https://github.com/astrio-ai/legacy2modern)
 
-![L2M CLI Screenshot](./docs/assets/l2m-screenshot.png)
+## 🎯 Overview
 
-Welcome to **Legacy2Modern (L2M)**, an open-source engine for transforming legacy COBOL code into modern, maintainable Python applications.
+Legacy2Modern (L2M) is a research project for modernizing legacy COBOL code into modern Python using AI-powered agents. The project has evolved through multiple iterations:
 
-L2M specializes in **intelligent COBOL transpilation** into modern Python code. It combines the precision of ANTLR4-based parsing with the flexibility of template-driven code generation, augmented by Large Language Models (LLMs) for intelligent analysis and optimization.
+- **v1 (Archived)**: Multi-agent system using LangGraph - See `archive/v1-langgraph-multi-agent` branch
+- **v2 (Current)**: OpenAI Agents SDK implementation - See `l2m-openai-agents/` directory
 
-Whether you're modernizing COBOL business systems, migrating legacy enterprise applications, or transforming decades-old mainframe code — L2M is built to help you do it **safely**, **accurately**, and **transparently**.
+## 📁 Repository Structure
 
-## ✨ Features
+```
+legacy2modern/
+├── l2m-openai-agents/          # Current implementation (OpenAI Agents SDK)
+│   ├── src/                   # Source code
+│   ├── tests/                 # Test suite
+│   ├── examples/              # Usage examples
+│   └── README.md             # Detailed documentation
+├── archive/                   # Archived versions
+│   └── v1-langgraph-multi-agent/  # LangGraph-based implementation
+└── README.md                  # This file
+```
 
-* 🔄 **COBOL to Python Transpilation**  
-  Translate COBOL programs into modern Python code with multiple transpilation approaches.
-
-* 🖥️ **Modern CLI Interface**  
-  Beautiful, interactive command-line interface with natural language commands and AI-powered analysis.
-
-* 🧠 **Lossless Semantic Tree (LST) Parsing**  
-  ANTLR4-based parser that retains all source code information including comments, whitespace, and semantic context.
-
-* 🏗️ **Intermediate Representation (IR) System**  
-  Language-agnostic IR that enables extensibility to other source and target languages.
-
-* 📝 **Template-Based Code Generation**  
-  Jinja2-powered template system for clean, maintainable code generation.
-
-* 🤖 **AI-Powered Analysis & Optimization**  
-  LLM integration for code analysis, review, and optimization suggestions with multi-provider support.
-
-* 🎯 **Multiple Transpilation Approaches**  
-  - Direct COBOL → Python transpilation
-  - IR-based transpilation with templates
-  - Hybrid transpilation with LLM augmentation
-  - Extensible architecture for future languages
-
-* 🧪 **Comprehensive Testing Framework**  
-  Unit tests, integration tests, and validation for all transpilation components.
-
-* 📦 **Easy Installation Options**  
-  - PyPI installation: `pip install legacy2modern`
-  - Homebrew installation: `brew install legacy2modern`
-  - Direct installation: `pip install -e .`
-  - Run without installation: `python run_cli.py`
-
-## 🚀 Quickstart
+## 🚀 Quick Start (Current Version)
 
 ### Prerequisites
+
 - Python 3.10+
-- OpenAI or Anthropic API Key
+- OpenAI API Key
 
 ### Installation
 
 ```bash
-# Clone and install
-git clone https://github.com/astrio-ai/legacy2modern.git
-cd legacy2modern
-pip install -r requirements.txt
+# Navigate to the current implementation
+cd l2m-openai-agents
 
-# Set API key
-export OPENAI_API_KEY="your-api-key-here"
+# Install dependencies
+pip install -r requirements.txt  # or: uv add 'openai-agents'
+
+# Set up environment
+cp .env.example .env
+# Edit .env and add your OPENAI_API_KEY
 ```
 
-### Modernize COBOL to Python
+### Basic Usage
 
-```bash
-# Step 1: Modernize a COBOL file
-python -m src.cli.cli modernize examples/cobol/HELLO.cobol python
-
-# Step 2: Run the generated code
-python output/python/transformed_code.py
-```
-
-**Output:**
-```
-Transformed legacy application starting...
-Calling transformed function: hello
-HELLO WORLD!
-Transformation completed successfully!
-```
-
-## 📋 CLI Commands
-
-```bash
-# Analyze COBOL structure
-python -m src.cli.cli analyze examples/cobol/HELLO.cobol
-
-# Modernize to Python
-python -m src.cli.cli modernize examples/cobol/HELLO.cobol python
-
-# With options
-python -m src.cli.cli modernize examples/cobol/HELLO.cobol python \
-  -o my_output/ -g "maintainability,readability"
-
-# Test generated code
-python output/python/transformed_code.py
-
-# Run tests
-pytest tests/
-```
-
-## ⚙️ Configuration
-
-```bash
-# Environment variables
-export OPENAI_API_KEY="sk-your-key"
-export LLM_PROVIDER="openai"  # or "anthropic"
-export LLM_MODEL="gpt-4"
-```
-
-## 🐛 Troubleshooting
-
-**No API key**: `export OPENAI_API_KEY="your-key"`  
-**Syntax errors**: Check logs with `-v` flag  
-**Module errors**: Run `pip install -r requirements.txt`
-
-## 📋 Supported Languages & Frameworks
-
-### **COBOL to Python**
-- Variable declarations with PIC clauses
-- Level numbers (01, 05, 77)
-- Type inference (PIC X → str, PIC 9 → int/float)
-- Control flow statements (PERFORM, IF-THEN-ELSE)
-- File I/O operations
-- Arithmetic operations
-
-### **Legacy Websites to Modern Frameworks**
-- **React**: Component-based architecture with hooks
-- **Next.js**: Full-stack React framework with SSR
-- **Astro**: Content-focused static site generator
-- **Bootstrap → Tailwind CSS**: Modern utility-first CSS
-- **jQuery → React Hooks**: State management and DOM manipulation
-- **PHP → API Routes**: Server-side logic conversion
-
-### **Example Transformations**
-
-**COBOL to Python:**
-```cobol
-       IDENTIFICATION DIVISION.
-       PROGRAM-ID. HELLO.
-       PROCEDURE DIVISION.
-           DISPLAY 'HELLO WORLD!'.
-           GOBACK.
-```
-
-**Output:**
 ```python
-# Generated Python code from main
+from src.workflows.modernization_pipeline import ModernizationPipeline
 
-def main():
-    print('HELLO WORLD!')
-    return
-
-if __name__ == '__main__':
-    main()
+pipeline = ModernizationPipeline()
+result = await pipeline.run("data/samples/sample1.cbl")
+print(result)
 ```
 
-**Legacy HTML to React:**
-```html
-<div class="container">
-  <h1>Welcome</h1>
-  <button onclick="showAlert()">Click me</button>
-</div>
-```
+See [l2m-openai-agents/README.md](./l2m-openai-agents/README.md) for detailed documentation.
 
-**Output:**
-```jsx
-import React, { useState } from 'react';
+## 📚 Documentation
 
-function App() {
-  const showAlert = () => {
-    alert('Hello!');
-  };
+- **Current Implementation**: [l2m-openai-agents/README.md](./l2m-openai-agents/README.md)
+- **OpenAI Agents SDK**: [Official Documentation](https://openai.github.io/openai-agents-python/)
+- **Archived v1**: See `archive/v1-langgraph-multi-agent` branch
 
-  return (
-    <div className="container">
-      <h1>Welcome</h1>
-      <button onClick={showAlert}>Click me</button>
-    </div>
-  );
-}
+## 🔄 Migration History
 
-export default App;
-```
+### v1 → v2 Migration
 
-## 🔧 Development
+We migrated from LangGraph-based multi-agent system to OpenAI Agents SDK for:
+- **Simpler API**: More intuitive agent creation and management
+- **Built-in Sessions**: Automatic conversation history management
+- **Better Tooling**: Native support for function tools and handoffs
+- **Active Development**: Official OpenAI framework with regular updates
 
-### **Project Structure**
+### Accessing Previous Versions
 
-```
-legacy2modern/
-├── engine/                    # Core engine components
-│   ├── agents/               # LLM agent system
-│   ├── cli/                  # Modern CLI interface
-│   └── modernizers/          # Language-specific modernizers
-│       ├── cobol_system/     # COBOL transpilation
-│       └── static_site/      # Website modernization
-├── examples/
-│   ├── cobol/               # Sample COBOL programs
-│   └── website/             # Sample legacy websites
-├── tests/                   # Test suite
-├── docs/                    # Documentation
-├── scripts/                 # CLI script wrappers
-├── output/                  # Generated output files
-├── install.sh               # Installation script
-├── run_cli.py               # Direct CLI runner
-└── setup.py                 # Package configuration
-```
-
-### **Adding New Features**
-
-1. **New Language Support**: Add grammar files and IR translators
-2. **New Templates**: Create Jinja2 templates for target languages
-3. **New Rules**: Implement transformation rules in the modernizers directory
-4. **LLM Integration**: Extend agents for AI-powered suggestions
-5. **CLI Enhancements**: Add new commands and interactive features
-6. **Framework Support**: Add new target frameworks for website modernization
+- **LangGraph Implementation**: Checkout `archive/v1-langgraph-multi-agent` branch
+- **All commits preserved**: Full git history available
 
 ## 🧪 Testing
 
 ```bash
-# Run all tests
-pytest
-
-# Run specific test file
-pytest tests/static_site/test_website_modernization.py
-
-# Run with coverage
-pytest --cov=engine
+cd l2m-openai-agents
+pytest tests/
 ```
 
 ## 📄 License
-This project is licensed under the Apache-2.0 License. See the [LICENSE](./LICENSE) file for details.
+
+Apache-2.0
 
 ## 🤝 Contributing
-We welcome all contributions — from fixing typos to adding new language support!
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for setup instructions, coding guidelines, and how to submit PRs.
 
-## 💬 Community & Support
-* 📢 Follow our project updates on [X](https://x.com/nolan-lwin)
-* 👾 Join our [Discord](https://discord.gg/2BVwAUzW)
-* 🧑‍💻 Join the discussion: [GitHub Discussions](https://github.com/astrio-ai/legacy2modern/discussions)
-* 🧪 Report bugs: [GitHub Issues](https://github.com/astrio-ai/legacy2modern/issues)
+Contributions welcome! See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
 
-## 📬 Contact Us
-For partnership inquiries or professional use cases:
+## 📬 Contact
 
-📧 **[naingoolwin.astrio@gmail.com](mailto:naingoolwin.astrio@gmail.com)**
+**naingoolwin.astrio@gmail.com**
+
+## 🙏 Acknowledgments
+
+- [OpenAI Agents SDK](https://github.com/openai/openai-agents-python) - Multi-agent framework
+- [LangGraph](https://github.com/langchain-ai/langgraph) - Previous orchestration framework
+
+---
+
+**Note**: This repository maintains multiple versions for research purposes. The current active development is in `l2m-openai-agents/`.
+
