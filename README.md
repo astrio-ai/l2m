@@ -1,10 +1,12 @@
 # Legacy2Modern (L2M)
 
-**AI-Powered COBOL to Python Modernization System**
+<div align="center">
 
-[![GitHub Repo stars](https://img.shields.io/github/stars/astrio-ai/legacy2modern)](https://github.com/astrio-ai/legacy2modern)
-
-## 🎯 Overview
+<!-- Keep the gap above this line, otherwise they won't render correctly! -->
+[![GitHub Repo stars](https://img.shields.io/github/stars/astrio-ai/openlegacy)](https://github.com/astrio-ai/openlegacy) 
+[![Join us on Discord](https://img.shields.io/discord/1396038465002405948?logo=discord&logoColor=white&label=discord)](https://discord.gg/2BVwAUzW)
+[![Contributing Guide](https://img.shields.io/badge/Contributing-Guide-informational)](https://github.com/openrewrite/.github/blob/main/CONTRIBUTING.md)
+</div>
 
 Legacy2Modern (L2M) is a research project for modernizing legacy COBOL code into modern Python using AI-powered agents. Built on OpenAI's Agents SDK, it provides a flexible, extensible framework for code transformation.
 
@@ -27,8 +29,8 @@ Legacy2Modern (L2M) is a research project for modernizing legacy COBOL code into
 
 ```bash
 # Clone the repository
-git clone https://github.com/astrio-ai/legacy2modern.git
-cd legacy2modern
+git clone https://github.com/astrio-ai/l2m.git
+cd l2m
 
 # Install dependencies
 pip install -r requirements.txt  # or use: uv add 'openai-agents'
@@ -87,21 +89,6 @@ legacy2modern/
 ```bash
 pytest tests/
 ```
-
-## 🔄 Migration History
-
-### v1 → v2 Migration
-
-We migrated from LangGraph-based multi-agent system to OpenAI Agents SDK for:
-- **Simpler API**: More intuitive agent creation and management
-- **Built-in Sessions**: Automatic conversation history management
-- **Better Tooling**: Native support for function tools and handoffs
-- **Active Development**: Official OpenAI framework with regular updates
-
-### Accessing Previous Versions
-
-- **LangGraph Implementation**: Checkout `archive/v1-langgraph-multi-agent` branch
-- **All commits preserved**: Full git history available
 
 ## 📄 License
 
