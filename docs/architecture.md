@@ -6,29 +6,28 @@ Legacy2Modern (L2M) is built on a **multi-agent architecture** using the OpenAI 
 
 ## System Architecture
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    Modernization Pipeline                    │
-│                                                              │
-│  ┌──────────────┐                                           │
-│  │ Orchestrator │  ◄─── Coordinates all agents              │
-│  │    Agent     │                                            │
-│  └──────┬───────┘                                            │
-│         │                                                     │
-│         ├──────────┬──────────┬──────────┬──────────┐        │
-│         │          │          │          │          │        │
-│    ┌────▼────┐ ┌──▼───┐ ┌────▼────┐ ┌──▼───┐ ┌────▼────┐   │
-│    │Analyzer │ │Trans │ │Reviewer │ │Tester│ │Refactor│   │
-│    │ Agent   │ │Agent │ │ Agent   │ │Agent │ │ Agent  │   │
-│    └────┬────┘ └──┬───┘ └────┬────┘ └──┬───┘ └────┬────┘   │
-│         │          │          │          │          │        │
-│         └──────────┴──────────┴──────────┴──────────┘        │
-│                    │                                            │
-│                    ▼                                            │
-│         ┌──────────────────────┐                               │
-│         │  Modernized Python   │                               │
-│         └──────────────────────┘                               │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    A[Modernization Pipeline] --> B[Orchestrator Agent]
+    B --> C[Coordinates all agents]
+    B --> D[Analyzer Agent]
+    B --> E[Translator Agent]
+    B --> F[Reviewer Agent]
+    B --> G[Tester Agent]
+    B --> H[Refactor Agent]
+    D --> I[Modernized Python]
+    E --> I
+    F --> I
+    G --> I
+    H --> I
+    
+    style B fill:#e1f5ff
+    style D fill:#fff4e1
+    style E fill:#fff4e1
+    style F fill:#fff4e1
+    style G fill:#fff4e1
+    style H fill:#fff4e1
+    style I fill:#e8f5e9
 ```
 
 ## Core Components
@@ -93,46 +92,25 @@ Centralized configuration using Pydantic settings:
 
 ## Data Flow
 
-```
-COBOL File
-    │
-    ▼
-┌─────────────────┐
-│ Input Guardrail │  ← Validates file exists, is readable
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  Analyzer Agent │  ← Parses structure, extracts logic
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│Translator Agent │  ← Converts COBOL → Python
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ Output Guardrail│  ← Validates Python syntax
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ Reviewer Agent  │  ← Reviews code quality
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  Tester Agent   │  ← Generates & runs tests
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ Refactor Agent  │  ← Improves structure
-└────────┬────────┘
-         │
-         ▼
-  Python Code
+```mermaid
+flowchart TD
+    A[COBOL File] --> B[Input Guardrail]
+    B -->|Validates file exists, is readable| C[Analyzer Agent]
+    C -->|Parses structure, extracts logic| D[Translator Agent]
+    D -->|Converts COBOL → Python| E[Output Guardrail]
+    E -->|Validates Python syntax| F[Reviewer Agent]
+    F -->|Reviews code quality| G[Tester Agent]
+    G -->|Generates & runs tests| H[Refactor Agent]
+    H -->|Improves structure| I[Python Code]
+    
+    style B fill:#ffebee
+    style E fill:#ffebee
+    style C fill:#e3f2fd
+    style D fill:#e3f2fd
+    style F fill:#e3f2fd
+    style G fill:#e3f2fd
+    style H fill:#e3f2fd
+    style I fill:#e8f5e9
 ```
 
 ## Execution Modes
@@ -153,17 +131,21 @@ Agents execute in a fixed order:
 
 Orchestrator agent dynamically routes tasks:
 
-```
-User Request
-    │
-    ▼
-Orchestrator Agent
-    │
-    ├─→ Analyzer (if analysis needed)
-    ├─→ Translator (if translation needed)
-    ├─→ Reviewer (if review needed)
-    ├─→ Tester (if testing needed)
-    └─→ Refactor (if refactoring needed)
+```mermaid
+graph TD
+    A[User Request] --> B[Orchestrator Agent]
+    B -->|if analysis needed| C[Analyzer]
+    B -->|if translation needed| D[Translator]
+    B -->|if review needed| E[Reviewer]
+    B -->|if testing needed| F[Tester]
+    B -->|if refactoring needed| G[Refactor]
+    
+    style B fill:#e1f5ff
+    style C fill:#fff4e1
+    style D fill:#fff4e1
+    style E fill:#fff4e1
+    style F fill:#fff4e1
+    style G fill:#fff4e1
 ```
 
 **Use Case**: When you want the orchestrator to intelligently decide which agents to use.
