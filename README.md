@@ -10,14 +10,14 @@
 
 Legacy2Modern (L2M) is an open-source, AI-powered multi-agent framework that automatically analyzes, translates, refactors, and modernizes legacy codebases into modern programming languages.
 
-## ✨ Features
+## Features
 
 - **Multi-Agent Architecture**: Specialized agents for analysis, translation, review, testing, and refactoring
 - **Session Management**: Persistent conversation history across agent interactions
 - **Tool Integration**: Extensible tools for COBOL parsing, Python synthesis, and code quality
 - **Tracing Support**: Built-in tracing for debugging and monitoring agent behavior
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -49,7 +49,7 @@ result = await pipeline.run("data/samples/sample1.cbl")
 print(result)
 ```
 
-## 🤖 Agents
+## Agents
 
 - **Orchestrator Agent**: Manages overall pipeline and agent handoffs
 - **Analyzer Agent**: Parses COBOL and extracts logic
@@ -58,11 +58,15 @@ print(result)
 - **Tester Agent**: Creates and runs unit tests
 - **Refactor Agent**: Improves code structure and readability
 
-## 📚 Documentation
+## Documentation
 
-- [Architecture](docs/architecture.md)
+- [Getting Started](docs/getting_started.md) - Installation and quick start guide
+- [Architecture](docs/architecture.md) - System architecture and design
+- [Agent System](docs/agents.md) - Detailed agent documentation
+- [Workflows](docs/workflows.md) - Workflow documentation and usage
+- [Full Documentation](docs/README.md) - Complete documentation index
 
-## 🧪 Testing
+## Testing
 
 **Important: Make sure your virtual environment is activated before running tests.**
 
@@ -76,20 +80,20 @@ python -m pytest tests/
 
 If you see `ModuleNotFoundError: No module named 'agents'`, it means the virtual environment isn't activated. Make sure to run `source .venv/bin/activate` first.
 
-## 📄 License
+## License
 This project is licensed under the Apache-2.0 License. See the [LICENSE](./LICENSE) file for details.
 
-## 🤝 Contributing
+## Contributing
 We welcome all contributions — from fixing typos to adding new language support!
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for setup instructions, coding guidelines, and how to submit PRs.
 
-## 💬 Community & Support
-* 📢 Follow our project updates on [X](https://x.com/astrioai)
-* 👾 Join our [Discord](https://discord.gg/2BVwAUzW)
-* 🧑‍💻 Join the discussion: [GitHub Discussions](https://github.com/astrio-ai/l2m/discussions)
-* 🧪 Report bugs: [GitHub Issues](https://github.com/astrio-ai/l2m/issues)
+## Community & Support
+* Follow our project updates on [X](https://x.com/astrioai)
+* Join our [Discord](https://discord.gg/2BVwAUzW)
+* Join the discussion: [GitHub Discussions](https://github.com/astrio-ai/l2m/discussions)
+* Report bugs: [GitHub Issues](https://github.com/astrio-ai/l2m/issues)
 
-## 📬 Contact Us
+## Contact Us
 For partnership inquiries or professional use cases:
 
 📧 **[naingoolwin.astrio@gmail.com](mailto:naingoolwin.astrio@gmail.com)**
