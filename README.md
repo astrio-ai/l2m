@@ -1,6 +1,6 @@
 # Legacy2Modern (L2M)
 
-<div align="center">
+<div align="left">
 
 <!-- Keep the gap above this line, otherwise they won't render correctly! -->
 [![GitHub Repo stars](https://img.shields.io/github/stars/astrio-ai/l2m)](https://github.com/astrio-ai/l2m) 
