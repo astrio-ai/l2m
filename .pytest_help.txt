@@ -1,0 +1,21 @@
+TESTING TROUBLESHOOTING
+======================
+
+If you see import errors like "ModuleNotFoundError: No module named 'agents'",
+it means pytest is using the system Python instead of your virtual environment.
+
+SOLUTION 1: Activate virtual environment first
+-----------------------------------------------
+source .venv/bin/activate
+pytest tests/
+
+SOLUTION 2: Use python -m pytest (recommended)
+-----------------------------------------------
+source .venv/bin/activate
+python -m pytest tests/
+
+SOLUTION 3: Use the helper script
+---------------------------------
+./scripts/run_tests.sh
+
+This script automatically activates the venv and runs pytest.
