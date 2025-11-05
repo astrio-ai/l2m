@@ -6,26 +6,17 @@
 
 ## 🎯 Overview
 
-Legacy2Modern (L2M) is a research project for modernizing legacy COBOL code into modern Python using AI-powered agents. The project has evolved through multiple iterations:
+Legacy2Modern (L2M) is a research project for modernizing legacy COBOL code into modern Python using AI-powered agents. Built on OpenAI's Agents SDK, it provides a flexible, extensible framework for code transformation.
 
-- **v1 (Archived)**: Multi-agent system using LangGraph - See `archive/v1-langgraph-multi-agent` branch
-- **v2 (Current)**: OpenAI Agents SDK implementation - See `l2m-openai-agents/` directory
+## ✨ Features
 
-## 📁 Repository Structure
+- **Multi-Agent Architecture**: Specialized agents for analysis, translation, review, testing, and refactoring
+- **OpenAI Agents SDK**: Built on the official OpenAI Agents framework for reliable agent workflows
+- **Session Management**: Persistent conversation history across agent interactions
+- **Tool Integration**: Extensible tools for COBOL parsing, Python synthesis, and code quality
+- **Tracing Support**: Built-in tracing for debugging and monitoring agent behavior
 
-```
-legacy2modern/
-├── l2m-openai-agents/          # Current implementation (OpenAI Agents SDK)
-│   ├── src/                   # Source code
-│   ├── tests/                 # Test suite
-│   ├── examples/              # Usage examples
-│   └── README.md             # Detailed documentation
-├── archive/                   # Archived versions
-│   └── v1-langgraph-multi-agent/  # LangGraph-based implementation
-└── README.md                  # This file
-```
-
-## 🚀 Quick Start (Current Version)
+## 🚀 Quick Start
 
 ### Prerequisites
 
@@ -35,11 +26,12 @@ legacy2modern/
 ### Installation
 
 ```bash
-# Navigate to the current implementation
-cd l2m-openai-agents
+# Clone the repository
+git clone https://github.com/astrio-ai/legacy2modern.git
+cd legacy2modern
 
 # Install dependencies
-pip install -r requirements.txt  # or: uv add 'openai-agents'
+pip install -r requirements.txt  # or use: uv add 'openai-agents'
 
 # Set up environment
 cp .env.example .env
@@ -56,13 +48,45 @@ result = await pipeline.run("data/samples/sample1.cbl")
 print(result)
 ```
 
-See [l2m-openai-agents/README.md](./l2m-openai-agents/README.md) for detailed documentation.
+## 📁 Project Structure
+
+```
+legacy2modern/
+├── src/
+│   ├── agents/          # Specialized AI agents
+│   ├── tools/           # COBOL parsing, Python synthesis tools
+│   ├── workflows/       # Agent orchestration workflows
+│   ├── sessions/        # Session management
+│   ├── guardrails/      # Input/output validation
+│   ├── tracing/         # Tracing configuration
+│   └── utils/           # Utilities
+├── data/                # Sample COBOL files and outputs
+├── tests/               # Test suite
+├── examples/            # Usage examples
+├── docs/                # Documentation
+└── evals/               # Evaluation benchmarks
+```
+
+## 🤖 Agents
+
+- **Orchestrator Agent**: Manages overall pipeline and agent handoffs
+- **Analyzer Agent**: Parses COBOL and extracts logic
+- **Translator Agent**: Converts COBOL to Python
+- **Reviewer Agent**: Reviews translated code quality
+- **Tester Agent**: Creates and runs unit tests
+- **Refactor Agent**: Improves code structure and readability
 
 ## 📚 Documentation
 
-- **Current Implementation**: [l2m-openai-agents/README.md](./l2m-openai-agents/README.md)
-- **OpenAI Agents SDK**: [Official Documentation](https://openai.github.io/openai-agents-python/)
-- **Archived v1**: See `archive/v1-langgraph-multi-agent` branch
+- [OpenAI Agents SDK Docs](https://openai.github.io/openai-agents-python/)
+- [Agent Patterns](examples/)
+- [Architecture](docs/architecture.md)
+
+## 🧪 Testing
+
+```bash
+pytest tests/
+```
 
 ## 🔄 Migration History
 
@@ -78,13 +102,6 @@ We migrated from LangGraph-based multi-agent system to OpenAI Agents SDK for:
 
 - **LangGraph Implementation**: Checkout `archive/v1-langgraph-multi-agent` branch
 - **All commits preserved**: Full git history available
-
-## 🧪 Testing
-
-```bash
-cd l2m-openai-agents
-pytest tests/
-```
 
 ## 📄 License
 
@@ -105,5 +122,4 @@ Contributions welcome! See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
 
 ---
 
-**Note**: This repository maintains multiple versions for research purposes. The current active development is in `l2m-openai-agents/`.
-
+**Note**: This repository maintains multiple versions for research purposes. The current active development uses OpenAI Agents SDK. Previous LangGraph implementation is archived in `archive/v1-langgraph-multi-agent` branch.
