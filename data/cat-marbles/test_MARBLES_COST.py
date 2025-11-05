@@ -12,22 +12,28 @@ import sqlite3
 from pathlib import Path
 
 # Add parent directory to path to import marbles_cost
-sys.path.insert(0, str(Path(__file__).parent))
+test_dir = Path(__file__).parent
+sys.path.insert(0, str(test_dir))
 
-from marbles_cost import (
-    MarblesCostProgram,
-    MarbleDatabase,
-    InputData,
-    WorkAreas,
-    VERB_CREATE,
-    VERB_UPDATE,
-    VERB_DELETE,
-    ERROR_MARBLE_DNE,
-    ERROR_MARBLE_EXISTS,
-    CONST_SUCCESS,
-    BOOLEAN_TRUE,
-    BOOLEAN_FALSE
-)
+# Import with explicit file name handling
+import importlib.util
+spec = importlib.util.spec_from_file_location("marbles_cost", test_dir / "marbles_cost.py")
+marbles_cost_module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(marbles_cost_module)
+
+# Import classes and constants from the loaded module
+MarblesCostProgram = marbles_cost_module.MarblesCostProgram
+MarbleDatabase = marbles_cost_module.MarbleDatabase
+InputData = marbles_cost_module.InputData
+WorkAreas = marbles_cost_module.WorkAreas
+VERB_CREATE = marbles_cost_module.VERB_CREATE
+VERB_UPDATE = marbles_cost_module.VERB_UPDATE
+VERB_DELETE = marbles_cost_module.VERB_DELETE
+ERROR_MARBLE_DNE = marbles_cost_module.ERROR_MARBLE_DNE
+ERROR_MARBLE_EXISTS = marbles_cost_module.ERROR_MARBLE_EXISTS
+CONST_SUCCESS = marbles_cost_module.CONST_SUCCESS
+BOOLEAN_TRUE = marbles_cost_module.BOOLEAN_TRUE
+BOOLEAN_FALSE = marbles_cost_module.BOOLEAN_FALSE
 
 
 class TestMarbleDatabase:
