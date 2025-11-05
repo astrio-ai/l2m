@@ -1,0 +1,29 @@
+# Core OpenAI Agents SDK
+openai-agents>=0.4.0
+
+# Data Validation
+pydantic>=2.0.0
+
+# Environment Variables
+python-dotenv>=1.0.0
+
+# Async Support (included in Python 3.10+, but explicit for clarity)
+# asyncio is built-in
+
+# Optional: Redis Session Support
+# Uncomment if using Redis for distributed sessions
+# redis>=5.0.0
+
+# Optional: Voice Support
+# Uncomment if using voice features
+# openai-agents[voice]>=0.4.0
+
+# Development Dependencies (optional)
+# Uncomment for development
+# pytest>=7.0.0
+# pytest-asyncio>=0.21.0
+# pytest-cov>=4.0.0
+# black>=23.0.0
+# ruff>=0.1.0
+# mypy>=1.0.0
+
