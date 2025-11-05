@@ -4,7 +4,8 @@ Refactor Agent - Improves code structure and readability.
 Refactors Python code to improve structure, readability, and maintainability.
 """
 
-from agents import Agent, Runner, function_tool, ModelConfig
+from agents import Agent, Runner, function_tool
+from agents.model_settings import ModelSettings
 from typing import Optional
 from src.config import get_settings
 from src.utils.logger import get_logger
@@ -36,9 +37,8 @@ class RefactorAgent:
         """Initialize the refactor agent."""
         self.settings = get_settings()
         
-        # Create model config
-        model_config = ModelConfig(
-            model=self.settings.openai_model,
+        # Create model settings
+        model_settings = ModelSettings(
             temperature=self.settings.openai_temperature,
         )
         
@@ -53,7 +53,8 @@ class RefactorAgent:
 5. Optimize performance where appropriate
 
 Maintain functional equivalence while improving code quality.""",
-            model_config=model_config,
+            model=self.settings.openai_model,
+            model_settings=model_settings,
             tools=[refactor_code],
         )
     

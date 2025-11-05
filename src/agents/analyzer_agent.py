@@ -4,7 +4,8 @@ Analyzer Agent - Parses COBOL and extracts logic.
 Analyzes COBOL source code to understand structure, dependencies, and business logic.
 """
 
-from agents import Agent, Runner, function_tool, ModelConfig
+from agents import Agent, Runner, function_tool
+from agents.model_settings import ModelSettings
 from typing import Optional
 from src.config import get_settings
 from src.utils.logger import get_logger
@@ -37,9 +38,8 @@ class AnalyzerAgent:
         """Initialize the analyzer agent."""
         self.settings = get_settings()
         
-        # Create model config
-        model_config = ModelConfig(
-            model=self.settings.openai_model,
+        # Create model settings
+        model_settings = ModelSettings(
             temperature=self.settings.openai_temperature,
         )
         
@@ -55,7 +55,8 @@ class AnalyzerAgent:
 
 Provide detailed analysis reports that will help the translator agent
 understand what needs to be converted.""",
-            model_config=model_config,
+            model=self.settings.openai_model,
+            model_settings=model_settings,
             tools=[analyze_cobol],
         )
     

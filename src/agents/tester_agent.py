@@ -4,7 +4,8 @@ Tester Agent - Creates and runs unit tests.
 Generates and executes unit tests for translated Python code.
 """
 
-from agents import Agent, Runner, function_tool, ModelConfig
+from agents import Agent, Runner, function_tool
+from agents.model_settings import ModelSettings
 from typing import Optional
 from src.config import get_settings
 from src.utils.logger import get_logger
@@ -55,9 +56,8 @@ class TesterAgent:
         """Initialize the tester agent."""
         self.settings = get_settings()
         
-        # Create model config
-        model_config = ModelConfig(
-            model=self.settings.openai_model,
+        # Create model settings
+        model_settings = ModelSettings(
             temperature=self.settings.openai_temperature,
         )
         
@@ -72,7 +72,8 @@ class TesterAgent:
 5. Include both positive and negative test cases
 
 Generate well-structured, maintainable test code.""",
-            model_config=model_config,
+            model=self.settings.openai_model,
+            model_settings=model_settings,
             tools=[create_tests, execute_tests],
         )
     

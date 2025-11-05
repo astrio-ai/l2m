@@ -85,13 +85,14 @@ def _setup_logging(settings: Settings) -> None:
         log_file_path.parent.mkdir(parents=True, exist_ok=True)
     
     # Configure logging
+    handlers = [logging.StreamHandler()]
+    if settings.log_file:
+        handlers.append(logging.FileHandler(settings.log_file))
+    
     logging.basicConfig(
         level=log_level,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        handlers=[
-            logging.StreamHandler(),
-            *(logging.FileHandler(settings.log_file) if settings.log_file else []),
-        ],
+        handlers=handlers,
     )
     
     logger = logging.getLogger(__name__)

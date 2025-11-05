@@ -5,7 +5,8 @@ Coordinates handoffs between specialized agents for COBOL to Python modernizatio
 """
 
 from typing import Optional, List
-from agents import Agent, Runner, ModelConfig
+from agents import Agent, Runner
+from agents.model_settings import ModelSettings
 from src.config import get_settings
 from src.utils.logger import get_logger
 
@@ -23,9 +24,8 @@ class OrchestratorAgent:
         """
         self.settings = get_settings()
         
-        # Create model config
-        model_config = ModelConfig(
-            model=self.settings.openai_model,
+        # Create model settings
+        model_settings = ModelSettings(
             temperature=self.settings.openai_temperature,
         )
         
@@ -41,7 +41,8 @@ Your role is to coordinate handoffs between specialized agents:
 
 Decide which agent should handle the current task and hand off appropriately.
 Provide clear context to each agent about what needs to be done.""",
-            model_config=model_config,
+            model=self.settings.openai_model,
+            model_settings=model_settings,
             handoffs=handoff_agents or [],
         )
     
