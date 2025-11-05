@@ -6,60 +6,23 @@ The modernization workflow transforms COBOL code into modern Python through a se
 
 ## Workflow Diagram
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│              COBOL Modernization Workflow                     │
-└─────────────────────────────────────────────────────────────┘
-
-Input: COBOL File
-    │
-    ▼
-┌─────────────────────┐
-│  Input Validation   │  ← Guardrail checks file validity
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────┐
-│   Step 1: Analyze   │  ← Analyzer Agent
-│   - Structure        │     Extracts program structure
-│   - Variables        │     Identifies procedures
-│   - Logic Flow       │     Maps dependencies
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────┐
-│  Step 2: Translate   │  ← Translator Agent
-│   - COBOL → Python   │     Converts syntax
-│   - Type Mapping      │     Translates logic
-│   - Best Practices   │     Applies Python idioms
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────┐
-│  Step 3: Review      │  ← Reviewer Agent
-│   - Code Quality     │     Checks quality
-│   - Correctness      │     Validates translation
-│   - Suggestions      │     Provides improvements
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────┐
-│  Step 4: Test        │  ← Tester Agent
-│   - Generate Tests   │     Creates test suite
-│   - Run Tests        │     Executes tests
-│   - Report Results   │     Reports coverage
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────┐
-│  Step 5: Refactor    │  ← Refactor Agent
-│   - Improve Structure│     Enhances organization
-│   - Optimize Code     │     Improves readability
-│   - Apply Patterns   │     Uses best practices
-└──────────┬──────────┘
-           │
-           ▼
-Output: Modernized Python Code
+```mermaid
+flowchart TD
+    A[Input: COBOL File] --> B[Input Validation]
+    B -->|Guardrail checks file validity| C[Step 1: Analyze]
+    C -->|Analyzer Agent<br/>Extracts program structure<br/>Identifies procedures<br/>Maps dependencies| D[Step 2: Translate]
+    D -->|Translator Agent<br/>Converts syntax<br/>Translates logic<br/>Applies Python idioms| E[Step 3: Review]
+    E -->|Reviewer Agent<br/>Checks quality<br/>Validates translation<br/>Provides improvements| F[Step 4: Test]
+    F -->|Tester Agent<br/>Creates test suite<br/>Executes tests<br/>Reports coverage| G[Step 5: Refactor]
+    G -->|Refactor Agent<br/>Enhances organization<br/>Improves readability<br/>Uses best practices| H[Output: Modernized Python Code]
+    
+    style B fill:#ffebee
+    style C fill:#e3f2fd
+    style D fill:#e3f2fd
+    style E fill:#e3f2fd
+    style F fill:#e3f2fd
+    style G fill:#e3f2fd
+    style H fill:#e8f5e9
 ```
 
 ## Sequential Workflow
@@ -170,23 +133,23 @@ The orchestrator agent:
 
 ### Dynamic Routing
 
-```
-User: "Modernize program.cbl"
-    │
-    ▼
-Orchestrator analyzes request
-    │
-    ├─→ Routes to Analyzer (analysis needed)
-    │   └─→ Analyzer returns: Analysis report
-    │
-    ├─→ Routes to Translator (translation needed)
-    │   └─→ Translator returns: Python code
-    │
-    ├─→ Routes to Reviewer (review needed)
-    │   └─→ Reviewer returns: Review report
-    │
-    └─→ Routes to Refactor (if needed)
-        └─→ Refactor returns: Final code
+```mermaid
+flowchart TD
+    A["User: Modernize program.cbl"] --> B[Orchestrator analyzes request]
+    B -->|Routes to Analyzer<br/>analysis needed| C[Analyzer]
+    C -->|Returns: Analysis report| B
+    B -->|Routes to Translator<br/>translation needed| D[Translator]
+    D -->|Returns: Python code| B
+    B -->|Routes to Reviewer<br/>review needed| E[Reviewer]
+    E -->|Returns: Review report| B
+    B -->|Routes to Refactor<br/>if needed| F[Refactor]
+    F -->|Returns: Final code| B
+    
+    style B fill:#e1f5ff
+    style C fill:#fff4e1
+    style D fill:#fff4e1
+    style E fill:#fff4e1
+    style F fill:#fff4e1
 ```
 
 ## Usage Examples

@@ -6,23 +6,17 @@ L2M uses a **multi-agent system** where specialized AI agents collaborate to mod
 
 ## Agent Architecture
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     Agent System                             │
-│                                                              │
-│  Each Agent:                                                 │
-│  ┌──────────────┐                                           │
-│  │  Instructions │  ← Defines agent's role and behavior      │
-│  └──────┬───────┘                                            │
-│         │                                                     │
-│  ┌──────▼───────┐                                            │
-│  │     Tools     │  ← Functions agent can call               │
-│  └──────┬───────┘                                            │
-│         │                                                     │
-│  ┌──────▼───────┐                                            │
-│  │  LLM Model   │  ← OpenAI GPT model for reasoning          │
-│  └──────────────┘                                            │
-└─────────────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    A[Agent System] --> B[Each Agent]
+    B --> C[Instructions]
+    C -->|Defines agent's role and behavior| D[Tools]
+    D -->|Functions agent can call| E[LLM Model]
+    E -->|OpenAI GPT model for reasoning| F[Agent Output]
+    
+    style C fill:#e3f2fd
+    style D fill:#fff4e1
+    style E fill:#e8f5e9
 ```
 
 ## Agent Details
@@ -214,23 +208,23 @@ def test_main():
 
 When using handoff mode, agents communicate through the orchestrator:
 
-```
-User Request
-    │
-    ▼
-Orchestrator
-    │
-    ├─→ Analyzer: "Analyze this COBOL file"
-    │   └─→ Returns: Analysis report
-    │
-    ├─→ Translator: "Translate using this analysis"
-    │   └─→ Returns: Python code
-    │
-    ├─→ Reviewer: "Review this Python code"
-    │   └─→ Returns: Review report
-    │
-    └─→ Refactor: "Refactor based on review"
-        └─→ Returns: Refactored code
+```mermaid
+flowchart TD
+    A[User Request] --> B[Orchestrator]
+    B -->|"Analyze this COBOL file"| C[Analyzer]
+    C -->|Returns: Analysis report| B
+    B -->|"Translate using this analysis"| D[Translator]
+    D -->|Returns: Python code| B
+    B -->|"Review this Python code"| E[Reviewer]
+    E -->|Returns: Review report| B
+    B -->|"Refactor based on review"| F[Refactor]
+    F -->|Returns: Refactored code| B
+    
+    style B fill:#e1f5ff
+    style C fill:#fff4e1
+    style D fill:#fff4e1
+    style E fill:#fff4e1
+    style F fill:#fff4e1
 ```
 
 ### Session Context
