@@ -4,7 +4,7 @@ Reviewer Agent - Reviews translated code quality.
 Reviews Python code generated from COBOL for quality, correctness, and best practices.
 """
 
-from agents import Agent, Runner, function_tool
+from agents import Agent, Runner, function_tool, ModelConfig
 from typing import Optional
 from src.config import get_settings
 from src.utils.logger import get_logger
@@ -37,8 +37,16 @@ class ReviewerAgent:
     def __init__(self):
         """Initialize the reviewer agent."""
         self.settings = get_settings()
+        
+        # Create model config
+        model_config = ModelConfig(
+            model=self.settings.openai_model,
+            temperature=self.settings.openai_temperature,
+        )
+        
         self.agent = Agent(
             name="Code Reviewer",
+            handoff_description="Specialist agent for reviewing Python code quality and correctness",
             instructions="""You are a Python code reviewer. Your task is to:
 1. Review Python code generated from COBOL for correctness
 2. Check adherence to PEP 8 style guidelines
@@ -47,8 +55,7 @@ class ReviewerAgent:
 5. Verify that business logic is preserved
 
 Provide detailed feedback with specific line numbers and suggestions.""",
-            model=self.settings.openai_model,
-            temperature=self.settings.openai_temperature,
+            model_config=model_config,
             tools=[review_code],
         )
     
