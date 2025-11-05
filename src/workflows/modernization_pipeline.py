@@ -79,16 +79,34 @@ class ModernizationPipeline:
             if self.use_handoffs and self.orchestrator:
                 # Use orchestrator with handoffs
                 logger.info("Using orchestrator with agent handoffs")
-                prompt = f"""Modernize this COBOL file to Python: {cobol_file_path}
                 
-                The workflow should be:
-                1. Analyze the COBOL code structure
-                2. Translate to Python
-                3. Review the translated code
-                4. Generate tests
-                5. Refactor if needed
+                # Read COBOL file content first
+                from pathlib import Path
+                cobol_file = Path(cobol_file_path)
+                if not cobol_file.exists():
+                    results["error"] = f"COBOL file not found: {cobol_file_path}"
+                    return results
                 
-                Coordinate the handoffs between agents as needed."""
+                cobol_content = cobol_file.read_text(encoding="utf-8", errors="ignore")
+                logger.info(f"Read COBOL file: {len(cobol_content)} characters")
+                
+                prompt = f"""Modernize this COBOL file to Python.
+
+File Path: {cobol_file_path}
+
+COBOL Code:
+```
+{cobol_content}
+```
+
+The workflow should be:
+1. Use the Analyzer Agent to analyze the COBOL code structure using the analyze_cobol tool with file path: {cobol_file_path}
+2. Use the Translator Agent to translate the COBOL code to Python
+3. Use the Reviewer Agent to review the translated code
+4. Use the Tester Agent to generate and run tests
+5. Use the Refactor Agent to improve the code structure if needed
+
+Coordinate the handoffs between agents as needed. Make sure to use the tools available to each agent."""
                 
                 output = await self.orchestrator.run(prompt, session=self.session)
                 results["orchestrator_output"] = output
