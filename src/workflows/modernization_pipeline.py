@@ -441,6 +441,22 @@ RULES: Use agents, don't manually translate. Tester Agent must generate test cod
                 cobol_content = cobol_file.read_text(encoding="utf-8", errors="ignore")
                 logger.info(f"Read COBOL file: {len(cobol_content)} characters")
                 
+                # Truncate COBOL content if too large for model context
+                # gpt-4o-mini has ~128k context, but agent system prompts + tools take significant space
+                # Be very conservative - agent overhead can be 20-30k tokens
+                max_cobol_chars = 3000  # Very conservative limit to account for agent overhead
+                cobol_for_analysis = cobol_content
+                if len(cobol_content) > max_cobol_chars:
+                    # Include first part (header/structure) and last part (main logic)
+                    header_size = max_cobol_chars // 2
+                    tail_size = max_cobol_chars // 2
+                    cobol_for_analysis = (
+                        f"{cobol_content[:header_size]}\n"
+                        f"... [COBOL code truncated - {len(cobol_content)} total chars, showing first {header_size} and last {tail_size} chars] ...\n"
+                        f"{cobol_content[-tail_size:]}"
+                    )
+                    logger.warning(f"COBOL file too large ({len(cobol_content)} chars), truncating to {len(cobol_for_analysis)} chars for analysis")
+                
                 # Check for ground truth Python file
                 ground_truth = self._find_ground_truth(cobol_file_path)
                 ground_truth_section = ""
@@ -476,13 +492,31 @@ REQUIREMENTS:
                 
                 # Step 1: Analyze COBOL
                 logger.info("Step 1: Analyzing COBOL code")
-                analysis_prompt = f"""Analyze this COBOL program:
+                # Use a fresh session for analysis to avoid context accumulation
+                # The analyzer tool can read the file directly, so we don't need full COBOL in prompt
+                # For very large files, just provide the file path and let the tool handle it
+                if len(cobol_content) > max_cobol_chars:
+                    # For large files, don't include COBOL in prompt at all - just use the tool
+                    analysis_prompt = f"""Analyze this COBOL program:
+
+File path: {cobol_file_path}
+
+IMPORTANT: Use the analyze_cobol tool with the file path '{cobol_file_path}' to read and analyze the complete COBOL file structure. The tool will handle the full file content.
+
+Then provide a detailed analysis of:
+- Program structure (PROGRAM-ID, divisions)
+- Variable declarations (WORKING-STORAGE)
+- Procedures and logic flow
+- Dependencies between sections"""
+                else:
+                    # For smaller files, include the COBOL code
+                    analysis_prompt = f"""Analyze this COBOL program:
 
 File: {cobol_file_path}
 
 COBOL Code:
 ```
-{cobol_content}
+{cobol_for_analysis}
 ```
 
 Use the analyze_cobol tool to extract the structure, then provide a detailed analysis of:
@@ -491,13 +525,48 @@ Use the analyze_cobol tool to extract the structure, then provide a detailed ana
 - Procedures and logic flow
 - Dependencies between sections"""
                 async def run_analyzer():
-                    return await self.analyzer.run(analysis_prompt, session=self.session)
+                    # Use a fresh session to avoid context overflow
+                    from src.sessions import SQLiteSession
+                    analysis_session = SQLiteSession(f"{self.session_id}_analysis", str(self.settings.db_path)) if self.session_id else None
+                    try:
+                        return await self.analyzer.run(analysis_prompt, session=analysis_session)
+                    finally:
+                        if analysis_session:
+                            analysis_session.close()
                 results["analysis"] = await self._run_with_retry(run_analyzer, max_retries=6, base_delay=15.0)
                 await asyncio.sleep(self.settings.agent_delay_seconds)  # Delay to avoid rate limits
                 
                 # Step 2: Translate to Python
                 logger.info("Step 2: Translating to Python")
-                translation_prompt = f"""Translate this COBOL code to modern Python:
+                
+                # Truncate analysis aggressively - keep only key points
+                analysis_text = str(results['analysis'])
+                if len(analysis_text) > 1500:
+                    # Keep first 1000 chars (usually contains structure info) and last 500 (summary)
+                    analysis_text = analysis_text[:1000] + "\n... [analysis truncated] ...\n" + analysis_text[-500:]
+                
+                # For large files, don't include COBOL in translation prompt - rely on analysis
+                if len(cobol_content) > max_cobol_chars:
+                    # Large file - use analysis and tool approach
+                    translation_prompt = f"""Translate this COBOL program to modern Python:
+
+File path: {cobol_file_path}
+
+Analysis Results:
+{analysis_text}
+{ground_truth_section}
+
+IMPORTANT: The COBOL file is large ({len(cobol_content)} chars). Use the analysis above and your understanding of COBOL patterns to generate the Python translation. Focus on the structure and logic described in the analysis.
+
+Generate clean, modern Python code that:
+- Preserves the original functionality
+- Uses type hints and docstrings
+- Follows PEP 8 style guidelines
+- Includes a main() function if appropriate
+{'- IMPORTANT: Match class names, constants, and structure from the ground truth above' if ground_truth else ''}"""
+                else:
+                    # Small file - include COBOL code
+                    translation_prompt = f"""Translate this COBOL code to modern Python:
 
 Original COBOL:
 ```
@@ -505,7 +574,7 @@ Original COBOL:
 ```
 
 Analysis Results:
-{results['analysis']}
+{analysis_text}
 {ground_truth_section}
 Generate clean, modern Python code that:
 - Preserves the original functionality
@@ -513,47 +582,89 @@ Generate clean, modern Python code that:
 - Follows PEP 8 style guidelines
 - Includes a main() function if appropriate
 {'- IMPORTANT: Match class names, constants, and structure from the ground truth above' if ground_truth else ''}"""
+                
                 async def run_translator():
-                    return await self.translator.run(translation_prompt, session=self.session)
+                    # Use a fresh session to avoid context overflow
+                    from src.sessions import SQLiteSession
+                    translation_session = SQLiteSession(f"{self.session_id}_translation", str(self.settings.db_path)) if self.session_id else None
+                    try:
+                        return await self.translator.run(translation_prompt, session=translation_session)
+                    finally:
+                        if translation_session:
+                            translation_session.close()
                 results["translation"] = await self._run_with_retry(run_translator, max_retries=6, base_delay=15.0)
                 await asyncio.sleep(self.settings.agent_delay_seconds)  # Delay to avoid rate limits
                 
                 # Step 3: Review code
                 logger.info("Step 3: Reviewing translated code")
-                review_prompt = f"""Review this Python code for quality and correctness:
-
-Python Code:
-```
-{results['translation']}
-```
+                
+                # Extract just Python code from translation (not full markdown response)
+                translation_code = self._extract_python_code({"translation": results['translation']})
+                if not translation_code:
+                    translation_code = str(results['translation'])[:5000]  # Fallback: truncate
+                
+                # Truncate Python code if too long
+                if len(translation_code) > 6000:
+                    translation_code = translation_code[:6000] + "\n... [Python code truncated] ..."
+                
+                # For large files, don't include COBOL in review
+                cobol_for_review = ""
+                if len(cobol_content) <= max_cobol_chars:
+                    cobol_for_review = f"""
 
 Original COBOL for reference:
 ```
 {cobol_content}
-```
+```"""
+                
+                review_prompt = f"""Review this Python code for quality and correctness:
 
+Python Code:
+```python
+{translation_code}
+```
+{cobol_for_review}
 Check for:
 - Correctness (does it match COBOL logic?)
 - PEP 8 compliance
 - Code quality and best practices
 - Potential bugs or improvements"""
                 async def run_reviewer():
-                    return await self.reviewer.run(review_prompt, session=self.session)
+                    # Use a fresh session to avoid context overflow
+                    from src.sessions import SQLiteSession
+                    review_session = SQLiteSession(f"{self.session_id}_review", str(self.settings.db_path)) if self.session_id else None
+                    try:
+                        return await self.reviewer.run(review_prompt, session=review_session)
+                    finally:
+                        if review_session:
+                            review_session.close()
                 results["review"] = await self._run_with_retry(run_reviewer, max_retries=6, base_delay=15.0)
                 await asyncio.sleep(self.settings.agent_delay_seconds)  # Delay to avoid rate limits
                 
                 # Step 4: Generate tests
                 logger.info("Step 4: Generating tests")
+                
+                # Extract just the Python code from translation (not full markdown response)
+                python_code = self._extract_python_code({"translation": results['translation']})
+                if not python_code:
+                    python_code = str(results['translation'])[:5000]  # Fallback: truncate if extraction fails
+                
+                # For large COBOL files, only include a summary in test generation
+                cobol_for_tests = cobol_content
+                if len(cobol_content) > 5000:
+                    # Include first 2000 chars (header/structure) and last 1000 chars (main logic)
+                    cobol_for_tests = f"{cobol_content[:2000]}\n\n... [COBOL code truncated for test generation - {len(cobol_content)} total chars] ...\n\n{cobol_content[-1000:]}"
+                
                 test_prompt = f"""Generate comprehensive unit tests for this Python code:
 
 Python Code:
-```
-{results['translation']}
+```python
+{python_code[:8000] if len(python_code) > 8000 else python_code}
 ```
 
-Original COBOL:
+Original COBOL (summary):
 ```
-{cobol_content}
+{cobol_for_tests}
 ```
 
 Generate pytest tests that:
@@ -561,18 +672,38 @@ Generate pytest tests that:
 - Verify correct behavior matches COBOL logic
 - Include edge cases
 - Use pytest conventions"""
+                # For test generation, use a fresh session to avoid context overflow
+                # The session has accumulated too much history by this point
                 async def run_tester():
-                    return await self.tester.run(test_prompt, session=self.session)
+                    # Create a minimal session just for this step to avoid context overflow
+                    from src.sessions import SQLiteSession
+                    test_session = SQLiteSession(f"{self.session_id}_test", str(self.settings.db_path)) if self.session_id else None
+                    try:
+                        return await self.tester.run(test_prompt, session=test_session)
+                    finally:
+                        if test_session:
+                            test_session.close()
+                
                 results["tests"] = await self._run_with_retry(run_tester, max_retries=6, base_delay=15.0)
                 await asyncio.sleep(self.settings.agent_delay_seconds)  # Delay to avoid rate limits
                 
                 # Step 5: Refactor (optional)
                 logger.info("Step 5: Refactoring code")
+                
+                # Extract just Python code from translation (not full markdown response)
+                refactor_code = self._extract_python_code({"translation": results['translation']})
+                if not refactor_code:
+                    refactor_code = str(results['translation'])[:5000]  # Fallback: truncate
+                
+                # Truncate Python code if too long
+                if len(refactor_code) > 6000:
+                    refactor_code = refactor_code[:6000] + "\n... [Python code truncated] ..."
+                
                 refactor_prompt = f"""Refactor this Python code to improve readability and maintainability:
 
 Python Code:
-```
-{results['translation']}
+```python
+{refactor_code}
 ```
 
 Improve:
@@ -583,7 +714,14 @@ Improve:
 
 Maintain functional equivalence."""
                 async def run_refactor():
-                    return await self.refactor.run(refactor_prompt, session=self.session)
+                    # Use a fresh session to avoid context overflow
+                    from src.sessions import SQLiteSession
+                    refactor_session = SQLiteSession(f"{self.session_id}_refactor", str(self.settings.db_path)) if self.session_id else None
+                    try:
+                        return await self.refactor.run(refactor_prompt, session=refactor_session)
+                    finally:
+                        if refactor_session:
+                            refactor_session.close()
                 results["refactored"] = await self._run_with_retry(run_refactor, max_retries=6, base_delay=15.0)
             
             # Save results to files if requested

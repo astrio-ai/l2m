@@ -41,12 +41,48 @@ cp .env.example .env
 
 ### Basic Usage
 
+#### Command Line Interface (CLI)
+
+The easiest way to run the modernization pipeline is through the CLI:
+
+```bash
+# Activate virtual environment (if not already activated)
+source .venv/bin/activate
+
+# Run modernization on a COBOL file
+python -m src.main <path_to_cobol_file>
+
+# Example:
+python -m src.main data/hello/HELLO.cbl
+```
+
+The pipeline will:
+1. Analyze the COBOL code structure
+2. Translate it to modern Python
+3. Review the translated code
+4. Generate unit tests
+5. Refactor for best practices
+6. Save the generated Python file and test file to `data/output/`
+
+**Output:**
+- Generated Python file: `data/output/<filename>.py`
+- Generated test file: `data/output/test_<filename>.py`
+
+#### Programmatic Usage
+
+You can also use the pipeline programmatically:
+
 ```python
+import asyncio
 from src.workflows.modernization_pipeline import ModernizationPipeline
 
-pipeline = ModernizationPipeline()
-result = await pipeline.run("data/samples/sample1.cbl")
-print(result)
+async def main():
+    pipeline = ModernizationPipeline()
+    result = await pipeline.run("data/samples/sample1.cbl", save_files=True)
+    print(result)
+
+if __name__ == "__main__":
+    asyncio.run(main())
 ```
 
 ## Agents
