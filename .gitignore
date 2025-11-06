@@ -84,3 +84,6 @@ build/
 # Lock files (if not using uv as primary package manager)
 uv.lock
 
+# Evaluation results
+evals/results/
+
