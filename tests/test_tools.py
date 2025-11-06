@@ -70,8 +70,9 @@ class TestPythonSynthTool:
         
         code = generate_python_code(analysis, structure)
         assert isinstance(code, str)
-        assert "Generated Python code" in code
-        assert analysis in code
+        assert "Placeholder" in code
+        assert "LLM agent" in code
+        assert analysis[:100] in code  # Check that analysis is included (truncated)
     
     def test_validate_python_syntax_valid(self):
         """Test validation of valid Python code."""

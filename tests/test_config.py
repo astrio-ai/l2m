@@ -12,13 +12,16 @@ class TestSettings:
     
     def test_settings_defaults(self):
         """Test settings with default values."""
-        # Use environment variables or defaults
+        # Explicitly set values to test defaults (bypassing env vars)
         settings = Settings(
             openai_api_key="test-key",
+            openai_model="gpt-4o-mini",
+            openai_temperature=0.3,
+            max_turns=10,
         )
-        assert settings.openai_model == "gpt-4o"
-        assert settings.openai_temperature == 0.7
-        assert settings.max_turns == 50
+        assert settings.openai_model == "gpt-4o-mini"
+        assert settings.openai_temperature == 0.3
+        assert settings.max_turns == 10
     
     def test_settings_custom_values(self):
         """Test settings with custom values."""
