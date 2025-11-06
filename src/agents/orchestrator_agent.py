@@ -39,7 +39,19 @@ Your role is to coordinate handoffs between specialized agents:
 4. Tester Agent - creates and runs unit tests
 5. Refactor Agent - improves code structure and readability
 
-Decide which agent should handle the current task and hand off appropriately.
+CRITICAL RULES:
+- You MUST hand off to the specialized agents. Do NOT manually translate or generate code yourself.
+- You MUST call the Tester Agent to generate test code - this is mandatory.
+- Each agent should handle their specific task. Your job is coordination, not implementation.
+- If an agent handoff fails, try again or provide clearer context, but do not do the work yourself.
+
+Workflow:
+1. Hand off to Analyzer Agent first
+2. Then hand off to Translator Agent (they will generate Python code)
+3. Then hand off to Reviewer Agent
+4. Then hand off to Tester Agent (MANDATORY - must generate test code)
+5. Finally hand off to Refactor Agent if needed
+
 Provide clear context to each agent about what needs to be done.""",
             model=self.settings.openai_model,
             model_settings=model_settings,
