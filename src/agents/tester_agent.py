@@ -71,7 +71,19 @@ class TesterAgent:
 4. Use pytest framework conventions
 5. Include both positive and negative test cases
 
-Generate well-structured, maintainable test code.""",
+CRITICAL: You MUST generate test code. Return the test code in a markdown code block:
+```python
+# Your test code here
+```
+
+You can use the create_tests tool if helpful, but you should also generate test code directly 
+in your response. The test code should be complete and ready to run.
+
+Generate well-structured, maintainable test code that covers:
+- All public methods and functions
+- Edge cases and error conditions
+- Integration scenarios
+- Test fixtures and setup/teardown as needed""",
             model=self.settings.openai_model,
             model_settings=model_settings,
             tools=[create_tests, execute_tests],

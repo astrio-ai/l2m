@@ -27,9 +27,9 @@ class Settings(BaseSettings):
     
     # OpenAI Configuration
     openai_api_key: str
-    openai_model: str = "gpt-4o"
-    openai_temperature: float = 0.7
-    openai_max_tokens: int = 4096
+    openai_model: str = "gpt-4o-mini"
+    openai_temperature: float = 0.3
+    openai_max_tokens: int = 6000
     
     # Database Configuration
     db_path: str = "./data/sessions.db"
@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     log_file: Optional[str] = "./logs/l2m.log"
     
     # Tracing Configuration
-    enable_tracing: bool = True
+    enable_tracing: bool = False
     tracing_provider: Optional[str] = None  # logfire, agentops, braintrust, etc.
     
     # Path Configuration
@@ -48,8 +48,10 @@ class Settings(BaseSettings):
     backup_dir: str = "./data/backup"
     
     # Agent Configuration
-    max_turns: int = 50
-    enable_handoffs: bool = True
+    max_turns: int = 10
+    enable_handoffs: bool = False  # Default to sequential to avoid rate limits
+    reduce_prompt_size: bool = True
+    agent_delay_seconds: float = 2.0  # Delay between agent calls to avoid rate limits
     
     @property
     def base_dir(self) -> Path:

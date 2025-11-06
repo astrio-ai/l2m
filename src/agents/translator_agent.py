@@ -18,22 +18,35 @@ logger = get_logger(__name__)
 def translate_to_python(cobol_analysis: str, target_structure: str) -> str:
     """Translate COBOL logic to Python code.
     
+    This tool is a placeholder. The actual translation should be done by the LLM agent
+    generating Python code directly. This tool just provides a way to validate syntax
+    of generated code.
+    
     Args:
         cobol_analysis: Analysis results from analyzer agent
         target_structure: Desired Python code structure
         
     Returns:
-        Generated Python code
+        Message indicating the agent should generate Python code directly
     """
-    try:
-        python_code = generate_python_code(cobol_analysis, target_structure)
-        # Validate syntax
-        if validate_python_syntax(python_code):
-            return python_code
-        else:
-            return "Error: Generated Python code has syntax errors"
-    except Exception as e:
-        return f"Error translating to Python: {str(e)}"
+    # This tool doesn't actually generate code - it's a placeholder
+    # The agent should generate Python code directly in its response
+    logger.info("translate_to_python tool called - agent should generate Python code directly")
+    return f"""Use this information to generate Python code:
+
+COBOL Analysis:
+{cobol_analysis}
+
+Target Structure:
+{target_structure}
+
+Generate clean, modern Python code that:
+- Preserves the original COBOL functionality
+- Uses type hints and docstrings
+- Follows PEP 8 style guidelines
+- Includes proper error handling
+
+Return the Python code in a markdown code block (```python ... ```)."""
 
 
 class TranslatorAgent:
@@ -58,11 +71,14 @@ class TranslatorAgent:
 4. Convert COBOL I/O to Python equivalents
 5. Maintain business logic equivalence
 
+IMPORTANT: Generate Python code directly in your response. Do NOT use the translate_to_python tool.
+Return the Python code in a markdown code block: ```python ... ```
+
 Generate clean, modern Python code that preserves the original COBOL functionality.
 Use type hints, docstrings, and follow PEP 8 style guidelines.""",
             model=self.settings.openai_model,
             model_settings=model_settings,
-            tools=[translate_to_python],
+            tools=[],  # Remove the placeholder tool
         )
     
     async def run(self, input_text: str, session=None) -> str:

@@ -45,9 +45,11 @@ logs/
 
 # Database
 *.db
+*.db-shm
+*.db-wal
 *.sqlite
 *.sqlite3
-data/sessions.db
+data/sessions.db*
 
 # Output and temporary files
 data/output/
