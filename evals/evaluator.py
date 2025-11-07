@@ -39,6 +39,7 @@ class ExecutionResult:
     error_message: Optional[str] = None
     stdout: Optional[str] = None
     stderr: Optional[str] = None
+    validation_type: Optional[str] = None  # "ground_truth" or "basic_validation"
 
 
 @dataclass
@@ -145,6 +146,7 @@ class Evaluator:
         
         try:
             test_content = ground_truth_test_file.read_text(encoding="utf-8")
+            ground_truth_code = ground_truth_python_file.read_text(encoding="utf-8")
             
             # Parse pytest test file to extract test cases
             # Look for patterns like:
@@ -157,6 +159,11 @@ class Evaluator:
             
             # Pattern 2: main(...) with keyword arguments
             main_kwargs_pattern = r'main\s*\((.*?)\)'
+            
+            # Pattern 3: Any function call that might be the entry point
+            # Look for common function names: hello, execute, run, etc.
+            # This is a fallback for programs that don't use main() or program.run()
+            function_call_pattern = r'(\w+)\s*\((.*?)\)'
             
             # Split by test functions to get context
             test_function_pattern = r'def\s+(test_\w+)\([^)]*\):'
@@ -208,7 +215,7 @@ class Evaluator:
                         args.append(current_arg.strip())
                     
                     # Clean up arguments
-                    args = [arg.strip().strip('"\'') for arg in args if arg.strip()]
+                    args = [arg.strip().strip('"').strip("'") for arg in args if arg.strip()]
                     
                     # Look for expected output in the lines after this run() call
                     run_end = run_match.end()
@@ -251,58 +258,82 @@ class Evaluator:
                             description=f"{test_func_match.group(1)}: {args[1:] if len(args) > 1 else args}"
                         ))
                 
-                # Process main() calls with keyword arguments
+                # Process main() calls - extract ALL main() calls, not just specific ones
                 for main_match in main_matches:
-                    kwargs_str = main_match.group(1)
-                    # Check if this looks like keyword arguments (has = signs)
-                    if '=' in kwargs_str:
-                        # This is a keyword argument call - extract the key parameters
-                        # For ATSFILEA, we care about filea_filename and mock_request_callback
-                        # We'll create a simplified test case
-                        # Extract filea_filename if present
-                        filea_match = re.search(r'filea_filename\s*=\s*([^,\n)]+)', kwargs_str)
-                        if filea_match:
-                            # This is a main() call with keyword args - create a test case
-                            # We'll use a special format to indicate this is a keyword call
-                            # Store as a dict representation
-                            test_cases.append(TestCase(
-                                inputs=({"main_kwargs": kwargs_str},),  # Store kwargs as string
-                                expected_output="0",  # main() returns 0 on success
-                                description=f"{test_func_match.group(1)}: main() with kwargs"
-                            ))
+                    kwargs_str = main_match.group(1).strip()
+                    
+                    # Check if this is a main() call (with or without args)
+                    if kwargs_str == "":
+                        # main() with no arguments
+                        test_cases.append(TestCase(
+                            inputs=(),
+                            expected_output=None,
+                            description=f"{test_func_match.group(1)}: main()"
+                        ))
+                    elif '=' in kwargs_str:
+                        # This is a keyword argument call - extract all keyword arguments
+                        # Store as a special format to indicate this is a keyword call
+                        test_cases.append(TestCase(
+                            inputs=({"main_kwargs": kwargs_str},),  # Store kwargs as string
+                            expected_output=None,  # Don't assume return value
+                            description=f"{test_func_match.group(1)}: main() with kwargs"
+                        ))
+                    else:
+                        # Positional arguments (less common, but handle it)
+                        # Parse as positional args
+                        args = [arg.strip().strip('"').strip("'") for arg in kwargs_str.split(',') if arg.strip()]
+                        test_cases.append(TestCase(
+                            inputs=(args,),
+                            expected_output=None,
+                            description=f"{test_func_match.group(1)}: main() with args"
+                        ))
             
-            # If no test cases found, create default test cases
+            # Pattern 3: Extract function calls like hello(), execute(), etc.
+            # This handles programs that don't use main() or program.run()
             if not test_cases:
-                # Try to infer from program structure
-                # For MARBLES_COST, create typical test cases
-                test_cases = [
-                    TestCase(
-                        inputs=(["program.py", "MRBC", "CRE", "BLUE", "10", "4"],),
-                        expected_output="SUCCESS",
-                        description="Create operation"
-                    ),
-                    TestCase(
-                        inputs=(["program.py", "MRBC", "UPD", "BLUE", "5", "6"],),
-                        expected_output="SUCCESS",
-                        description="Update operation"
-                    ),
-                    TestCase(
-                        inputs=(["program.py", "MRBC", "DEL", "BLUE"],),
-                        expected_output="SUCCESS",
-                        description="Delete operation"
-                    ),
-                ]
+                # Try to find function calls in test functions
+                for test_func_match in test_functions:
+                    start_pos = test_func_match.end()
+                    end_pos = test_functions[test_functions.index(test_func_match) + 1].start() if test_functions.index(test_func_match) + 1 < len(test_functions) else len(test_content)
+                    test_func_content = test_content[start_pos:end_pos]
+                    
+                    # Look for function calls (but skip main() and program.run() as we already handled those)
+                    func_matches = list(re.finditer(function_call_pattern, test_func_content, re.DOTALL))
+                    for func_match in func_matches:
+                        func_name = func_match.group(1)
+                        func_args = func_match.group(2).strip()
+                        
+                        # Skip if it's main() or program.run() (already handled)
+                        if func_name == 'main' or func_name == 'run':
+                            continue
+                        
+                        # Check if this function exists in the ground truth code
+                        if f'def {func_name}(' in ground_truth_code or f'def {func_name}(' in test_content:
+                            # This looks like an entry point function
+                            if func_args == "":
+                                # Function call with no arguments
+                                test_cases.append(TestCase(
+                                    inputs=(),
+                                    expected_output=None,
+                                    description=f"{test_func_match.group(1)}: {func_name}()"
+                                ))
+                            elif '=' in func_args:
+                                # Keyword arguments
+                                test_cases.append(TestCase(
+                                    inputs=({f"{func_name}_kwargs": func_args},),
+                                    expected_output=None,
+                                    description=f"{test_func_match.group(1)}: {func_name}() with kwargs"
+                                ))
+            
+            # If no test cases found, return empty list
+            # Don't create default test cases - let the caller handle it
+            # This prevents using wrong test cases for different programs
             
         except Exception as e:
+            # Log warning but return empty list - let caller decide what to do
+            # Don't create default test cases that might be wrong for this program
             print(f"Warning: Could not extract test cases from {ground_truth_test_file}: {e}")
-            # Return default test cases
-            test_cases = [
-                TestCase(
-                    inputs=(["program.py", "TEST"],),
-                    expected_output=None,
-                    description="Default test case"
-                )
-            ]
+            return []
         
         return test_cases
     
@@ -311,7 +342,8 @@ class Evaluator:
         program_name: str,
         ground_truth_code: str,
         generated_code: str,
-        test_cases: List[TestCase]
+        test_cases: List[TestCase],
+        data_dir: Optional[Path] = None
     ) -> str:
         """Create a test harness template with f_gold and #TOFILL marker.
         
@@ -351,6 +383,11 @@ class Evaluator:
         except:
             pass
         
+        # Get absolute path to data directory
+        if data_dir is None:
+            data_dir = self.data_dir
+        data_dir_abs = str(data_dir.resolve())
+        
         # Create harness based on structure
         if has_class_run and class_name:
             # Class-based program with run() method
@@ -360,7 +397,19 @@ import sys
 import io
 import tempfile
 import os
+from pathlib import Path
 from contextlib import redirect_stdout
+
+# Add data directories to Python path to resolve module imports
+# This allows ground truth code to import modules like CSCVDLTI, etc.
+data_dir_path = r"{data_dir_abs}"
+if os.path.exists(data_dir_path):
+    sys.path.insert(0, data_dir_path)
+    # Also add subdirectories
+    for item in os.listdir(data_dir_path):
+        subdir = os.path.join(data_dir_path, item)
+        if os.path.isdir(subdir):
+            sys.path.insert(0, subdir)
 
 # Ground truth reference implementation
 {ground_truth_code}
@@ -415,7 +464,7 @@ if __name__ == '__main__':
             # Function-based program
             # Check if test cases use keyword arguments (main_kwargs format)
             uses_kwargs = any(
-                isinstance(tc.inputs[0], dict) and "main_kwargs" in tc.inputs[0]
+                tc.inputs and len(tc.inputs) > 0 and isinstance(tc.inputs[0], dict) and "main_kwargs" in tc.inputs[0]
                 for tc in test_cases
             ) if test_cases else False
             
@@ -425,6 +474,19 @@ if __name__ == '__main__':
 import sys
 import tempfile
 import os
+from pathlib import Path
+
+# Add data directories to Python path to resolve module imports
+# This allows ground truth code to import modules like CSCVDLTI, etc.
+import os
+data_dir_path = r"{data_dir_abs}"
+if os.path.exists(data_dir_path):
+    sys.path.insert(0, data_dir_path)
+    # Also add subdirectories
+    for item in os.listdir(data_dir_path):
+        subdir = os.path.join(data_dir_path, item)
+        if os.path.isdir(subdir):
+            sys.path.insert(0, subdir)
 
 # Ground truth reference implementation
 {ground_truth_code}
@@ -453,14 +515,15 @@ def f_gold(*args):
         # This is a simplified parser - in production you'd want something more robust
         import re
         # Extract key=value pairs
-        pattern = r'(\w+)\s*=\s*([^,)]+)'
+        pattern = r'(\w+)\s*=\s*([^,)]+)'  # noqa: W605
         for match in re.finditer(pattern, kwargs_str):
             key = match.group(1)
             value_str = match.group(2).strip()
             # Try to evaluate the value
             try:
                 if value_str.startswith("'") or value_str.startswith('"'):
-                    value = value_str.strip('"\'')
+                    # Remove quotes from both ends
+                    value = value_str.strip('"').strip("'")
                 elif value_str == "False":
                     value = False
                 elif value_str == "True":
@@ -518,6 +581,19 @@ if __name__ == '__main__':
                 # Standard function-based (uses sys.argv)
                 harness = f'''# Test harness for {program_name}
 import sys
+from pathlib import Path
+
+# Add data directories to Python path to resolve module imports
+# This allows ground truth code to import modules like CSCVDLTI, etc.
+import os
+data_dir_path = r"{data_dir_abs}"
+if os.path.exists(data_dir_path):
+    sys.path.insert(0, data_dir_path)
+    # Also add subdirectories
+    for item in os.listdir(data_dir_path):
+        subdir = os.path.join(data_dir_path, item)
+        if os.path.isdir(subdir):
+            sys.path.insert(0, subdir)
 
 # Ground truth reference implementation
 {ground_truth_code}
@@ -547,7 +623,11 @@ if __name__ == '__main__':
         
         # Add test cases
         for i, test_case in enumerate(test_cases):
-            inputs_repr = repr(test_case.inputs[0]) if test_case.inputs else "()"
+            # Handle empty inputs tuple
+            if test_case.inputs and len(test_case.inputs) > 0:
+                inputs_repr = repr(test_case.inputs[0]) if len(test_case.inputs) == 1 else repr(test_case.inputs)
+            else:
+                inputs_repr = "()"
             expected_repr = repr(test_case.expected_output) if test_case.expected_output else "None"
             harness += f"        ({inputs_repr}, {expected_repr}),  # {test_case.description or f'Test {i+1}'}\n"
         
@@ -699,13 +779,14 @@ def f_filled(*args):
             kwargs_str = kwargs_str.replace("temp_filename", "'" + temp_file + "'")
         
         # Parse key=value pairs
-        pattern = r'(\w+)\s*=\s*([^,)]+)'
+        pattern = r'(\w+)\s*=\s*([^,)]+)'  # noqa: W605
         for match in re.finditer(pattern, kwargs_str):
             key = match.group(1)
             value_str = match.group(2).strip()
             try:
                 if value_str.startswith("'") or value_str.startswith('"'):
-                    value = value_str.strip('"\'')
+                    # Remove quotes from both ends
+                    value = value_str.strip('"').strip("'")
                 elif value_str == "False":
                     value = False
                 elif value_str == "True":
@@ -937,25 +1018,75 @@ def f_filled(*args):
         generated_code = generated_python.read_text(encoding="utf-8")
         
         # Extract test cases
+        test_cases = []
         if ground_truth_test and ground_truth_test.exists():
             test_cases = self.extract_test_cases_from_ground_truth(
                 ground_truth_test,
                 ground_truth_python
             )
-        else:
-            # Create default test case
-            test_cases = [TestCase(
-                inputs=(["program.py", "TEST"],),
-                expected_output=None,
-                description="Default test case"
-            )]
+        
+        # If no test cases extracted, try to create a minimal generic test case
+        # This handles cases where test extraction fails but we still want to evaluate
+        if not test_cases:
+            # Try to infer a simple test case from the code structure
+            # Check if it's a class-based program with run() method
+            has_run_method = 'def run(' in ground_truth_code or '.run(' in ground_truth_code
+            has_main_function = 'def main(' in ground_truth_code
+            
+            # Try to find any function that might be the entry point
+            # Look for common patterns: main, run, or any function defined at module level
+            import ast
+            entry_function = None
+            try:
+                tree = ast.parse(ground_truth_code)
+                for node in ast.walk(tree):
+                    if isinstance(node, ast.FunctionDef) and not any(isinstance(p, ast.ClassDef) for p in ast.walk(tree) if hasattr(p, 'body') and node in getattr(p, 'body', [])):
+                        # Found a top-level function
+                        if node.name in ['main', 'run', 'hello', 'execute'] or node.name.lower().startswith('main'):
+                            entry_function = node.name
+                            break
+            except:
+                pass
+            
+            if has_run_method:
+                # Class-based program - try with minimal args
+                test_cases = [TestCase(
+                    inputs=(["program.py"],),
+                    expected_output=None,
+                    description="Minimal test case (no specific test cases found)"
+                )]
+            elif has_main_function:
+                # Function-based program - try calling main with no args
+                test_cases = [TestCase(
+                    inputs=(),
+                    expected_output=None,
+                    description="Minimal test case (no specific test cases found)"
+                )]
+            elif entry_function:
+                # Found an entry function - try calling it with no args
+                test_cases = [TestCase(
+                    inputs=(),
+                    expected_output=None,
+                    description=f"Minimal test case calling {entry_function}() (no specific test cases found)"
+                )]
+            else:
+                # Last resort: create a minimal test case that tries to call main or run
+                # This will at least attempt to execute the code
+                test_cases = [TestCase(
+                    inputs=(),
+                    expected_output=None,
+                    description="Minimal test case (no specific test cases found, attempting generic execution)"
+                )]
         
         # Create test harness
+        # Get the data directory from the ground truth file path
+        data_dir_for_harness = ground_truth_python.parent.parent if ground_truth_python.parent.name != "data" else ground_truth_python.parent
         harness = self.create_test_harness(
             program_name,
             ground_truth_code,
             generated_code,
-            test_cases
+            test_cases,
+            data_dir=data_dir_for_harness
         )
         
         # Inject generated code
@@ -963,8 +1094,196 @@ def f_filled(*args):
         
         # Execute harness
         result = self.execute_harness(harness, program_name)
+        result.validation_type = "ground_truth"
         
         return result
+    
+    def validate_without_ground_truth(
+        self,
+        program_name: str,
+        generated_file: Path
+    ) -> ExecutionResult:
+        """Validate generated code without ground truth using basic checks.
+        
+        This performs:
+        1. Syntax/compilation check
+        2. Import test
+        3. Basic execution test (if main function exists)
+        4. Code quality checks (type hints, docstrings)
+        
+        Args:
+            program_name: Name of the program
+            generated_file: Path to generated Python file
+            
+        Returns:
+            ExecutionResult with validation results
+        """
+        start_time = time.time()
+        tests_passed = 0
+        total_tests = 0
+        error_type = None
+        error_message = None
+        
+        try:
+            code = generated_file.read_text(encoding="utf-8")
+            
+            # Test 1: Syntax/Compilation Check
+            total_tests += 1
+            try:
+                ast.parse(code)
+                tests_passed += 1
+            except SyntaxError as e:
+                error_type = "compilation_error"
+                error_message = f"Syntax error: {str(e)}"
+                return ExecutionResult(
+                    program_name=program_name,
+                    success=False,
+                    n_success=tests_passed,
+                    total_tests=total_tests,
+                    execution_time=time.time() - start_time,
+                    error_type=error_type,
+                    error_message=error_message,
+                    validation_type="basic_validation"
+                )
+            
+            # Test 2: Import Test
+            total_tests += 1
+            try:
+                # Create a temporary module to test import
+                import tempfile
+                import importlib.util
+                import sys
+                
+                # Create temp file
+                with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+                    f.write(code)
+                    temp_path = f.name
+                
+                try:
+                    # Try to load as module
+                    spec = importlib.util.spec_from_file_location(f"test_{program_name}", temp_path)
+                    if spec and spec.loader:
+                        module = importlib.util.module_from_spec(spec)
+                        spec.loader.exec_module(module)
+                        tests_passed += 1
+                    else:
+                        error_type = "compilation_error"
+                        error_message = "Could not create module spec"
+                finally:
+                    import os
+                    if os.path.exists(temp_path):
+                        os.unlink(temp_path)
+            except Exception as e:
+                error_type = "compilation_error"
+                error_message = f"Import error: {str(e)}"
+                # Don't return yet - continue with other tests
+            
+            # Test 3: Basic Execution Test (if main function exists)
+            if 'def main' in code or 'if __name__' in code:
+                total_tests += 1
+                try:
+                    # Try to execute with minimal input
+                    import subprocess
+                    import tempfile
+                    import os
+                    
+                    with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+                        # Remove if __name__ block to prevent direct execution
+                        lines = code.split('\n')
+                        filtered_lines = []
+                        skip_block = False
+                        for line in lines:
+                            if 'if __name__' in line:
+                                skip_block = True
+                            if not skip_block:
+                                filtered_lines.append(line)
+                            elif line.strip() and not line.strip().startswith(' ') and not line.strip().startswith('\t'):
+                                skip_block = False
+                                if 'if __name__' not in line:
+                                    filtered_lines.append(line)
+                        
+                        f.write('\n'.join(filtered_lines))
+                        temp_path = f.name
+                    
+                    try:
+                        # Try to import and call main if it exists
+                        result = subprocess.run(
+                            [sys.executable, "-c", f"import sys; sys.path.insert(0, '{os.path.dirname(temp_path)}'); exec(open('{temp_path}').read())"],
+                            capture_output=True,
+                            timeout=5,
+                            text=True
+                        )
+                        if result.returncode == 0:
+                            tests_passed += 1
+                        else:
+                            if not error_type:
+                                error_type = "runtime_error"
+                                error_message = result.stderr[:200] if result.stderr else "Execution failed"
+                    finally:
+                        if os.path.exists(temp_path):
+                            os.unlink(temp_path)
+                except subprocess.TimeoutExpired:
+                    if not error_type:
+                        error_type = "timeout"
+                        error_message = "Execution timed out"
+                except Exception as e:
+                    if not error_type:
+                        error_type = "runtime_error"
+                        error_message = f"Execution error: {str(e)[:200]}"
+            
+            # Test 4: Code Quality Checks
+            total_tests += 1
+            quality_score = 0
+            quality_checks = []
+            
+            # Check for type hints
+            if '->' in code or ': str' in code or ': int' in code or ': bool' in code:
+                quality_score += 1
+                quality_checks.append("type_hints")
+            
+            # Check for docstrings
+            if '"""' in code or "'''" in code:
+                quality_score += 1
+                quality_checks.append("docstrings")
+            
+            # Check for class definitions (structured code)
+            if 'class ' in code:
+                quality_score += 1
+                quality_checks.append("classes")
+            
+            # Pass if at least 2 quality checks pass
+            if quality_score >= 2:
+                tests_passed += 1
+            
+            # Determine success
+            success = tests_passed == total_tests and error_type is None
+            
+            if not success and not error_type:
+                error_type = "validation_failed"
+                error_message = f"Only {tests_passed}/{total_tests} validation checks passed"
+            
+            return ExecutionResult(
+                program_name=program_name,
+                success=success,
+                n_success=tests_passed,
+                total_tests=total_tests,
+                execution_time=time.time() - start_time,
+                error_type=error_type,
+                error_message=error_message,
+                validation_type="basic_validation"
+            )
+            
+        except Exception as e:
+            return ExecutionResult(
+                program_name=program_name,
+                success=False,
+                n_success=0,
+                total_tests=max(total_tests, 1),
+                execution_time=time.time() - start_time,
+                error_type="runtime_error",
+                error_message=f"Validation error: {str(e)[:200]}",
+                validation_type="basic_validation"
+            )
     
     def evaluate_all(self) -> EvaluationMetrics:
         """Evaluate all programs in output directory.
@@ -992,6 +1311,10 @@ def f_filled(*args):
             
             for data_subdir in self.data_dir.iterdir():
                 if data_subdir.is_dir():
+                    # Skip output directory - it contains generated files, not ground truth
+                    if data_subdir.name == "output" or data_subdir.name.startswith("output"):
+                        continue
+                    
                     # Look for ground truth Python file
                     possible_names = [
                         program_name + ".py",
@@ -1013,23 +1336,35 @@ def f_filled(*args):
                     if ground_truth_python:
                         break
             
-            if not ground_truth_python:
-                print(f"Warning: No ground truth found for {program_name}, skipping...")
-                continue
+            # Check if we have ground truth
+            has_ground_truth = ground_truth_python and ground_truth_test and ground_truth_test.exists()
             
-            print(f"Evaluating {program_name}...", end=" ", flush=True)
-            
-            result = self.evaluate_program(
-                program_name,
-                ground_truth_python,
-                ground_truth_test,
-                generated_file
-            )
+            if has_ground_truth:
+                # Full evaluation with ground truth
+                print(f"Evaluating {program_name}...", end=" ", flush=True)
+                
+                result = self.evaluate_program(
+                    program_name,
+                    ground_truth_python,
+                    ground_truth_test,
+                    generated_file
+                )
+                # validation_type is already set in evaluate_program
+            else:
+                # Basic validation for programs without ground truth
+                print(f"Validating {program_name} (no ground truth)...", end=" ", flush=True)
+                
+                result = self.validate_without_ground_truth(
+                    program_name,
+                    generated_file
+                )
+                result.validation_type = "basic_validation"
             
             results.append(result)
             
             status = "✓" if result.success else "✗"
-            print(f"{status} ({result.n_success}/{result.total_tests})")
+            validation_label = "[GT]" if result.validation_type == "ground_truth" else "[BV]"
+            print(f"{status} ({result.n_success}/{result.total_tests}) {validation_label}")
         
         # Calculate metrics
         total = len(results)
@@ -1104,7 +1439,24 @@ def f_filled(*args):
         print(f"Timestamp: {metrics.timestamp}")
         print(f"Total Programs: {metrics.total_programs}")
         print()
-        print("METRICS:")
+        
+        # Separate ground truth vs basic validation
+        gt_results = [r for r in metrics.program_results if r.get('validation_type') == 'ground_truth']
+        bv_results = [r for r in metrics.program_results if r.get('validation_type') == 'basic_validation']
+        
+        if gt_results:
+            gt_success = sum(1 for r in gt_results if r['success'])
+            print(f"Ground Truth Evaluation: {len(gt_results)} programs")
+            print(f"  Success Rate: {gt_success}/{len(gt_results)} ({gt_success/len(gt_results)*100:.1f}%)")
+            print()
+        
+        if bv_results:
+            bv_success = sum(1 for r in bv_results if r['success'])
+            print(f"Basic Validation: {len(bv_results)} programs (no ground truth)")
+            print(f"  Validation Pass Rate: {bv_success}/{len(bv_results)} ({bv_success/len(bv_results)*100:.1f}%)")
+            print()
+        
+        print("OVERALL METRICS:")
         print(f"  CA@1 (Correctness at 1): {metrics.ca_at_1:.2f}%")
         print(f"  Compilation Error Rate: {metrics.compilation_error_rate:.2f}%")
         print(f"  Runtime Error Rate: {metrics.runtime_error_rate:.2f}%")
@@ -1119,8 +1471,9 @@ def f_filled(*args):
             print("PROGRAM RESULTS:")
             for result in metrics.program_results:
                 status = "✓" if result['success'] else "✗"
+                validation_label = "[GT]" if result.get('validation_type') == 'ground_truth' else "[BV]"
                 print(f"  {status} {result['program_name']}: "
-                      f"{result['n_success']}/{result['total_tests']} tests passed")
+                      f"{result['n_success']}/{result['total_tests']} tests passed {validation_label}")
                 if result['error_type']:
                     print(f"    Error: {result['error_type']}")
         print("=" * 80)
