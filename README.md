@@ -101,24 +101,6 @@ python -m src.main --file-list files.txt
 
 **Example Output:**
 ```
-======================================================================
-Starting batch modernization of 15 file(s)
-======================================================================
-Output directory: data/output
-Delay between files: 10.0s
-Continue on error: True
-----------------------------------------------------------------------
-
-[████████░░░░░░░░] 20% (3/15) | ETA: 45 minutes | [3/15] Processing COACTUPC.cbl (4237 lines)... Translating...
-
-======================================================================
-BATCH MODERNIZATION SUMMARY
-======================================================================
-Total files processed: 15
-Successful: 12 (80.0%)
-Failed: 3 (20.0%)
-Total duration: 2h 15m 30s
-...
 ```
 
 ## Agents
