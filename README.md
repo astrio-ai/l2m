@@ -13,6 +13,7 @@ Legacy2Modern (L2M) is an open-source, AI-powered multi-agent framework that aut
 ## Features
 
 - **Multi-Agent Architecture**: Specialized agents for analysis, translation, review, testing, and refactoring
+- **Batch Processing**: Process multiple COBOL files with real-time progress tracking and comprehensive reporting
 - **Session Management**: Persistent conversation history across agent interactions
 - **Tool Integration**: Extensible tools for COBOL parsing, Python synthesis, and code quality
 - **Tracing Support**: Built-in tracing for debugging and monitoring agent behavior
@@ -68,21 +69,38 @@ The pipeline will:
 - Generated Python file: `data/output/<filename>.py`
 - Generated test file: `data/output/test_<filename>.py`
 
-#### Programmatic Usage
+#### Batch Processing
 
-You can also use the pipeline programmatically:
+Process multiple COBOL files at once with real-time progress tracking:
 
-```python
-import asyncio
-from src.workflows.modernization_pipeline import ModernizationPipeline
+```bash
+# Process all COBOL files in a directory (recursive)
+python -m src.main --directory data/aws-samples-aws-mainframe-modernization-carddemo/ --batch-delay 10.0
 
-async def main():
-    pipeline = ModernizationPipeline()
-    result = await pipeline.run("data/samples/sample1.cbl", save_files=True)
-    print(result)
+# Process multiple specific files
+python -m src.main file1.cbl file2.cbl file3.cbl
 
-if __name__ == "__main__":
-    asyncio.run(main())
+# Process files matching a pattern
+python -m src.main --pattern "**/*.cbl"
+
+# Process files from a list file
+python -m src.main --file-list files.txt
+```
+
+**Batch Processing Features:**
+- **Real-time Progress**: Shows progress bar, ETA, and current step for each file
+- **Progress Display**: `[████████░░░░░░░░] 20% (3/15) | ETA: 45 minutes | [3/15] Processing COACTUPC.cbl (4237 lines)... Analyzing...`
+- **Error Handling**: Continues processing on errors (configurable)
+- **Rate Limiting**: Configurable delays between files to avoid API rate limits
+- **Summary Report**: JSON report with detailed results saved to `data/output/batch_report_YYYYMMDD_HHMMSS.json`
+
+**Batch Options:**
+- `--batch-delay <seconds>`: Delay between files (default: 5.0s)
+- `--max-concurrent <n>`: Maximum concurrent files (default: 1)
+- `--no-continue-on-error`: Stop on first error (default: continue)
+
+**Example Output:**
+```
 ```
 
 ## Agents
