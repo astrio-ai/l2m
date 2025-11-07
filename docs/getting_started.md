@@ -97,9 +97,15 @@ Create `.env` file in project root:
 ```bash
 # .env
 OPENAI_API_KEY=sk-your-key-here
-OPENAI_MODEL=gpt-4o
-OPENAI_TEMPERATURE=0.7
-MAX_TURNS=50
+OPENAI_MODEL=gpt-4o-mini
+OPENAI_TEMPERATURE=0.3
+OPENAI_MAX_TOKENS=6000
+MAX_TURNS=10
+
+# Batch processing settings (optional)
+BATCH_FILE_DELAY_SECONDS=5.0
+BATCH_MAX_CONCURRENT=1
+BATCH_CONTINUE_ON_ERROR=true
 ```
 
 #### 5. Verify Installation
@@ -184,12 +190,39 @@ Save as `data/samples/hello.cbl`
 
 ### Running Modernization
 
+**Single File (CLI)**:
+```bash
+python -m src.main data/samples/hello.cbl
+```
+
+**Single File (Programmatic)**:
 ```python
 from pathlib import Path
 
 cobol_file = Path("data/samples/hello.cbl")
 pipeline = ModernizationPipeline()
 results = await pipeline.run(str(cobol_file))
+```
+
+**Batch Processing (CLI)**:
+```bash
+# Process all COBOL files in a directory
+python -m src.main --directory data/aws-samples/ --batch-delay 10.0
+
+# Process multiple specific files
+python -m src.main file1.cbl file2.cbl file3.cbl
+```
+
+**Batch Processing (Programmatic)**:
+```python
+from src.workflows.batch_pipeline import BatchModernizationPipeline, discover_cobol_files
+
+# Discover files
+cobol_files = discover_cobol_files("data/aws-samples/")
+
+# Process batch
+batch_pipeline = BatchModernizationPipeline()
+batch_result = await batch_pipeline.run_batch(cobol_files)
 ```
 
 ## Understanding Results

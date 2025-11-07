@@ -261,9 +261,185 @@ results = {
 ### Optimization Tips
 
 1. **Use Sessions**: Reuse sessions for related files
-2. **Batch Processing**: Process multiple files in one session
+2. **Batch Processing**: Process multiple files efficiently with batch pipeline
 3. **Caching**: Cache analysis results for similar files
 4. **Model Selection**: Use faster models for simple tasks
+
+## Batch Processing
+
+The batch processing workflow allows you to modernize multiple COBOL files efficiently with real-time progress tracking and comprehensive reporting.
+
+### Batch Pipeline
+
+The `BatchModernizationPipeline` processes multiple files sequentially with configurable delays to avoid API rate limits:
+
+```python
+from src.workflows.batch_pipeline import BatchModernizationPipeline, discover_cobol_files
+from src.config import get_settings
+
+# Discover COBOL files
+cobol_files = discover_cobol_files("data/aws-samples/")
+
+# Create batch pipeline
+settings = get_settings()
+settings.batch_file_delay_seconds = 10.0  # 10 second delay between files
+batch_pipeline = BatchModernizationPipeline(settings)
+
+# Process all files
+batch_result = await batch_pipeline.run_batch(cobol_files)
+```
+
+### File Discovery
+
+Discover COBOL files from various sources:
+
+```python
+from src.workflows.batch_pipeline import discover_cobol_files
+
+# From directory (recursive)
+files = discover_cobol_files("data/aws-samples/")
+
+# With glob pattern
+files = discover_cobol_files(".", pattern="**/*.cbl")
+
+# From file list
+files = discover_cobol_files("file_list.txt")  # One path per line
+```
+
+### CLI Batch Processing
+
+Use the CLI for batch processing:
+
+```bash
+# Process directory
+python -m src.main --directory data/aws-samples/ --batch-delay 10.0
+
+# Process multiple files
+python -m src.main file1.cbl file2.cbl file3.cbl
+
+# Process with pattern
+python -m src.main --pattern "**/*.cbl"
+
+# Process from file list
+python -m src.main --file-list files.txt
+```
+
+### Batch Configuration
+
+Configure batch processing via settings:
+
+```python
+from src.config import get_settings
+
+settings = get_settings()
+
+# Batch settings
+settings.batch_file_delay_seconds = 10.0  # Delay between files (default: 5.0s)
+settings.batch_max_concurrent = 1        # Max parallel files (default: 1)
+settings.batch_continue_on_error = True   # Continue on error (default: True)
+settings.batch_retry_failed = False       # Retry failed files (default: False)
+```
+
+Or via environment variables in `.env`:
+
+```bash
+BATCH_FILE_DELAY_SECONDS=10.0
+BATCH_MAX_CONCURRENT=1
+BATCH_CONTINUE_ON_ERROR=true
+```
+
+### Progress Tracking
+
+The batch pipeline provides real-time progress updates:
+
+- **Progress Bar**: Visual progress indicator `[████████░░░░░░░░] 20% (3/15)`
+- **ETA**: Estimated time remaining based on average processing time
+- **Current Step**: Shows which pipeline step is running (Analyzing, Translating, etc.)
+- **File Info**: Current file name and line count
+
+Example output:
+```
+[████████░░░░░░░░] 20% (3/15) | ETA: 45 minutes | [3/15] Processing COACTUPC.cbl (4237 lines)... Translating...
+```
+
+### Batch Results
+
+Access batch processing results:
+
+```python
+batch_result = await batch_pipeline.run_batch(cobol_files)
+
+# Summary statistics
+print(f"Total files: {batch_result.total_files}")
+print(f"Successful: {batch_result.successful}")
+print(f"Failed: {batch_result.failed}")
+print(f"Duration: {batch_result.total_duration_seconds}s")
+
+# Individual file results
+for result in batch_result.results:
+    if result.success:
+        print(f"✓ {result.file_path.name}: {result.duration_seconds:.1f}s")
+        print(f"  Output: {result.output_file}")
+        print(f"  Test: {result.test_file}")
+    else:
+        print(f"✗ {result.file_path.name}: {result.error}")
+```
+
+### Batch Reports
+
+The batch pipeline automatically generates JSON reports:
+
+```json
+{
+  "batch_info": {
+    "start_time": "2025-11-07T01:08:16",
+    "end_time": "2025-11-07T03:23:46",
+    "total_duration_seconds": 8130.0,
+    "total_files": 15,
+    "successful": 12,
+    "failed": 3
+  },
+  "configuration": {
+    "batch_file_delay_seconds": 10.0,
+    "batch_max_concurrent": 1,
+    "batch_continue_on_error": true
+  },
+  "results": [...]
+}
+```
+
+Reports are saved to `data/output/batch_report_YYYYMMDD_HHMMSS.json`.
+
+### Error Handling
+
+Batch processing handles errors gracefully:
+
+- **Continue on Error**: By default, processing continues even if a file fails
+- **Error Tracking**: All errors are recorded in the batch result
+- **Summary Report**: Failed files are listed in the console summary
+
+To stop on first error:
+
+```bash
+python -m src.main --directory data/aws-samples/ --no-continue-on-error
+```
+
+### Rate Limiting
+
+Batch processing includes built-in rate limiting:
+
+- **Inter-file Delays**: Configurable delay between files (default: 5.0s)
+- **Exponential Backoff**: Automatic retry with backoff on rate limit errors
+- **Agent Delays**: Additional delays between agent calls within each file
+
+Recommended settings for large batches:
+
+```bash
+# Conservative settings for large codebases
+BATCH_FILE_DELAY_SECONDS=10.0
+AGENT_DELAY_SECONDS=3.0
+OPENAI_MODEL=gpt-4o-mini
+```
 
 ## Extending the Workflow
 
