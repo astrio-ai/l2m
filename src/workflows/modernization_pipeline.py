@@ -497,7 +497,7 @@ REQUIREMENTS:
                 # For very large files, just provide the file path and let the tool handle it
                 if len(cobol_content) > max_cobol_chars:
                     # For large files, don't include COBOL in prompt at all - just use the tool
-                    analysis_prompt = f"""Analyze this COBOL program:
+                        analysis_prompt = f"""Analyze this COBOL program:
 
 File path: {cobol_file_path}
 

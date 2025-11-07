@@ -53,6 +53,14 @@ class Settings(BaseSettings):
     reduce_prompt_size: bool = True
     agent_delay_seconds: float = 2.0  # Delay between agent calls to avoid rate limits
     
+    # Batch Processing Configuration
+    batch_mode: bool = False
+    batch_file_delay_seconds: float = 5.0  # Delay between files in batch mode
+    batch_max_concurrent: int = 1  # Max parallel files (default 1 for rate limits)
+    batch_continue_on_error: bool = True  # Continue processing if a file fails
+    batch_report_file: Optional[str] = None  # Optional JSON summary report path
+    batch_retry_failed: bool = False  # Retry failed files at the end
+    
     @property
     def base_dir(self) -> Path:
         """Get the base directory of the project."""
