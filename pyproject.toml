@@ -42,7 +42,8 @@ dev = [
 ]
 
 [project.scripts]
-l2m = "src.main:main"
+l2m = "src.cli.launcher:main"
+l2m-pipeline = "src.main:main"
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
@@ -69,4 +70,7 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "-v --tb=short"
 asyncio_mode = "auto"
+
+[tool.setuptools.packages.find]
+include = ["src*", "evals*"]
 

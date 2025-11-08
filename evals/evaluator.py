@@ -392,7 +392,7 @@ class Evaluator:
         if has_class_run and class_name:
             # Class-based program with run() method
             class_name_var = class_name  # Store in variable to use in f-string
-            harness = f'''# Test harness for {program_name}
+            harness = rf'''# Test harness for {program_name}
 import sys
 import io
 import tempfile
@@ -470,7 +470,7 @@ if __name__ == '__main__':
             
             if uses_kwargs:
                 # Handle main() with keyword arguments
-                harness = f'''# Test harness for {program_name}
+                harness = rf'''# Test harness for {program_name}
 import sys
 import tempfile
 import os
@@ -579,7 +579,7 @@ if __name__ == '__main__':
 '''
             else:
                 # Standard function-based (uses sys.argv)
-                harness = f'''# Test harness for {program_name}
+                harness = rf'''# Test harness for {program_name}
 import sys
 from pathlib import Path
 
@@ -702,7 +702,7 @@ if __name__ == '__main__':
         if has_class_run and class_name:
             # Include the entire generated code and create wrapper
             class_name_var = class_name  # Store in variable to use in f-string
-            injected_code = f'''# Generated code
+            injected_code = rf'''# Generated code
 {generated_code}
 
 def f_filled(*args):
@@ -755,7 +755,7 @@ def f_filled(*args):
             
             if uses_kwargs:
                 # Handle main() with keyword arguments (same logic as f_gold)
-                injected_code = f'''# Generated code
+                injected_code = rf'''# Generated code
 {generated_code}
 
 def f_filled(*args):
@@ -833,7 +833,7 @@ def f_filled(*args):
 '''
             else:
                 # Standard function-based (uses sys.argv)
-                injected_code = f'''# Generated code
+                injected_code = rf'''# Generated code
 {generated_code}
 
 def f_filled(*args):
