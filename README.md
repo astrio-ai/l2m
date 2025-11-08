@@ -40,99 +40,20 @@ cp .env.example .env
 # Edit .env and add your OPENAI_API_KEY
 ```
 
-### Basic Usage
-
-#### Command Line Interface (CLI)
-
-The easiest way to run the modernization pipeline is through the CLI:
+#### Interactive CLI (Preview)
 
 ```bash
-# Activate virtual environment (if not already activated)
-source .venv/bin/activate
+# Ensure your environment is activated and the package is installed
+pip install -e .
 
-# Run modernization on a COBOL file
-python -m src.main <path_to_cobol_file>
-
-# Example:
-python -m src.main data/hello/HELLO.cbl
+# Start the interactive CLI
+l2m
 ```
-
-The pipeline will:
-1. Analyze the COBOL code structure
-2. Translate it to modern Python
-3. Review the translated code
-4. Generate unit tests
-5. Refactor for best practices
-6. Save the generated Python file and test file to `data/output/`
-
-**Output:**
-- Generated Python file: `data/output/<filename>.py`
-- Generated test file: `data/output/test_<filename>.py`
-
-#### Batch Processing
-
-Process multiple COBOL files at once with real-time progress tracking:
-
-```bash
-# Process all COBOL files in a directory (recursive)
-python -m src.main --directory data/aws-samples-aws-mainframe-modernization-carddemo/ --batch-delay 10.0
-
-# Process multiple specific files
-python -m src.main file1.cbl file2.cbl file3.cbl
-
-# Process files matching a pattern
-python -m src.main --pattern "**/*.cbl"
-
-# Process files from a list file
-python -m src.main --file-list files.txt
-```
-
-**Batch Processing Features:**
-- **Real-time Progress**: Shows progress bar, ETA, and current step for each file
-- **Progress Display**: `[████████░░░░░░░░] 20% (3/15) | ETA: 45 minutes | [3/15] Processing COACTUPC.cbl (4237 lines)... Analyzing...`
-- **Error Handling**: Continues processing on errors (configurable)
-- **Rate Limiting**: Configurable delays between files to avoid API rate limits
-- **Summary Report**: JSON report with detailed results saved to `data/output/batch_report_YYYYMMDD_HHMMSS.json`
-
-**Batch Options:**
-- `--batch-delay <seconds>`: Delay between files (default: 5.0s)
-- `--max-concurrent <n>`: Maximum concurrent files (default: 1)
-- `--no-continue-on-error`: Stop on first error (default: continue)
-
-**Example Output:**
-```
-```
-
-## Agents
-
-- **Orchestrator Agent**: Manages overall pipeline and agent handoffs
-- **Analyzer Agent**: Parses COBOL and extracts logic
-- **Translator Agent**: Converts COBOL to Python
-- **Reviewer Agent**: Reviews translated code quality
-- **Tester Agent**: Creates and runs unit tests
-- **Refactor Agent**: Improves code structure and readability
 
 ## Documentation
 
 - [Getting Started](docs/getting_started.md) - Installation and quick start guide
-- [Architecture](docs/architecture.md) - System architecture and design
-- [Agent System](docs/agents.md) - Detailed agent documentation
-- [Workflows](docs/workflows.md) - Workflow documentation and usage
 - [Full Documentation](docs/README.md) - Complete documentation index
-
-## Testing
-
-**Important: Make sure your virtual environment is activated before running tests.**
-
-```bash
-# Activate virtual environment first
-source .venv/bin/activate
-
-# Then run tests (use python -m pytest to ensure venv Python is used)
-python -m pytest tests/
-```
-
-If you see `ModuleNotFoundError: No module named 'agents'`, it means the virtual environment isn't activated. Make sure to run `source .venv/bin/activate` first.
 
 ## License
 This project is licensed under the Apache-2.0 License. See the [LICENSE](./LICENSE) file for details.

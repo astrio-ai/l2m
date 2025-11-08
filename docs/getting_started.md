@@ -48,6 +48,31 @@ async def main():
 asyncio.run(main())
 ```
 
+### Interactive CLI (Preview)
+
+For a guided, conversation-friendly workflow, launch the interactive shell:
+
+```bash
+pip install -e .
+l2m
+```
+
+Available commands include:
+- `modernize <file.cbl>` – run the pipeline on a single COBOL file
+- `batch --directory data/aws-samples-aws-mainframe-modernization-carddemo` – orchestrate multi-file runs with progress bars
+- `evaluate --save` – execute the evaluator and persist the report
+- `inspect`, `diff`, `ls`, `history`, `save_session`, `load_session`, `config` – streamline day-to-day exploration and debugging
+
+Type `help` (or `help <command>`) inside the shell to see detailed usage.
+
+### Classic CLI
+
+The legacy non-interactive CLI remains available via `l2m-pipeline` (equivalent to `python -m src.main`).
+
+```bash
+l2m-pipeline --directory data/aws-samples-aws-mainframe-modernization-carddemo/
+```
+
 ## Detailed Setup
 
 ### Prerequisites

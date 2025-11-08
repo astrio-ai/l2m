@@ -108,7 +108,3 @@ def _setup_logging(settings: Settings) -> None:
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         handlers=handlers,
     )
-    
-    logger = logging.getLogger(__name__)
-    logger.info(f"Logging configured at level {settings.log_level}")
-
