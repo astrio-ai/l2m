@@ -468,3 +468,38 @@ pipeline.custom_agent = CustomAgent()
 custom_result = await pipeline.custom_agent.run("...")
 ```
 
+## Interactive CLI Workflow
+
+The `l2m` command wraps all workflows into an interactive REPL. It keeps context between commands, streams progress as you modernize programs, and exposes quick shortcuts for common tasks.
+
+### Launching the Shell
+
+```bash
+pip install -e .
+l2m
+```
+
+### Core Commands
+
+| Command | Description |
+| --- | --- |
+| `modernize <file.cbl>` | Runs the full modernization pipeline and prints a concise summary. |
+| `batch --directory DIR [--pattern PATTERN]` | Orchestrates batch processing with live progress bar, ETA, and summary. |
+| `evaluate [--save]` | Executes the evaluator and displays CodeGen-style metrics; optionally saves the report. |
+| `inspect <path>` | Previews COBOL or Python files directly inside the shell. |
+| `diff <file_a> <file_b>` | Shows a unified diff, helpful for comparing generated code vs. ground truth. |
+| `history`, `save_session`, `load_session` | Manage session history across CLI runs. |
+| `config [--refresh]` | Displays active configuration (model, rate limits, batch settings). |
+
+### Natural Language Prompts
+
+The shell also accepts light natural language queries. For example, typing `modernize the file data/hello/HELLO.cbl` will trigger the same modernization as the explicit command.
+
+### When to Use It
+
+- **Exploration**: Inspect COBOL/Python pairs, run quick diffs, and review evaluator output.
+- **Iterative modernization**: Move between modernization, inspection, and evaluation without leaving the REPL.
+- **Session handoff**: Save your progress with `save_session state.json` and resume later with `load_session state.json`.
+
+For large automated runs, the non-interactive CLI (`python -m src.main ...`) and batch APIs remain the best fit. The interactive shell complements them with an operator-friendly, conversational interface.
+
