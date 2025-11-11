@@ -16,7 +16,13 @@ from dataclasses import dataclass, asdict
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any
-import resource
+
+# resource module is Unix-only, import conditionally
+try:
+    import resource
+except ImportError:
+    # Windows doesn't have resource module
+    resource = None
 
 
 @dataclass
@@ -884,17 +890,22 @@ def f_filled(*args):
         try:
             # Set memory limit (only on Unix-like systems, and handle errors gracefully)
             def set_memory_limit():
+                if resource is None:
+                    # Windows doesn't support resource limits
+                    return
                 try:
                     limit = self.memory_limit_mb * 1024 * 1024  # Convert to bytes
                     resource.setrlimit(resource.RLIMIT_AS, (limit, limit))
-                except (ValueError, OSError) as e:
+                except (ValueError, OSError, AttributeError) as e:
                     # On macOS, RLIMIT_AS might not be supported or might fail
+                    # On Windows, resource module doesn't exist
                     # Just continue without setting the limit
                     pass
             
             # Execute with timeout
             # Only use preexec_fn on Unix-like systems (not Windows or macOS with issues)
-            use_preexec = sys.platform not in ('win32', 'darwin')
+            # Also check if resource module is available
+            use_preexec = sys.platform not in ('win32', 'darwin') and resource is not None
             result = subprocess.run(
                 [sys.executable, str(temp_file)],
                 capture_output=True,
