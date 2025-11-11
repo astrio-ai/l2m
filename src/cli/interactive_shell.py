@@ -9,6 +9,7 @@ import difflib
 import json
 import os
 import shlex
+import shutil
 import sys
 import textwrap
 import time
@@ -37,6 +38,41 @@ def _expand_path(base: Path, value: str) -> Path:
         path = base / path
     return path.expanduser().resolve()
 
+
+def _get_ascii_art() -> str:
+    """Generate centered ASCII art with blue color."""
+    ascii_lines = [
+        "██╗     ██████╗ ███╗   ███╗",
+        "██║     ╚════██╗████╗ ████║",
+        "██║      █████╔╝██╔████╔██║",
+        "██║     ██╔═══╝ ██║╚██╔╝██║",
+        "███████╗███████╗██║ ╚═╝ ██║",
+        "╚══════╝╚══════╝╚═╝     ╚═╝",
+    ]
+    
+    # Get terminal width, default to 80 if unavailable
+    try:
+        width = shutil.get_terminal_size().columns
+    except (OSError, AttributeError):
+        width = 80
+    
+    # Blue color code (#3B82F6 = RGB 59, 130, 246)
+    # blue = "\033[38;2;59;130;246m"
+    # reset = "\033[0m"
+    
+    # Center each line
+    centered_lines = []
+    for line in ascii_lines:
+        # Strip any trailing whitespace from the line
+        line = line.rstrip()
+        # Calculate padding to center
+        padding = (width - len(line)) // 2
+        centered_line = " " * padding + line
+        centered_lines.append(centered_line)
+    
+    # Combine with color codes
+    # return f"{blue}\n".join(centered_lines) + reset
+    return "\n".join(centered_lines)
 
 @dataclass
 class CLIContext:
@@ -72,26 +108,24 @@ class CLIContext:
 class L2MInteractiveShell(cmd.Cmd):
     """Interactive REPL for the Legacy2Modern toolkit."""
 
-    intro = textwrap.dedent(
-        """
-        ██╗     ██████╗ ███╗   ███╗
-        ██║     ╚════██╗████╗ ████║
-        ██║      █████╔╝██╔████╔██║
-        ██║     ██╔═══╝ ██║╚██╔╝██║
-        ███████╗███████╗██║ ╚═╝ ██║
-        ╚══════╝╚══════╝╚═╝     ╚═╝                                       
-
-        Welcome to the Legacy2Modern interactive shell. Type 'help' or '?' to list commands.
-        Use natural language or explicit commands to drive modernizations, batch runs,
-        evaluations, and file inspections.
-        """
-    )
     prompt = "l2m> "
 
     def __init__(self, context: Optional[CLIContext] = None):
         super().__init__()
         self.context = context or CLIContext()
         self.settings = get_settings()
+        # Generate intro with centered ASCII art
+        self.intro = (
+            _get_ascii_art()
+            + "\n\n"
+            + textwrap.dedent(
+                """
+                Welcome to the Legacy2Modern interactive shell. Type 'help' or '?' to list commands.
+                Use natural language or explicit commands to drive modernizations, batch runs,
+                evaluations, and file inspections.
+                """
+            ).strip()
+        )
 
     # ------------------------------------------------------------------
     # Helpers
