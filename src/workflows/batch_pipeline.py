@@ -164,48 +164,61 @@ class ProgressTracker:
         return f"\r{progress_bar} | ETA: {eta} | [{self.current_file_index}/{self.total_files}] Processing {filename} ({file_lines} lines)... {self.current_step}"
 
 
-def discover_cobol_files(input_path: str, pattern: Optional[str] = None) -> List[Path]:
+def discover_cobol_files(base_path: Path, pattern: Optional[str] = None, limit: Optional[int] = None) -> List[Path]:
     """Discover COBOL files from various input types.
     
     Args:
-        input_path: File path, directory path, or file list path
+        base_path: Base path (file, directory, or directory for pattern search)
         pattern: Optional glob pattern (e.g., "**/*.cbl")
+        limit: Optional maximum number of files to return
         
     Returns:
         List of COBOL file paths
     """
-    path = Path(input_path)
     cobol_files = []
     
     # COBOL file extensions
     cobol_extensions = {'.cbl', '.cob', '.COBOL', '.CBL', '.COB'}
     
-    if path.is_file():
+    if base_path.is_file():
         # Single file
-        if path.suffix in cobol_extensions:
-            cobol_files.append(path)
-        elif path.suffix == '.txt':
+        if base_path.suffix in cobol_extensions:
+            cobol_files.append(base_path)
+        elif base_path.suffix == '.txt':
             # File list - read paths from file
-            with open(path, 'r') as f:
+            with open(base_path, 'r', encoding='utf-8', errors='ignore') as f:
                 for line in f:
                     line = line.strip()
                     if line and not line.startswith('#'):
                         file_path = Path(line)
+                        if not file_path.is_absolute():
+                            # Resolve relative to the directory containing the file list
+                            file_path = base_path.parent / file_path
                         if file_path.exists() and file_path.suffix in cobol_extensions:
                             cobol_files.append(file_path)
-    elif path.is_dir():
+    elif base_path.is_dir():
         # Directory - recursively find COBOL files
         if pattern:
-            cobol_files = list(path.glob(pattern))
+            # Use pattern relative to base_path
+            try:
+                cobol_files = list(base_path.glob(pattern))
+            except ValueError:
+                # Invalid pattern, fall back to extension search
+                for ext in cobol_extensions:
+                    cobol_files.extend(base_path.rglob(f'*{ext}'))
         else:
             for ext in cobol_extensions:
-                cobol_files.extend(path.rglob(f'*{ext}'))
-    elif pattern:
-        # Glob pattern
-        cobol_files = list(Path('.').glob(pattern))
+                cobol_files.extend(base_path.rglob(f'*{ext}'))
+    
+    # Filter to only COBOL files
+    cobol_files = [p for p in cobol_files if p.is_file() and p.suffix in cobol_extensions]
     
     # Sort by size (smallest first) for better progress visibility
     cobol_files.sort(key=lambda p: p.stat().st_size if p.exists() else 0)
+    
+    # Apply limit if specified
+    if limit is not None:
+        cobol_files = cobol_files[:limit]
     
     return cobol_files
 
