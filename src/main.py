@@ -235,19 +235,19 @@ async def process_batch(args, settings):
     
     if args.directory:
         # Directory provided
-        cobol_files = discover_cobol_files(args.directory)
+        cobol_files = discover_cobol_files(Path(args.directory))
         if not cobol_files:
             print(f"Error: No COBOL files found in directory: {args.directory}")
             sys.exit(1)
     elif args.pattern:
         # Glob pattern provided
-        cobol_files = discover_cobol_files(".", pattern=args.pattern)
+        cobol_files = discover_cobol_files(Path("."), pattern=args.pattern)
         if not cobol_files:
             print(f"Error: No COBOL files found matching pattern: {args.pattern}")
             sys.exit(1)
     elif args.file_list:
         # File list provided
-        cobol_files = discover_cobol_files(args.file_list)
+        cobol_files = discover_cobol_files(Path(args.file_list))
         if not cobol_files:
             print(f"Error: No valid COBOL files found in list: {args.file_list}")
             sys.exit(1)
