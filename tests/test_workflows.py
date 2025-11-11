@@ -102,8 +102,10 @@ class TestDiscoverCobolFiles:
             
             result = discover_cobol_files(file_list)
             assert len(result) == 2
-            assert cbl1 in result
-            assert cbl2 in result
+            # Compare resolved paths to handle macOS symlink differences (/var vs /private/var)
+            result_resolved = {p.resolve() for p in result}
+            assert cbl1.resolve() in result_resolved
+            assert cbl2.resolve() in result_resolved
     
     def test_discover_file_list_relative_paths(self):
         """Test discovering COBOL files from file list with relative paths."""
@@ -124,7 +126,8 @@ class TestDiscoverCobolFiles:
             
             result = discover_cobol_files(file_list)
             assert len(result) == 1
-            assert result[0] == cbl1
+            # Compare resolved paths to handle macOS symlink differences (/var vs /private/var)
+            assert result[0].resolve() == cbl1.resolve()
     
     def test_discover_windows_drive_letter(self):
         """Test that function handles absolute paths with drive letters (Windows)."""

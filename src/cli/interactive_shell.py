@@ -30,13 +30,28 @@ logger = get_logger(__name__)
 
 def _expand_path(base: Path, value: str) -> Path:
     """Resolve user input path relative to the current working directory."""
+    # Strip whitespace and quotes
     value = value.strip().strip('"').strip("'")
+    
+    # Handle empty string
     if not value:
         return base
-    path = Path(value)
-    if not path.is_absolute():
-        path = base / path
-    return path.expanduser().resolve()
+    
+    # Normalize backslashes to forward slashes on non-Windows systems
+    # This ensures cross-platform consistency
+    if os.name != 'nt':
+        value = value.replace("\\", "/")
+    
+    # Create Path and expand user home directory (~) first
+    # expanduser() must be called before checking if path is absolute
+    path = Path(value).expanduser()
+    
+    # If absolute, return resolved path
+    if path.is_absolute():
+        return path.resolve()
+    
+    # Otherwise, join with base and resolve
+    return (base / path).resolve()
 
 
 def _get_ascii_art() -> str:
