@@ -16,18 +16,18 @@ body:
     validations:
       required: true
   - type: textarea
-    id: use_case
+    id: implementation
     attributes:
-      label: Use Case
-      description: How would this feature be used?
-      placeholder: "I would use this to..."
+      label: Implementation Ideas
+      description: How would this feature be implemented?
+      placeholder: "I would implement this by..."
     validations:
       required: true
   - type: textarea
-    id: alternatives
+    id: deliverables
     attributes:
-      label: Alternatives
-      description: Any alternative solutions you've considered?
+      label: Deliverables
+      description: What will you deliver?
     validations:
-      required: false
+      required: true
 
