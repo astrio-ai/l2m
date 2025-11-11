@@ -12,7 +12,7 @@ import time
 from dataclasses import dataclass, asdict
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Union
 from src.config import get_settings
 from src.utils.logger import get_logger
 from src.workflows.modernization_pipeline import ModernizationPipeline
@@ -164,25 +164,27 @@ class ProgressTracker:
         return f"\r{progress_bar} | ETA: {eta} | [{self.current_file_index}/{self.total_files}] Processing {filename} ({file_lines} lines)... {self.current_step}"
 
 
-def discover_cobol_files(base_path: Path, pattern: Optional[str] = None, limit: Optional[int] = None) -> List[Path]:
+def discover_cobol_files(base_path: Union[str, Path], pattern: Optional[str] = None, limit: Optional[int] = None) -> List[Path]:
     """Discover COBOL files from various input types.
     
     Args:
-        base_path: Base path (file, directory, or directory for pattern search)
+        base_path: Base path (file, directory, or directory for pattern search) - str or Path
         pattern: Optional glob pattern (e.g., "**/*.cbl")
         limit: Optional maximum number of files to return
         
     Returns:
         List of COBOL file paths
     """
+    # Convert to Path if string
+    base_path = Path(base_path)
     cobol_files = []
     
-    # COBOL file extensions
-    cobol_extensions = {'.cbl', '.cob', '.COBOL', '.CBL', '.COB'}
+    # COBOL file extensions (normalized to lowercase for case-insensitive comparison)
+    cobol_extensions = {'.cbl', '.cob', '.cobol'}
     
     if base_path.is_file():
         # Single file
-        if base_path.suffix in cobol_extensions:
+        if base_path.suffix.lower() in cobol_extensions:
             cobol_files.append(base_path)
         elif base_path.suffix == '.txt':
             # File list - read paths from file
@@ -193,8 +195,9 @@ def discover_cobol_files(base_path: Path, pattern: Optional[str] = None, limit: 
                         file_path = Path(line)
                         if not file_path.is_absolute():
                             # Resolve relative to the directory containing the file list
-                            file_path = base_path.parent / file_path
-                        if file_path.exists() and file_path.suffix in cobol_extensions:
+                            file_path = (base_path.parent / file_path).resolve()
+                        # Use case-insensitive extension comparison
+                        if file_path.exists() and file_path.suffix.lower() in cobol_extensions:
                             cobol_files.append(file_path)
     elif base_path.is_dir():
         # Directory - recursively find COBOL files
@@ -204,14 +207,17 @@ def discover_cobol_files(base_path: Path, pattern: Optional[str] = None, limit: 
                 cobol_files = list(base_path.glob(pattern))
             except ValueError:
                 # Invalid pattern, fall back to extension search
-                for ext in cobol_extensions:
-                    cobol_files.extend(base_path.rglob(f'*{ext}'))
+                for file_path in base_path.rglob('*'):
+                    if file_path.is_file() and file_path.suffix.lower() in cobol_extensions:
+                        cobol_files.append(file_path)
         else:
-            for ext in cobol_extensions:
-                cobol_files.extend(base_path.rglob(f'*{ext}'))
+            # Use case-insensitive extension matching
+            for file_path in base_path.rglob('*'):
+                if file_path.is_file() and file_path.suffix.lower() in cobol_extensions:
+                    cobol_files.append(file_path)
     
-    # Filter to only COBOL files
-    cobol_files = [p for p in cobol_files if p.is_file() and p.suffix in cobol_extensions]
+    # Filter to only COBOL files (case-insensitive)
+    cobol_files = [p for p in cobol_files if p.is_file() and p.suffix.lower() in cobol_extensions]
     
     # Sort by size (smallest first) for better progress visibility
     cobol_files.sort(key=lambda p: p.stat().st_size if p.exists() else 0)
