@@ -66,6 +66,12 @@ For security vulnerabilities, please email [naingoolwin.astrio@gmail.com](mailto
 We welcome all contributions — from fixing typos to adding new language support!
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for setup instructions, coding guidelines, and how to submit PRs.
 
+## Contributors
+
+<a href="https://github.com/astrio-ai/l2m/graphs/contributors">
+  <img alt="contributors" src="https://contrib.rocks/image?repo=astrio-ai/l2m"/>
+</a>
+
 ## Community & Support
 * Follow our project updates on [X](https://x.com/astrioai)
 * Join our [Discord](https://discord.gg/2BVwAUzW)
