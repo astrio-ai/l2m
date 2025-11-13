@@ -550,10 +550,24 @@ class Coder:
             self.linter.set_linter(lang, cmd)
 
     def show_announcements(self):
+        from cli.tui_utils import format_separator
+        
+        # Print separator before announcements
+        try:
+            import shutil
+            width = shutil.get_terminal_size().columns
+        except Exception:
+            width = 80
+        
+        self.io.tool_output(format_separator(width))
+        
         bold = True
         for line in self.get_announcements():
             self.io.tool_output(line, bold=bold)
             bold = False
+        
+        # Print separator after announcements
+        self.io.tool_output(format_separator(width))
 
     def add_rel_fname(self, rel_fname):
         self.abs_fnames.add(self.abs_root_path(rel_fname))
@@ -1812,7 +1826,8 @@ class Coder:
             self.calculate_and_show_tokens_and_cost(messages, completion)
 
         except LiteLLMExceptions().exceptions_tuple() as err:
-            ex_info = LiteLLMExceptions().get_ex_info(err)
+            litellm_ex = LiteLLMExceptions()
+            ex_info = litellm_ex.get_ex_info(err)
             if ex_info.name == "ContextWindowExceededError":
                 # Still calculate costs for context window errors
                 self.calculate_and_show_tokens_and_cost(messages, completion)

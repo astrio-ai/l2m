@@ -40,10 +40,15 @@ from src.analytics.report import report_uncaught_exceptions
 from src.setup.versioncheck import check_version, install_from_main_branch, install_upgrade
 from src.watch import FileWatcher
 from src.utils.dump import dump  # noqa: F401
+from cli.tui_utils import StyleGuide, format_separator
 
 
 def _get_ascii_art() -> str:
-    """Generate centered ASCII art with blue color."""
+    """Generate centered ASCII art with blue color (#3B82F6)."""
+    # ANSI 24-bit color code for #3B82F6 (blue)
+    blue = "\033[38;2;59;130;246m"
+    reset = "\033[0m"
+    
     ascii_lines = [
         "██╗     ██████╗ ███╗   ███╗",
         "██║     ╚════██╗████╗ ████║",
@@ -59,10 +64,6 @@ def _get_ascii_art() -> str:
     except (OSError, AttributeError):
         width = 80
     
-    # Blue color code (#3B82F6 = RGB 59, 130, 246)
-    blue = "\033[38;2;59;130;246m"
-    reset = "\033[0m"
-    
     # Center each line
     centered_lines = []
     for line in ascii_lines:
@@ -73,8 +74,9 @@ def _get_ascii_art() -> str:
         centered_line = " " * padding + line
         centered_lines.append(centered_line)
     
-    # Combine with color codes
-    return blue + "\n".join(centered_lines) + reset
+    # Apply color to entire art
+    art = "\n".join(centered_lines)
+    return f"{blue}{art}{reset}"
 
 
 def check_config_files_for_yes(config_files):
@@ -556,14 +558,14 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
         models.request_timeout = args.timeout
 
     if args.dark_mode:
-        args.user_input_color = "#32FF32"
+        args.user_input_color = "#FFFFFF"
         args.tool_error_color = "#FF3333"
         args.tool_warning_color = "#FFFF00"
         args.assistant_output_color = "#00FFFF"
         args.code_theme = "monokai"
 
     if args.light_mode:
-        args.user_input_color = "green"
+        args.user_input_color = "#000000"
         args.tool_error_color = "red"
         args.tool_warning_color = "#FFA500"
         args.assistant_output_color = "blue"
