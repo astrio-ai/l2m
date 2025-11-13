@@ -1,6 +1,6 @@
 import pytest  # noqa: F401
 
-from src.run_cmd import run_cmd
+from src.utils.run_cmd import run_cmd
 
 
 def test_run_cmd_echo():

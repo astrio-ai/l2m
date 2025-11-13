@@ -33,9 +33,9 @@ from rich.markdown import Markdown
 from rich.style import Style as RichStyle
 from rich.text import Text
 
-from src.mdstream import MarkdownStream
-from src.dump import dump  # noqa: F401
-from src.editor import pipe_editor
+from src.utils.mdstream import MarkdownStream
+from src.utils.dump import dump  # noqa: F401
+from src.ui.editor import pipe_editor
 from src.utils import is_image_file
 
 # Constants

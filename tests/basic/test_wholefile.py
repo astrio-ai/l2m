@@ -7,9 +7,9 @@ from unittest.mock import MagicMock
 
 from src.coders import Coder
 from src.coders.wholefile_coder import WholeFileCoder
-from src.dump import dump  # noqa: F401
+from src.utils.dump import dump  # noqa: F401
 from cli.io import InputOutput
-from src.models import Model
+from src.core.models import Model
 
 
 class TestWholeFileCoder(unittest.TestCase):

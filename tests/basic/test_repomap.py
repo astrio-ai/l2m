@@ -7,10 +7,10 @@ from pathlib import Path
 
 import git
 
-from src.dump import dump  # noqa: F401
+from src.utils.dump import dump  # noqa: F401
 from cli.io import InputOutput
-from src.models import Model
-from src.repomap import RepoMap
+from src.core.models import Model
+from src.git.repomap import RepoMap
 from src.utils import GitTemporaryDirectory, IgnorantTemporaryDirectory
 
 

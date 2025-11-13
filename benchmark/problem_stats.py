@@ -8,7 +8,7 @@ from pathlib import Path
 
 import yaml
 
-from src.dump import dump  # noqa
+from src.utils.dump import dump  # noqa
 
 HARD_SET_NUM = 3  # Number of models that defines the hard set threshold
 

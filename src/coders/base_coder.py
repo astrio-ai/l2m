@@ -28,28 +28,30 @@ from typing import List
 
 from rich.console import Console
 
-from src import __version__, models, prompts, urls, utils
+from src import __version__
+from src.core import models, prompts, urls
+from src import utils
 from src.analytics import Analytics
 from cli.commands import Commands
-from src.exceptions import LiteLLMExceptions
-from src.history import ChatSummary
+from src.core.exceptions import LiteLLMExceptions
+from src.help.history import ChatSummary
 from cli.io import ConfirmGroup, InputOutput
-from src.linter import Linter
-from src.llm import litellm
-from src.models import RETRY_TIMEOUT
-from src.reasoning_tags import (
+from src.analysis.linter import Linter
+from src.core.llm import litellm
+from src.core.models import RETRY_TIMEOUT
+from src.analysis.reasoning_tags import (
     REASONING_TAG,
     format_reasoning_content,
     remove_reasoning_content,
     replace_reasoning_tags,
 )
-from src.repo import ANY_GIT_ERROR, GitRepo
-from src.repomap import RepoMap
-from src.run_cmd import run_cmd
+from src.git.repo import ANY_GIT_ERROR, GitRepo
+from src.git.repomap import RepoMap
+from src.utils.run_cmd import run_cmd
 from src.utils import format_content, format_messages, format_tokens, is_image_file
-from src.waiting import WaitingSpinner
+from src.utils.waiting import WaitingSpinner
 
-from ..dump import dump  # noqa: F401
+from src.utils.dump import dump  # noqa: F401
 from .chat_chunks import ChatChunks
 
 

@@ -2,7 +2,7 @@ import os
 
 import pytest
 
-from src.special import filter_important_files, is_important
+from src.analysis.special import filter_important_files, is_important
 
 
 def test_is_important():

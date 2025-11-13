@@ -2,8 +2,8 @@ import os
 import unittest
 from unittest.mock import MagicMock, patch
 
-from src.dump import dump  # noqa
-from src.linter import Linter
+from src.utils.dump import dump  # noqa
+from src.analysis.linter import Linter
 
 
 class TestLinter(unittest.TestCase):

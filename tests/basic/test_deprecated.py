@@ -6,7 +6,7 @@ from prompt_toolkit.input import DummyInput
 from prompt_toolkit.output import DummyOutput
 
 from src.deprecated import handle_deprecated_model_args
-from src.dump import dump  # noqa
+from src.utils.dump import dump  # noqa
 from cli.main import main
 
 

@@ -1,7 +1,7 @@
 import unittest
 
 from src.coders.udiff_coder import find_diffs
-from src.dump import dump  # noqa: F401
+from src.utils.dump import dump  # noqa: F401
 
 
 class TestUnifiedDiffCoder(unittest.TestCase):

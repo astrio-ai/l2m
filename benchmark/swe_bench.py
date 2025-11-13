@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from imgcat import imgcat
 from matplotlib import rc
 
-from src.dump import dump  # noqa: F401
+from src.utils.dump import dump  # noqa: F401
 
 
 def plot_swe_bench(data_file, is_lite):

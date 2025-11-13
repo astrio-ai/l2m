@@ -67,6 +67,9 @@ dev = [
     "ruff>=0.1.0",
     "mypy>=1.0.0",
 ]
+playwright = [
+    "playwright>=1.40.0",
+]
 
 [project.scripts]
 l2m = "cli.main:main"

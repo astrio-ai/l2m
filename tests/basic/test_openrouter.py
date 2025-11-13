@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from src.models import ModelInfoManager
-from src.openrouter import OpenRouterModelManager
+from src.core.models import ModelInfoManager
+from src.core.openrouter import OpenRouterModelManager
 
 
 class DummyResponse:

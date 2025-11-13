@@ -1,7 +1,7 @@
 import os
 from unittest.mock import patch
 
-from src.models import Model
+from src.core.models import Model
 
 
 class TestAWSCredentials:

@@ -1,7 +1,7 @@
 import os
 from unittest.mock import MagicMock, patch
 
-from src.editor import (
+from src.ui.editor import (
     DEFAULT_EDITOR_NIX,
     DEFAULT_EDITOR_OS_X,
     DEFAULT_EDITOR_WINDOWS,

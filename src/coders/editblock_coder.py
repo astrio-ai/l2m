@@ -7,7 +7,7 @@ from pathlib import Path
 
 from src import utils
 
-from ..dump import dump  # noqa: F401
+from src.utils.dump import dump  # noqa: F401
 from .base_coder import Coder
 from .editblock_prompts import EditBlockPrompts
 

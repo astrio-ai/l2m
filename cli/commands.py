@@ -13,17 +13,17 @@ from PIL import Image, ImageGrab
 from prompt_toolkit.completion import Completion, PathCompleter
 from prompt_toolkit.document import Document
 
-from src import models, prompts, voice
-from src.editor import pipe_editor
-from src.format_settings import format_settings
+from src.core import models, prompts
+from src.ui.editor import pipe_editor
+from src.utils.format_settings import format_settings
 from src.help import Help, install_help_extra
 from cli.io import CommandCompletionException
-from src.llm import litellm
-from src.repo import ANY_GIT_ERROR
-from src.run_cmd import run_cmd
-from src.scrape import Scraper, install_playwright
+from src.core.llm import litellm
+from src.git.repo import ANY_GIT_ERROR
+from src.utils.run_cmd import run_cmd
+from src.web.scrape import Scraper, install_playwright
 from src.utils import is_image_file
-from src.dump import dump  # noqa: F401
+from src.utils.dump import dump  # noqa: F401
 
 
 class SwitchCoder(Exception):
@@ -1234,6 +1234,7 @@ class Commands:
         "Record and transcribe voice input"
 
         if not self.voice:
+            from src.ui import voice
             if "OPENAI_API_KEY" not in os.environ:
                 self.io.tool_error("To use /voice you must provide an OpenAI API key.")
                 return
@@ -1535,7 +1536,7 @@ class Commands:
 
     def cmd_report(self, args):
         "Report a problem by opening a GitHub Issue"
-        from src.report import report_github_issue
+        from src.analytics.report import report_github_issue
 
         announcements = "\n".join(self.coder.get_announcements())
         issue_text = announcements

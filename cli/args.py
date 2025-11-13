@@ -15,7 +15,7 @@ from cli.args_formatter import (
     YamlHelpFormatter,
 )
 from src.deprecated import add_deprecated_model_args
-from src.dump import dump  # noqa: F401
+from src.utils.dump import dump  # noqa: F401
 
 
 def resolve_l2mignore_path(path_str, git_root=None):

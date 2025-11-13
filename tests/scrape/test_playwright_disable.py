@@ -1,4 +1,4 @@
-from src.scrape import Scraper
+from src.web.scrape import Scraper
 
 
 class DummyIO:

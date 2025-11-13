@@ -8,11 +8,11 @@ import git
 
 from src.coders import Coder
 from src.coders.base_coder import FinishReasonLength, UnknownEditFormat
-from src.dump import dump  # noqa: F401
+from src.utils.dump import dump  # noqa: F401
 from cli.io import InputOutput
-from src.models import Model
-from src.repo import GitRepo
-from src.sendchat import sanity_check_messages
+from src.core.models import Model
+from src.git.repo import GitRepo
+from src.core.sendchat import sanity_check_messages
 from src.utils import GitTemporaryDirectory
 
 

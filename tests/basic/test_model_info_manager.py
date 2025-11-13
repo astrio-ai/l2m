@@ -4,7 +4,7 @@ from pathlib import Path
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
 
-from src.models import ModelInfoManager
+from src.core.models import ModelInfoManager
 
 
 class TestModelInfoManager(TestCase):

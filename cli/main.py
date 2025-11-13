@@ -19,25 +19,27 @@ import shtab
 from dotenv import load_dotenv
 from prompt_toolkit.enums import EditingMode
 
-from src import __version__, models, urls, utils
+from src import __version__
+from src.core import models, urls
+from src import utils
 from src.analytics import Analytics
 from cli.args import get_parser
 from src.coders import Coder
 from src.coders.base_coder import UnknownEditFormat
 from cli.commands import Commands, SwitchCoder
-from src.copypaste import ClipboardWatcher
+from src.ui.copypaste import ClipboardWatcher
 from src.deprecated import handle_deprecated_model_args
-from src.format_settings import format_settings, scrub_sensitive_info
-from src.history import ChatSummary
+from src.utils.format_settings import format_settings, scrub_sensitive_info
+from src.help.history import ChatSummary
 from cli.io import InputOutput
-from src.llm import litellm  # noqa: F401; properly init litellm on launch
-from src.models import ModelSettings
-from src.onboarding import offer_openrouter_oauth, select_default_model
-from src.repo import ANY_GIT_ERROR, GitRepo
-from src.report import report_uncaught_exceptions
-from src.versioncheck import check_version, install_from_main_branch, install_upgrade
+from src.core.llm import litellm  # noqa: F401; properly init litellm on launch
+from src.core.models import ModelSettings
+from src.setup.onboarding import offer_openrouter_oauth, select_default_model
+from src.git.repo import ANY_GIT_ERROR, GitRepo
+from src.analytics.report import report_uncaught_exceptions
+from src.setup.versioncheck import check_version, install_from_main_branch, install_upgrade
 from src.watch import FileWatcher
-from src.dump import dump  # noqa: F401
+from src.utils.dump import dump  # noqa: F401
 
 
 def _get_ascii_art() -> str:

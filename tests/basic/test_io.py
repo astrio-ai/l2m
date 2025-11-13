@@ -7,7 +7,7 @@ from prompt_toolkit.completion import CompleteEvent
 from prompt_toolkit.document import Document
 from rich.text import Text
 
-from src.dump import dump  # noqa: F401
+from src.utils.dump import dump  # noqa: F401
 from cli.io import AutoCompleter, ConfirmGroup, InputOutput
 from src.utils import ChdirTemporaryDirectory
 

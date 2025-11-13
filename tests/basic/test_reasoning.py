@@ -2,10 +2,10 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from src.coders.base_coder import Coder
-from src.dump import dump  # noqa
+from src.utils.dump import dump  # noqa
 from cli.io import InputOutput
-from src.models import Model
-from src.reasoning_tags import (
+from src.core.models import Model
+from src.analysis.reasoning_tags import (
     REASONING_END,
     REASONING_START,
     remove_reasoning_content,
