@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 
 from cli.commands import Commands
 from cli.io import InputOutput
-from src.scrape import Scraper
+from src.web.scrape import Scraper
 
 
 class TestScrape(unittest.TestCase):

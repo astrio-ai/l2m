@@ -1,6 +1,6 @@
-from src import diffs
+from src.utils import diffs
 
-from ..dump import dump  # noqa: F401
+from src.utils.dump import dump  # noqa: F401
 from .base_coder import Coder
 from .single_wholefile_func_prompts import SingleWholeFileFunctionPrompts
 

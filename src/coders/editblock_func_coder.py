@@ -1,6 +1,6 @@
 import json
 
-from ..dump import dump  # noqa: F401
+from src.utils.dump import dump  # noqa: F401
 from .base_coder import Coder
 from .editblock_coder import do_replace
 from .editblock_func_prompts import EditBlockFunctionPrompts

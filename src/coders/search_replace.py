@@ -11,7 +11,7 @@ except ImportError:
 from diff_match_patch import diff_match_patch
 from tqdm import tqdm
 
-from src.dump import dump
+from src.utils.dump import dump
 from src.utils import GitTemporaryDirectory
 
 

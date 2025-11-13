@@ -1,8 +1,8 @@
 from pathlib import Path
 
-from src import diffs
+from src.utils import diffs
 
-from ..dump import dump  # noqa: F401
+from src.utils.dump import dump  # noqa: F401
 from .base_coder import Coder
 from .wholefile_prompts import WholeFilePrompts
 

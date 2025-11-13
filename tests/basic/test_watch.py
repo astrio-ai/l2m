@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from src.dump import dump  # noqa
+from src.utils.dump import dump  # noqa
 from cli.io import InputOutput
 from src.watch import FileWatcher
 

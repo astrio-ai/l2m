@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from imgcat import imgcat
 
-from src.dump import dump  # noqa: F401
+from src.utils.dump import dump  # noqa: F401
 
 
 def plot_timing(df):

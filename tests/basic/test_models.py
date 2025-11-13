@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import ANY, MagicMock, patch
 
-from src.models import (
+from src.core.models import (
     ANTHROPIC_BETA_HEADER,
     Model,
     ModelInfoManager,
@@ -14,13 +14,13 @@ from src.models import (
 class TestModels(unittest.TestCase):
     def setUp(self):
         """Reset MODEL_SETTINGS before each test"""
-        from src.models import MODEL_SETTINGS
+        from src.core.models import MODEL_SETTINGS
 
         self._original_settings = MODEL_SETTINGS.copy()
 
     def tearDown(self):
         """Restore original MODEL_SETTINGS after each test"""
-        from src.models import MODEL_SETTINGS
+        from src.core.models import MODEL_SETTINGS
 
         MODEL_SETTINGS.clear()
         MODEL_SETTINGS.extend(self._original_settings)
@@ -213,7 +213,7 @@ class TestModels(unittest.TestCase):
         io = InputOutput()
 
         # Test with a Bedrock model
-        from src.models import check_for_dependencies
+        from src.core.models import check_for_dependencies
 
         check_for_dependencies(io, "bedrock/anthropic.claude-3-sonnet-20240229-v1:0")
 
@@ -230,7 +230,7 @@ class TestModels(unittest.TestCase):
         io = InputOutput()
 
         # Test with a Vertex AI model
-        from src.models import check_for_dependencies
+        from src.core.models import check_for_dependencies
 
         check_for_dependencies(io, "vertex_ai/gemini-1.5-pro")
 
@@ -250,7 +250,7 @@ class TestModels(unittest.TestCase):
         io = InputOutput()
 
         # Test with a non-Bedrock, non-Vertex AI model
-        from src.models import check_for_dependencies
+        from src.core.models import check_for_dependencies
 
         check_for_dependencies(io, "gpt-4")
 

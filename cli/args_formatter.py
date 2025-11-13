@@ -1,8 +1,8 @@
 import argparse
 
-from src import urls
+from src.core import urls
 
-from src.dump import dump  # noqa: F401
+from src.utils.dump import dump  # noqa: F401
 
 
 class DotEnvFormatter(argparse.HelpFormatter):

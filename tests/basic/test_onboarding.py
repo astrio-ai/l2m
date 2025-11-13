@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 import requests
 
 # Import the functions to be tested
-from src.onboarding import (
+from src.setup.onboarding import (
     check_openrouter_tier,
     exchange_code_for_key,
     find_available_port,

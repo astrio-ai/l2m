@@ -6,7 +6,7 @@ import shutil
 import sys
 from pathlib import Path
 
-from src.dump import dump  # noqa: F401
+from src.utils.dump import dump  # noqa: F401
 
 
 class ParentNodeTransformer(ast.NodeTransformer):

@@ -1,4 +1,4 @@
-from src.exceptions import ExInfo, LiteLLMExceptions
+from src.core.exceptions import ExInfo, LiteLLMExceptions
 
 
 def test_litellm_exceptions_load():

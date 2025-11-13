@@ -2,7 +2,7 @@ import difflib
 from itertools import groupby
 from pathlib import Path
 
-from ..dump import dump  # noqa: F401
+from src.utils.dump import dump  # noqa: F401
 from .base_coder import Coder
 from .search_replace import (
     SearchTextNotUnique,

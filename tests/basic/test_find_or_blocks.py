@@ -8,7 +8,7 @@ import unittest
 
 from src.coders.base_coder import all_fences
 from src.coders.editblock_coder import find_original_update_blocks
-from src.dump import dump  # noqa: F401
+from src.utils.dump import dump  # noqa: F401
 
 
 def process_markdown(filename, fh):

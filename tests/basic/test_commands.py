@@ -13,10 +13,10 @@ import pyperclip
 
 from src.coders import Coder
 from cli.commands import Commands, SwitchCoder
-from src.dump import dump  # noqa: F401
+from src.utils.dump import dump  # noqa: F401
 from cli.io import InputOutput
-from src.models import Model
-from src.repo import GitRepo
+from src.core.models import Model
+from src.git.repo import GitRepo
 from src.utils import ChdirTemporaryDirectory, GitTemporaryDirectory, make_repo
 
 

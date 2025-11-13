@@ -12,7 +12,7 @@ from prompt_toolkit.input import DummyInput
 from prompt_toolkit.output import DummyOutput
 
 from src.coders import Coder
-from src.dump import dump  # noqa: F401
+from src.utils.dump import dump  # noqa: F401
 from cli.io import InputOutput
 from cli.main import check_gitignore, load_dotenv_files, main, setup_git
 from src.utils import GitTemporaryDirectory, IgnorantTemporaryDirectory, make_repo
@@ -635,7 +635,7 @@ class TestMain(TestCase):
 
         models.model_info_manager = models.ModelInfoManager()
 
-        from src.llm import litellm
+        from src.core.llm import litellm
 
         litellm._lazy_module = None
 

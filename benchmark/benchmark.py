@@ -25,9 +25,9 @@ from dotenv import load_dotenv
 from plots import plot_refactoring
 from rich.console import Console
 
-from src import models, sendchat
+from src.core import models, sendchat
 from src.coders import Coder, base_coder
-from src.dump import dump  # noqa: F401
+from src.utils.dump import dump  # noqa: F401
 from cli.io import InputOutput
 
 BENCHMARK_DNAME = Path(os.environ.get("L2M_BENCHMARK_DIR", "tmp.benchmarks"))

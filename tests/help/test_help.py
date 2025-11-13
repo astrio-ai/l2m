@@ -9,7 +9,7 @@ from src.coders import Coder
 from cli.commands import Commands
 from src.help import Help, fname_to_url
 from cli.io import InputOutput
-from src.models import Model
+from src.core.models import Model
 
 
 class TestHelp(unittest.TestCase):
