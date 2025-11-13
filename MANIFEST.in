@@ -1,0 +1,4 @@
+# Include package data files
+recursive-include src/resources *.yml *.json
+recursive-include src/queries *.scm
+

@@ -89,9 +89,6 @@ build/
 # Lock files (if not using uv as primary package manager)
 uv.lock
 
-# Evaluation results
-evals/results/
-
 # Large test fixtures (from Aider - not needed for L2M)
 tests/fixtures/chat-history.md
 tests/fixtures/chat-history-search-replace-gold.txt

@@ -69,3 +69,6 @@ backoff>=2.2.0
 # Analytics
 posthog>=6.5.0
 mixpanel>=4.10.0
+
+# Shell command parsing
+oslex>=0.1.3
