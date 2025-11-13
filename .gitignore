@@ -26,6 +26,10 @@ env/
 ENV/
 .venv
 
+# L2M runtime artifacts
+.l2m.tags.cache.v4/
+.l2m.chat.history.md
+
 # Environment variables
 .env
 .env.local
@@ -88,3 +92,8 @@ uv.lock
 # Evaluation results
 evals/results/
 
+# Large test fixtures (from Aider - not needed for L2M)
+tests/fixtures/chat-history.md
+tests/fixtures/chat-history-search-replace-gold.txt
+
+.l2m*
