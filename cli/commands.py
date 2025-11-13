@@ -1684,7 +1684,12 @@ def get_help_md():
     return md
 
 
+def count_commands():
+    commands = [attr for attr in dir(Commands) if attr.startswith("cmd_")]
+    return len(commands)
+
 def main():
+    print(f"Number of command lines: {count_commands()}")
     md = get_help_md()
     print(md)
 
