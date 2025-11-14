@@ -559,17 +559,19 @@ class Coder:
         self.io.tool_output(f"L2M v{__version__}", bold=True)
         self.io.tool_output()
         
+        # Format: command (white) - description (grayish)
+        # Using ANSI codes: white=#B4B4B4, grayish=#787878
         examples = [
-            "Add files to chat:              /add <filename>",
-            "Drop files from chat:           /drop <filename>",
-            "View chat context:              /ls",
-            "Clear chat history:             /clear",
-            "Undo last changes:              /undo",
-            "View available commands:        /help",
+            "\033[38;2;180;180;180m/add\033[0m - \033[38;2;120;120;120madd files to the chat\033[0m",
+            "\033[38;2;180;180;180m/drop\033[0m - \033[38;2;120;120;120mdrop files from the chat\033[0m",
+            "\033[38;2;180;180;180m/ls\033[0m - \033[38;2;120;120;120mview chat context\033[0m",
+            "\033[38;2;180;180;180m/clear\033[0m - \033[38;2;120;120;120mclear chat history\033[0m",
+            "\033[38;2;180;180;180m/undo\033[0m - \033[38;2;120;120;120mundo last changes\033[0m",
+            "\033[38;2;180;180;180m/help\033[0m - \033[38;2;120;120;120mview available commands\033[0m",
         ]
         
         for line in examples:
-            self.io.tool_output(line)
+            print(f"  {line}")
         
         self.io.tool_output()  # Blank line after
 
