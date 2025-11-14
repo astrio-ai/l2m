@@ -223,7 +223,12 @@ class Commands:
             self.io.tool_error("Please provide a URL to scrape.")
             return
 
-        self.io.tool_output(f"Scraping {url}...")
+        # Add protocol if missing
+        if not url.startswith(("http://", "https://")):
+            url = "https://" + url
+            self.io.tool_output(f"Scraping {url}... (added https://)")
+        else:
+            self.io.tool_output(f"Scraping {url}...")
         if not self.scraper:
             disable_playwright = getattr(self.args, "disable_playwright", False)
             if disable_playwright:
