@@ -90,10 +90,10 @@ def _get_ascii_art(light_mode=False, dark_mode=False) -> str:
     art = "\n".join(ascii_lines)
     
     # Use white for dark theme, dark for light theme
-    # If light_mode is explicitly set, use black; otherwise default to white (dark theme)
+    # If light_mode is explicitly set, use dark gray/black; otherwise default to white (dark theme)
     if light_mode:
-        # Dark color for light background
-        return f"\033[38;2;0;0;0m{art}\033[0m"
+        # Dark gray for light background (more readable than pure black)
+        return f"\033[38;2;30;30;30m{art}\033[0m"
     else:
         # White for dark background (default)
         return f"\033[38;2;255;255;255m{art}\033[0m"
@@ -630,8 +630,8 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
     io = get_io(args.pretty)
     
     # Determine if we should use light mode for ASCII art
-    # If explicitly set, use that; otherwise default to dark (white text)
-    use_light_ascii = args.light_mode
+    # If light_mode is explicitly set, use that; otherwise default to dark (white text)
+    use_light_ascii = getattr(args, 'light_mode', False)
     
     try:
         io.rule()
