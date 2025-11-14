@@ -240,8 +240,8 @@ class StyleGuide:
 
     @staticmethod
     def header(text: str) -> str:
-        """Format text as a header (brand color)."""
-        return f"{ANSI_BRAND}{text}{ANSI_RESET}"
+        """Format text as a header (white)."""
+        return f"{ANSI_WHITE}{text}{ANSI_RESET}"
 
     @staticmethod
     def secondary(text: str) -> str:

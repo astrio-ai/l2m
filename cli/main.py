@@ -571,7 +571,7 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
 
     if args.dark_mode:
         # Very muted colors: subdued tones, minimal brightness
-        args.user_input_color = "#FFFFFF"     # White for user input (commands)
+        args.user_input_color = "#278ef5"     # Brand blue for user input (commands)
         args.tool_error_color = "#B45A5A"     # Very muted red for errors
         args.tool_warning_color = "#B4825A"   # Very muted orange for warnings
         args.assistant_output_color = "#787878"  # Dim gray for secondary text
