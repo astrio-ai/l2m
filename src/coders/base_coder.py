@@ -1443,7 +1443,7 @@ class Coder:
         
         # Reset the response prefix flags for new message
         self._response_prefix_shown = False
-        self._response_prefix_printed = False
+        self._response_prefix_added = False
 
         self.cur_messages += [
             dict(role="user", content=inp),
@@ -1981,11 +1981,11 @@ class Coder:
 
             if received_content:
                 self._stop_waiting_spinner()
-                # Print white circle prefix once at the start of response
-                if not hasattr(self, '_response_prefix_printed'):
-                    sys.stdout.write("\033[38;2;255;255;255m●\033[0m ")
-                    sys.stdout.flush()
-                    self._response_prefix_printed = True
+            
+            # Add white circle prefix to the first content
+            if text and not hasattr(self, '_response_prefix_added'):
+                text = "● " + text
+                self._response_prefix_added = True
             
             self.partial_response_content += text
 
@@ -2012,12 +2012,6 @@ class Coder:
         show_resp = self.render_incremental_response(final)
         # Apply any reasoning tag formatting
         show_resp = replace_reasoning_tags(show_resp, self.reasoning_tag_name)
-        
-        # Add white circle prefix to AI response (only once at the start)
-        if not hasattr(self, '_response_prefix_shown'):
-            show_resp = "\033[38;2;255;255;255m●\033[0m " + show_resp
-            self._response_prefix_shown = True
-        
         self.mdstream.update(show_resp, final=final)
 
     def render_incremental_response(self, final):
