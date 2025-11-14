@@ -131,16 +131,9 @@ def select_default_model(args, io, analytics):
 
     model = try_to_select_default_model()
     if model:
-        # Color the model name in brand blue using Rich Text
-        from rich.text import Text
-        message = Text()
-        message.append("Using ", style="")
-        message.append(model, style="#278ef5")  # Brand blue
-        message.append(" model with API key from environment.", style="")
-        
-        # Print using io's console to preserve color
-        io.console.print(message)
-        io.tool_output(f"Using {model} model with API key from environment.", log_only=True)
+        # Color the model name with brand color #278ef5
+        colored_model = f"\033[38;2;39;142;245m{model}\033[0m"
+        io.tool_output(f"Using {colored_model} model with API key from environment.")
         analytics.event("auto_model_selection", model=model)
         return model
 
