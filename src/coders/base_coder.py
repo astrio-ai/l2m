@@ -1919,7 +1919,7 @@ class Coder:
 
         show_resp = replace_reasoning_tags(show_resp, self.reasoning_tag_name)
 
-        self.io.assistant_output(show_resp, pretty=self.show_pretty())
+        self.io.assistant_output(f"⚪ {show_resp}", pretty=self.show_pretty())
 
         if (
             hasattr(completion.choices[0], "finish_reason")
@@ -1992,7 +1992,7 @@ class Coder:
                 # Apply reasoning tag formatting
                 text = replace_reasoning_tags(text, self.reasoning_tag_name)
                 try:
-                    sys.stdout.write(text)
+                    sys.stdout.write(f"⚪ {text}")
                 except UnicodeEncodeError:
                     # Safely encode and decode the text
                     safe_text = text.encode(sys.stdout.encoding, errors="backslashreplace").decode(
