@@ -11,7 +11,6 @@ from textual.binding import Binding
 from rich.markdown import Markdown
 from rich.text import Text
 from queue import Queue
-from threading import Event
 
 
 class ChatDisplay(RichLog):
@@ -67,7 +66,6 @@ class L2MTUI(App):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.input_queue = Queue()
-        self.waiting_for_input = Event()
     
     def compose(self) -> ComposeResult:
         """Create the layout."""
@@ -105,22 +103,29 @@ class L2MTUI(App):
         self.exit()
     
     def write_output(self, text: str, style: str = ""):
-        """Write text to the chat display."""
-        chat = self.query_one("#chat", ChatDisplay)
-        if style:
-            chat.write(Text(text, style=style))
-        else:
-            chat.write(text)
+        """Write text to the chat display (thread-safe)."""
+        def _write():
+            chat = self.query_one("#chat", ChatDisplay)
+            if style:
+                chat.write(Text(text, style=style))
+            else:
+                chat.write(text)
+        
+        # Use call_from_thread to make it thread-safe
+        self.call_from_thread(_write)
     
     def write_markdown(self, text: str):
-        """Write markdown to the chat display."""
-        chat = self.query_one("#chat", ChatDisplay)
-        chat.write(Markdown(text))
+        """Write markdown to the chat display (thread-safe)."""
+        def _write():
+            chat = self.query_one("#chat", ChatDisplay)
+            chat.write(Markdown(text))
+        
+        # Use call_from_thread to make it thread-safe
+        self.call_from_thread(_write)
     
     def get_user_input(self) -> str:
-        """Get input from user (blocking)."""
-        self.waiting_for_input.clear()
-        self.waiting_for_input.wait()
+        """Get input from user (blocking, thread-safe)."""
+        # This will block until user submits input
         return self.input_queue.get()
 
 
