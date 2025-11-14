@@ -552,13 +552,20 @@ class Coder:
             self.linter.set_linter(lang, cmd)
 
     def show_announcements(self):
-        # Show announcements without separators (Codex-style clean UI)
+        # Show helpful command examples instead of technical details
         self.io.tool_output()  # Blank line before
         
-        bold = True
-        for line in self.get_announcements():
-            self.io.tool_output(line, bold=bold)
-            bold = False
+        examples = [
+            "Add files to chat:              /add <filename>",
+            "Drop files from chat:           /drop <filename>",
+            "View chat context:              /ls",
+            "Clear chat history:             /clear",
+            "Undo last changes:              /undo",
+            "View available commands:        /help",
+        ]
+        
+        for line in examples:
+            self.io.tool_output(line)
         
         self.io.tool_output()  # Blank line after
 
