@@ -1816,6 +1816,7 @@ class Coder:
         self.io.log_llm_history("TO LLM", format_messages(messages))
 
         completion = None
+        litellm_ex = LiteLLMExceptions()
         try:
             hash_object, completion = model.send_completion(
                 messages,
@@ -1833,8 +1834,7 @@ class Coder:
             # Calculate costs for successful responses
             self.calculate_and_show_tokens_and_cost(messages, completion)
 
-        except LiteLLMExceptions().exceptions_tuple() as err:
-            litellm_ex = LiteLLMExceptions()
+        except litellm_ex.exceptions_tuple() as err:
             ex_info = litellm_ex.get_ex_info(err)
             if ex_info.name == "ContextWindowExceededError":
                 # Still calculate costs for context window errors
