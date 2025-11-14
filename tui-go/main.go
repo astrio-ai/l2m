@@ -3,9 +3,11 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -32,6 +34,14 @@ var (
 	errorStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#B45A5A"))
 
+	// Warning style
+	warningStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#B4825A"))
+
+	// Success style
+	successStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#789678"))
+
 	// Separator style
 	separatorStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#505050"))
@@ -42,49 +52,113 @@ type model struct {
 	cursor          int
 	messages        []message
 	pythonCmd       *exec.Cmd
-	pythonStdin     *bufio.Writer
-	pythonStdout    *bufio.Reader
+	pythonStdin     io.WriteCloser
+	pythonStdout    io.ReadCloser
 	waiting         bool
 	err             error
-	viewport        int
 	terminalHeight  int
 	terminalWidth   int
+	currentResponse strings.Builder
+	mu              sync.Mutex
 }
 
 type message struct {
-	role    string // "user" or "assistant"
+	role    string // "user", "assistant", "error", "system"
 	content string
 }
 
-type pythonResponseMsg struct {
+type pythonOutputMsg struct {
 	content string
-	err     error
+	isError bool
+	done    bool
+}
+
+type pythonErrorMsg struct {
+	err error
 }
 
 func initialModel() model {
 	return model{
-		input:          "",
-		cursor:         0,
-		messages:       []message{},
-		waiting:        false,
-		viewport:       0,
-		terminalHeight: 24,
-		terminalWidth:  80,
+		input:    "",
+		cursor:   0,
+		messages: []message{},
+		waiting:  false,
 	}
 }
 
 func (m model) Init() tea.Cmd {
-	return tea.Batch(
-		tea.EnterAltScreen,
-		startPythonBackend,
-	)
+	return startPythonBackend
+}
+
+type pythonStartedMsg struct {
+	cmd    *exec.Cmd
+	stdin  io.WriteCloser
+	stdout io.ReadCloser
+	err    error
 }
 
 // Start the Python L2M backend
 func startPythonBackend() tea.Msg {
-	// TODO: Implement Python backend communication
-	// For now, just return success
-	return pythonResponseMsg{content: "Backend ready (demo mode)"}
+	// Start Python in TUI backend mode
+	cmd := exec.Command("python", "-m", "cli.main", "--tui-mode", "--yes-always", "--no-pretty")
+	
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		return pythonStartedMsg{err: fmt.Errorf("failed to create stdin pipe: %w", err)}
+	}
+	
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return pythonStartedMsg{err: fmt.Errorf("failed to create stdout pipe: %w", err)}
+	}
+	
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return pythonStartedMsg{err: fmt.Errorf("failed to create stderr pipe: %w", err)}
+	}
+	
+	// Start the command
+	if err := cmd.Start(); err != nil {
+		return pythonStartedMsg{err: fmt.Errorf("failed to start Python backend: %w", err)}
+	}
+	
+	// Read stderr in background for debugging
+	go func() {
+		scanner := bufio.NewScanner(stderr)
+		for scanner.Scan() {
+			// Log errors to a file for debugging
+			// fmt.Fprintf(os.Stderr, "Python: %s\n", scanner.Text())
+		}
+	}()
+	
+	return pythonStartedMsg{
+		cmd:    cmd,
+		stdin:  stdin,
+		stdout: stdout,
+		err:    nil,
+	}
+}
+
+// Wait for output from Python
+func waitForPythonOutput(stdout io.ReadCloser) tea.Cmd {
+	return func() tea.Msg {
+		if stdout == nil {
+			return pythonOutputMsg{done: true}
+		}
+		
+		scanner := bufio.NewScanner(stdout)
+		for scanner.Scan() {
+			line := scanner.Text()
+			// Return each line as it comes
+			return pythonOutputMsg{content: line, done: false}
+		}
+		
+		if err := scanner.Err(); err != nil {
+			return pythonErrorMsg{err: err}
+		}
+		
+		return pythonOutputMsg{done: true}
+	}
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -94,33 +168,92 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.terminalWidth = msg.Width
 		return m, nil
 
+	case pythonStartedMsg:
+		if msg.err != nil {
+			m.err = msg.err
+			return m, nil
+		}
+		// Store the handles
+		m.pythonCmd = msg.cmd
+		m.pythonStdin = msg.stdin
+		m.pythonStdout = msg.stdout
+		// Start waiting for output
+		return m, waitForPythonOutput(m.pythonStdout)
+
+	case pythonOutputMsg:
+		if msg.isError {
+			m.messages = append(m.messages, message{
+				role:    "error",
+				content: msg.content,
+			})
+			m.waiting = false
+			return m, nil
+		}
+		
+		if msg.done {
+			// Response complete
+			if m.currentResponse.Len() > 0 {
+				m.messages = append(m.messages, message{
+					role:    "assistant",
+					content: m.currentResponse.String(),
+				})
+				m.currentResponse.Reset()
+			}
+			m.waiting = false
+			return m, nil
+		}
+		
+		// Accumulate response
+		m.currentResponse.WriteString(msg.content)
+		m.currentResponse.WriteString("\n")
+		
+		// Continue waiting for more output
+		return m, waitForPythonOutput(m.pythonStdout)
+
+	case pythonErrorMsg:
+		m.err = msg.err
+		m.waiting = false
+		return m, nil
+
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c", "ctrl+d":
+			// Cleanup Python process
+			if m.pythonCmd != nil && m.pythonCmd.Process != nil {
+				m.pythonCmd.Process.Kill()
+			}
 			return m, tea.Quit
 
 		case "enter":
-			if m.input == "" {
+			if m.input == "" || m.waiting {
 				return m, nil
 			}
 			
 			// Add user message
+			userInput := strings.TrimSpace(m.input)
 			m.messages = append(m.messages, message{
 				role:    "user",
-				content: m.input,
+				content: userInput,
 			})
 			
-			// TODO: Send to Python backend and get response
-			// For now, simulate a response
-			m.messages = append(m.messages, message{
-				role:    "assistant",
-				content: "This is a simulated response. Python backend integration coming next...",
-			})
+			// Send to Python backend
+			if m.pythonStdin != nil {
+				m.waiting = true
+				go func() {
+					// Write input to Python
+					fmt.Fprintln(m.pythonStdin, userInput)
+				}()
+			} else {
+				// Demo mode - simulate response
+				m.messages = append(m.messages, message{
+					role:    "assistant",
+					content: "Backend not connected. Install Python L2M to use full features.",
+				})
+			}
 			
 			m.input = ""
 			m.cursor = 0
-			m.waiting = false
-			return m, nil
+			return m, waitForPythonOutput(m.pythonStdout)
 
 		case "backspace":
 			if m.cursor > 0 {
@@ -141,21 +274,22 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 
+		case "home", "ctrl+a":
+			m.cursor = 0
+			return m, nil
+
+		case "end", "ctrl+e":
+			m.cursor = len(m.input)
+			return m, nil
+
 		default:
 			// Regular character input
-			if len(msg.String()) == 1 {
+			if !m.waiting && len(msg.String()) == 1 {
 				m.input = m.input[:m.cursor] + msg.String() + m.input[m.cursor:]
 				m.cursor++
 			}
 			return m, nil
 		}
-
-	case pythonResponseMsg:
-		if msg.err != nil {
-			m.err = msg.err
-			return m, nil
-		}
-		return m, nil
 	}
 
 	return m, nil
@@ -164,22 +298,51 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m model) View() string {
 	var output strings.Builder
 
-	// Display messages
+	// Calculate available height for messages
+	availableHeight := m.terminalHeight - 5 // Reserve space for input and help
+
+	// Display messages (show last N messages that fit)
 	if len(m.messages) > 0 {
-		for i, msg := range m.messages {
-			if msg.role == "user" {
+		// Calculate how many messages to show
+		displayMessages := m.messages
+		if len(displayMessages) > availableHeight/3 {
+			// Show most recent messages
+			displayMessages = m.messages[len(m.messages)-availableHeight/3:]
+		}
+
+		for i, msg := range displayMessages {
+			switch msg.role {
+			case "user":
 				output.WriteString(promptStyle.Render("> "))
 				output.WriteString(msg.content)
-			} else {
+				
+			case "assistant":
 				output.WriteString(separatorStyle.Render("▌"))
 				output.WriteString("\n\n")
 				output.WriteString(assistantStyle.Render(msg.content))
+				
+			case "error":
+				output.WriteString(errorStyle.Render("✗ "))
+				output.WriteString(errorStyle.Render(msg.content))
+				
+			case "system":
+				output.WriteString(warningStyle.Render("● "))
+				output.WriteString(warningStyle.Render(msg.content))
 			}
 			
-			if i < len(m.messages)-1 {
+			if i < len(displayMessages)-1 {
 				output.WriteString("\n\n")
 			}
 		}
+		output.WriteString("\n\n")
+	}
+
+	// Show current response if waiting
+	if m.waiting && m.currentResponse.Len() > 0 {
+		output.WriteString(separatorStyle.Render("▌"))
+		output.WriteString("\n\n")
+		output.WriteString(assistantStyle.Render(m.currentResponse.String()))
+		output.WriteString(assistantStyle.Render("..."))
 		output.WriteString("\n\n")
 	}
 
@@ -189,20 +352,26 @@ func (m model) View() string {
 	}
 
 	// Display input box with background
-	inputLine := promptStyle.Render("> ") + m.input
+	inputPrefix := promptStyle.Render("> ")
+	inputText := m.input
+	
+	// Add cursor
 	if m.cursor == len(m.input) {
-		inputLine += "█" // Cursor at end
+		inputText += "█" // Cursor at end
+	} else if m.cursor < len(m.input) {
+		// Insert cursor in the middle
+		inputText = m.input[:m.cursor] + "█" + m.input[m.cursor:]
 	}
 	
-	// Apply background to the entire input box
-	styledInput := inputBoxStyle.Render(inputLine)
+	// Apply background to the entire input line
+	styledInput := inputBoxStyle.Render(inputPrefix + inputText)
 	output.WriteString(styledInput)
 	
-	// Help text
-	output.WriteString("\n\n")
-	output.WriteString(lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#505050")).
-		Render("Ctrl+C/Ctrl+D to quit"))
+	// Waiting indicator
+	if m.waiting {
+		output.WriteString(" ")
+		output.WriteString(assistantStyle.Render("●●●"))
+	}
 
 	return output.String()
 }
@@ -214,4 +383,3 @@ func main() {
 		os.Exit(1)
 	}
 }
-
