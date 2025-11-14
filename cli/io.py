@@ -421,10 +421,13 @@ class InputOutput:
 
         if self.user_input_color:
             # Add background to the input area
-            style_dict.setdefault("", f"{self.user_input_color} bg:#2b2b2b")
+            # Using 'text-area' class for the input region background
+            style_dict[""] = f"{self.user_input_color} bg:#2b2b2b"
+            style_dict["prompt"] = f"{self.user_input_color} bg:#2b2b2b"
+            style_dict["text-area"] = "bg:#2b2b2b"
             style_dict.update(
                 {
-                    "pygments.literal.string": f"bold italic {self.user_input_color}",
+                    "pygments.literal.string": f"bold italic {self.user_input_color} bg:#2b2b2b",
                 }
             )
 
@@ -759,7 +762,7 @@ class InputOutput:
                 break
 
         print()
-        self.user_input(inp, log_only=True)  # Don't display again, just log
+        self.user_input(inp, log_only=True)
         return inp
 
     def add_to_input_history(self, inp):
