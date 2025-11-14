@@ -9,22 +9,24 @@
 [![Contributing Guide](https://img.shields.io/badge/Contributing-Guide-informational)](https://github.com/astrio-ai/l2m/CONTRIBUTING.md)
 </div>
 
-Legacy2Modern (L2M) is an open-source, AI-powered multi-agent framework that automatically analyzes, translates, refactors, and modernizes legacy codebases into modern programming languages.
+Legacy2Modern (L2M) is an open-source, AI-powered tool that helps you modernize legacy codebases into modern programming languages through an intuitive terminal interface.
 
 ## Features
 
-- **Multi-Agent Architecture**: Specialized agents for analysis, translation, review, testing, and refactoring
-- **Batch Processing**: Process multiple COBOL files with real-time progress tracking and comprehensive reporting
-- **Session Management**: Persistent conversation history across agent interactions
-- **Tool Integration**: Extensible tools for COBOL parsing, Python synthesis, and code quality
-- **Tracing Support**: Built-in tracing for debugging and monitoring agent behavior
+- **Modern TUI**: Clean, Codex-style terminal interface with brand-colored UI elements
+- **Multi-Provider Support**: Works with OpenAI, Anthropic, DeepSeek, Gemini, and 100+ other LLM providers via LiteLLM
+- **Interactive Chat**: Natural conversation with your codebase - ask questions, request changes, and get AI assistance
+- **File Management**: Add files to context, drop them when done, view what's in your chat session
+- **Git Integration**: Automatic commits, undo support, and repository-aware context
+- **Streaming Responses**: Real-time AI responses with markdown rendering
+- **Session History**: Persistent conversation history across sessions
 
 ## Quick Start
 
 ### Prerequisites
 
 - Python 3.10+
-- OpenAI API Key
+- API Key for your preferred LLM provider (OpenAI, Anthropic, etc.)
 
 ### Installation
 
@@ -34,21 +36,58 @@ git clone https://github.com/astrio-ai/l2m.git
 cd l2m
 
 # Install dependencies
-pip install -r requirements.txt  # or use: uv add 'openai-agents'
+pip install -r requirements.txt
+
+# Install the package
+pip install -e .
 
 # Set up environment
 cp .env.example .env
-# Edit .env and add your OPENAI_API_KEY
+# Edit .env and add your API key (e.g., OPENAI_API_KEY, ANTHROPIC_API_KEY)
 ```
 
-#### Interactive CLI (Preview)
+### Usage
 
 ```bash
-# Ensure your environment is activated and the package is installed
-pip install -e .
-
 # Start the interactive CLI
 l2m
+
+# Or specify a model
+l2m --model gpt-4o
+l2m --model claude-3-5-sonnet-20241022
+l2m --model mistral/mistral-large-latest
+```
+
+L2M supports 100+ LLM providers via LiteLLM. See [LiteLLM documentation](https://docs.litellm.ai/docs/providers) for all supported providers.
+
+### Common Commands
+
+Once in the L2M CLI, you can use these commands:
+
+- `/add <filename>` - Add files to the chat context
+- `/drop <filename>` - Remove files from the chat
+- `/ls` - View files currently in chat context
+- `/clear` - Clear chat history
+- `/undo` - Undo last changes
+- `/help` - View all available commands
+
+### Example Workflow
+
+```bash
+# Start L2M
+l2m
+
+# Add a file to work on
+/add legacy_code.cobol
+
+# Ask AI to modernize it
+Convert this COBOL code to Python
+
+# Review changes and apply
+/review
+
+# Undo if needed
+/undo
 ```
 
 ## Documentation
