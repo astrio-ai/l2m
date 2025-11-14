@@ -77,6 +77,7 @@ def save_approval_mode_config(require_approval, git_root=None):
 def _get_ascii_art(light_mode=False, dark_mode=False) -> str:
     """Generate left-aligned ASCII art with theme-aware colors"""
     
+    # Same ASCII art characters for both themes
     ascii_lines = [
         "██╗     ██████╗ ███╗   ███╗",
         "██║     ╚════██╗████╗ ████║",
@@ -86,16 +87,14 @@ def _get_ascii_art(light_mode=False, dark_mode=False) -> str:
         "╚══════╝╚══════╝╚═╝     ╚═╝",
     ]
     
-    # Join lines (left-aligned, no centering)
     art = "\n".join(ascii_lines)
     
-    # Use white for dark theme, dark for light theme
-    # If light_mode is explicitly set, use dark gray/black; otherwise default to white (dark theme)
+    # Select appropriate color based on theme
     if light_mode:
-        # Dark gray for light background (more readable than pure black)
+        # Dark gray for light theme - ensure it's visible
         return f"\033[38;2;30;30;30m{art}\033[0m"
     else:
-        # White for dark background (default)
+        # White for dark theme (default)
         return f"\033[38;2;255;255;255m{art}\033[0m"
 
 
@@ -635,8 +634,12 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
     
     try:
         io.rule()
-        # Display ASCII art banner
-        io.tool_output(_get_ascii_art(light_mode=use_light_ascii))
+        # Display ASCII art banner with proper color handling
+        ascii_art = _get_ascii_art(light_mode=use_light_ascii)
+        # Print directly to stdout to preserve ANSI color codes
+        import sys
+        sys.stdout.write(ascii_art + "\n")
+        sys.stdout.flush()
         io.tool_output()
     except UnicodeEncodeError as err:
         if not io.pretty:
