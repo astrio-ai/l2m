@@ -16,7 +16,7 @@ ANSI_DIM = "\033[2m"
 ANSI_ITALIC = "\033[3m"
 
 # Very muted palette: subdued tones, minimal eye strain
-ANSI_WHITE = "\033[38;2;180;180;180m"     # Medium gray for important text (#B4B4B4)
+ANSI_WHITE = "\033[38;2;255;255;255m"     # Pure white for important text (#FFFFFF)
 ANSI_GRAY = "\033[38;2;120;120;120m"      # Dimmer gray for secondary text (#787878)
 ANSI_DARK_GRAY = "\033[38;2;80;80;80m"    # Dark gray for minimal importance (#505050)
 ANSI_CYAN = "\033[38;2;33;150;243m"       # Bright blue for selected (#2196F3)
