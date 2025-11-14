@@ -178,14 +178,24 @@ class Scraper:
                     if "ERR_NAME_NOT_RESOLVED" in error_str or "net::ERR_NAME_NOT_RESOLVED" in error_str:
                         self.print_error(f"Cannot find website: {url}")
                         self.print_error("Please check the URL spelling and try again.")
+                    elif "ERR_CERT_COMMON_NAME_INVALID" in error_str or "ERR_CERT_AUTHORITY_INVALID" in error_str:
+                        self.print_error(f"SSL certificate error: {url}")
+                        self.print_error("The website's security certificate is invalid or the URL may be misspelled.")
                     elif "ERR_CONNECTION_REFUSED" in error_str:
                         self.print_error(f"Connection refused: {url}")
                         self.print_error("The website may be down or blocking requests.")
                     elif "ERR_TIMED_OUT" in error_str:
                         self.print_error(f"Connection timed out: {url}")
                         self.print_error("The website is taking too long to respond.")
+                    elif "ERR_CONNECTION_CLOSED" in error_str:
+                        self.print_error(f"Connection closed: {url}")
+                        self.print_error("The website closed the connection unexpectedly.")
+                    elif "ERR_SSL_PROTOCOL_ERROR" in error_str:
+                        self.print_error(f"SSL protocol error: {url}")
+                        self.print_error("Cannot establish a secure connection to the website.")
                     else:
-                        self.print_error(f"Cannot access {url}: {error_str}")
+                        self.print_error(f"Cannot access website: {url}")
+                        self.print_error("The URL may be incorrect or the website may be unavailable.")
                     return None, None
 
                 try:
