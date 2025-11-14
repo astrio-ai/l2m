@@ -75,7 +75,7 @@ def save_approval_mode_config(require_approval, git_root=None):
 
 
 def _get_ascii_art() -> str:
-    """Generate centered ASCII art"""
+    """Generate left-aligned ASCII art"""
     
     ascii_lines = [
         "██╗     ██████╗ ███╗   ███╗",
@@ -86,24 +86,8 @@ def _get_ascii_art() -> str:
         "╚══════╝╚══════╝╚═╝     ╚═╝",
     ]
     
-    # Get terminal width, default to 80 if unavailable
-    try:
-        width = shutil.get_terminal_size().columns
-    except (OSError, AttributeError):
-        width = 80
-    
-    # Center each line
-    centered_lines = []
-    for line in ascii_lines:
-        # Strip any trailing whitespace from the line
-        line = line.rstrip()
-        # Calculate padding to center
-        padding = (width - len(line)) // 2
-        centered_line = " " * padding + line
-        centered_lines.append(centered_line)
-    
-    # Apply color to entire art
-    art = "\n".join(centered_lines)
+    # Join lines (left-aligned, no centering)
+    art = "\n".join(ascii_lines)
     return StyleGuide.header(art)
 
 
