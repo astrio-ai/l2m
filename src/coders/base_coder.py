@@ -1472,6 +1472,7 @@ class Coder:
         retry_delay = 0.125
 
         litellm_ex = LiteLLMExceptions()
+        litellm_exceptions = litellm_ex.exceptions_tuple()
 
         self.usage_report = None
         exhausted = False
@@ -1481,7 +1482,7 @@ class Coder:
                 try:
                     yield from self.send(messages, functions=self.functions)
                     break
-                except litellm_ex.exceptions_tuple() as err:
+                except litellm_exceptions as err:
                     ex_info = litellm_ex.get_ex_info(err)
 
                     if ex_info.name == "ContextWindowExceededError":
@@ -1817,6 +1818,7 @@ class Coder:
 
         completion = None
         litellm_ex = LiteLLMExceptions()
+        litellm_exceptions = litellm_ex.exceptions_tuple()
         try:
             hash_object, completion = model.send_completion(
                 messages,
@@ -1834,7 +1836,7 @@ class Coder:
             # Calculate costs for successful responses
             self.calculate_and_show_tokens_and_cost(messages, completion)
 
-        except litellm_ex.exceptions_tuple() as err:
+        except litellm_exceptions as err:
             ex_info = litellm_ex.get_ex_info(err)
             if ex_info.name == "ContextWindowExceededError":
                 # Still calculate costs for context window errors
