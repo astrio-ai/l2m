@@ -44,10 +44,7 @@ from cli.tui_utils import StyleGuide, format_separator
 
 
 def _get_ascii_art() -> str:
-    """Generate centered ASCII art with blue color (#3B82F6)."""
-    # ANSI 24-bit color code for #3B82F6 (blue)
-    blue = "\033[38;2;59;130;246m"
-    reset = "\033[0m"
+    """Generate centered ASCII art"""
     
     ascii_lines = [
         "██╗     ██████╗ ███╗   ███╗",
@@ -76,7 +73,7 @@ def _get_ascii_art() -> str:
     
     # Apply color to entire art
     art = "\n".join(centered_lines)
-    return f"{blue}{art}{reset}"
+    return StyleGuide.header(art)
 
 
 def check_config_files_for_yes(config_files):

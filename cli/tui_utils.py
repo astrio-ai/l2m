@@ -14,11 +14,15 @@ ANSI_RESET = "\033[0m"
 ANSI_BOLD = "\033[1m"
 ANSI_DIM = "\033[2m"
 ANSI_ITALIC = "\033[3m"
-ANSI_CYAN = "\033[36m"
-ANSI_GREEN = "\033[32m"
-ANSI_RED = "\033[31m"
-ANSI_MAGENTA = "\033[35m"
-ANSI_YELLOW = "\033[33m"
+
+# VS Code-inspired pale colors (24-bit)
+# Using softer, muted tones similar to VS Code Dark+ theme
+ANSI_CYAN = "\033[38;2;156;220;254m"      # Pale blue (#9CDCFE)
+ANSI_GREEN = "\033[38;2;181;206;168m"     # Pale green (#B5CEA8)
+ANSI_RED = "\033[38;2;244;106;106m"       # Pale red/coral (#F46A6A)
+ANSI_MAGENTA = "\033[38;2;197;134;192m"   # Pale purple (#C586C0)
+ANSI_YELLOW = "\033[38;2;220;220;170m"    # Pale yellow/cream (#DCDCAA)
+ANSI_ORANGE = "\033[38;2;206;145;120m"    # Pale orange (#CE9178)
 
 
 class TerminalColors:
@@ -210,11 +214,11 @@ class ShimmerEffect:
 class StatusIndicator:
     """Visual status indicators for different agent states."""
 
-    THINKING = f"{ANSI_MAGENTA}●{ANSI_RESET} Thinking..."
+    THINKING = f"{ANSI_MAGENTA}●{ANSI_RESET} "
     TYPING = f"{ANSI_CYAN}▌{ANSI_RESET} "
     SUCCESS = f"{ANSI_GREEN}✓{ANSI_RESET} "
     ERROR = f"{ANSI_RED}✗{ANSI_RESET} "
-    WARNING = f"{ANSI_YELLOW}⚠{ANSI_RESET} "
+    WARNING = f"{ANSI_ORANGE}⚠{ANSI_RESET} "
     INFO = f"{ANSI_CYAN}ℹ{ANSI_RESET} "
 
     @staticmethod
@@ -230,12 +234,12 @@ class StatusIndicator:
 
 
 class StyleGuide:
-    """Style guide for consistent terminal output."""
+    """Style guide for consistent terminal output with VS Code-inspired colors."""
 
     @staticmethod
     def header(text: str) -> str:
-        """Format text as a header (bold)."""
-        return f"{ANSI_BOLD}{text}{ANSI_RESET}"
+        """Format text as a header (bold pale cyan)."""
+        return f"{ANSI_BOLD}{ANSI_CYAN}{text}{ANSI_RESET}"
 
     @staticmethod
     def secondary(text: str) -> str:
@@ -244,29 +248,43 @@ class StyleGuide:
 
     @staticmethod
     def user_input(text: str) -> str:
-        """Format text as user input (cyan)."""
+        """Format text as user input (pale cyan)."""
         return f"{ANSI_CYAN}{text}{ANSI_RESET}"
 
     @staticmethod
     def success(text: str) -> str:
-        """Format text as success (green)."""
+        """Format text as success (pale green)."""
         return f"{ANSI_GREEN}{text}{ANSI_RESET}"
 
     @staticmethod
     def error(text: str) -> str:
-        """Format text as error (red)."""
+        """Format text as error (pale red)."""
         return f"{ANSI_RED}{text}{ANSI_RESET}"
 
     @staticmethod
+    def warning(text: str) -> str:
+        """Format text as warning (pale orange)."""
+        return f"{ANSI_ORANGE}{text}{ANSI_RESET}"
+
+    @staticmethod
     def agent(text: str) -> str:
-        """Format text as agent response (magenta)."""
+        """Format text as agent response (pale purple)."""
         return f"{ANSI_MAGENTA}{text}{ANSI_RESET}"
 
     @staticmethod
     def code(text: str) -> str:
-        """Format text as inline code."""
-        # Use a subtle background for code
-        return f"\033[48;5;236m{text}\033[49m"  # Dark gray background
+        """Format text as inline code (pale yellow)."""
+        return f"{ANSI_YELLOW}{text}{ANSI_RESET}"
+
+    @staticmethod
+    def keyword(text: str) -> str:
+        """Format text as keyword (pale purple)."""
+        return f"{ANSI_MAGENTA}{text}{ANSI_RESET}"
+
+    @staticmethod
+    def string(text: str) -> str:
+        """Format text as string (pale orange)."""
+        return f"{ANSI_ORANGE}{text}{ANSI_RESET}"
 
 
 def format_separator(width: Optional[int] = None, char: str = "─") -> str:
