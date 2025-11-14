@@ -555,6 +555,10 @@ class Coder:
         # Show helpful command examples instead of technical details
         self.io.tool_output()  # Blank line before
         
+        # Show version first
+        self.io.tool_output(f"L2M v{__version__}", bold=True)
+        self.io.tool_output()
+        
         examples = [
             "Add files to chat:              /add <filename>",
             "Drop files from chat:           /drop <filename>",
