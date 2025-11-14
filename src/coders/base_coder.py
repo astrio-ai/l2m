@@ -340,6 +340,7 @@ class Coder:
         file_watcher=None,
         auto_copy_context=False,
         auto_accept_architect=True,
+        require_approval=False,
     ):
         # Fill in a dummy Analytics if needed, but it is never .enable()'d
         self.analytics = analytics if analytics is not None else Analytics()
@@ -354,6 +355,7 @@ class Coder:
 
         self.auto_copy_context = auto_copy_context
         self.auto_accept_architect = auto_accept_architect
+        self.require_approval = require_approval
 
         self.ignore_mentions = ignore_mentions
         if not self.ignore_mentions:
@@ -2320,6 +2322,18 @@ class Coder:
             edits = self.apply_edits_dry_run(edits)
             edits = self.prepare_to_edit(edits)
             edited = set(edit[0] for edit in edits)
+
+            # Check if approval is required before applying edits
+            if self.require_approval and edited:
+                file_list = "\n".join(f"  - {self.get_rel_fname(f)}" for f in sorted(edited))
+                self.io.tool_output()
+                self.io.tool_output(f"Files to be modified ({len(edited)}):")
+                self.io.tool_output(file_list)
+                self.io.tool_output()
+                
+                if not self.io.confirm_ask("Apply these edits?"):
+                    self.io.tool_warning("Edits rejected by user.")
+                    return set()  # Return empty set, no edits applied
 
             self.apply_edits(edits)
         except ValueError as err:

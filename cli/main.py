@@ -43,6 +43,37 @@ from src.utils.dump import dump  # noqa: F401
 from cli.tui_utils import StyleGuide, format_separator
 
 
+def get_approval_mode_config_path(git_root=None):
+    """Get the path to the approval mode config file."""
+    if git_root:
+        return Path(git_root) / ".l2m.approval.json"
+    return Path.cwd() / ".l2m.approval.json"
+
+
+def load_approval_mode_config(git_root=None):
+    """Load approval mode config from file."""
+    config_path = get_approval_mode_config_path(git_root)
+    if config_path.exists():
+        try:
+            with open(config_path, "r") as f:
+                config = json.load(f)
+                return config.get("require_approval", None)
+        except (json.JSONDecodeError, IOError):
+            pass
+    return None
+
+
+def save_approval_mode_config(require_approval, git_root=None):
+    """Save approval mode config to file."""
+    config_path = get_approval_mode_config_path(git_root)
+    try:
+        with open(config_path, "w") as f:
+            json.dump({"require_approval": require_approval}, f, indent=2)
+    except IOError as e:
+        # Silently fail if we can't write the config
+        pass
+
+
 def _get_ascii_art() -> str:
     """Generate centered ASCII art"""
     
@@ -969,6 +1000,32 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
         analytics.event("repo", num_files=num_files)
     else:
         analytics.event("no-repo")
+    
+    # Handle approval mode (Codex-style prompt)
+    # Priority: command-line arg > saved config > interactive prompt (non-git only)
+    if args.require_approval is None:
+        # Not specified via command line, check saved config
+        saved_approval_mode = load_approval_mode_config(git_root)
+        if saved_approval_mode is not None:
+            args.require_approval = saved_approval_mode
+        elif not repo and not args.yes_always:
+            # No git repo, no saved config, not --yes-always: show interactive prompt
+            try:
+                cwd_path = Path.cwd().name
+            except OSError:
+                cwd_path = "this folder"
+            
+            require_approval = io.prompt_approval_mode(cwd_path)
+            args.require_approval = require_approval
+            save_approval_mode_config(require_approval, git_root)
+            analytics.event("approval_mode_selected", require_approval=require_approval)
+        else:
+            # Git repo exists or --yes-always set: default to auto mode (no approval)
+            args.require_approval = False
+    
+    # Override approval mode if --yes-always is set
+    if args.yes_always:
+        args.require_approval = False
 
     commands = Commands(
         io,
@@ -1042,6 +1099,7 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
             auto_copy_context=args.copy_paste,
             auto_accept_architect=args.auto_accept_architect,
             add_gitignore_files=args.add_gitignore_files,
+            require_approval=args.require_approval,
         )
     except UnknownEditFormat as err:
         io.tool_error(str(err))

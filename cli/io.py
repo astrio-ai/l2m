@@ -834,6 +834,49 @@ class InputOutput:
             return True
         return False
 
+    def prompt_approval_mode(self, folder_path):
+        """
+        Show an interactive menu to choose approval mode.
+        Returns True for auto mode, False for require approval.
+        """
+        from prompt_toolkit.shortcuts import radiolist_dialog
+        from prompt_toolkit.styles import Style as PTKStyle
+        
+        # Define options
+        options = [
+            (False, "Allow L2M to work in this folder without asking for approval"),
+            (True, "Require approval of edits and commands"),
+        ]
+        
+        style = PTKStyle.from_dict({
+            'dialog': 'bg:#1E1E1E',
+            'dialog.body': 'bg:#1E1E1E #9CDCFE',
+            'dialog frame.label': 'bg:#3B82F6 #FFFFFF bold',
+            'dialog.body text': '#CCCCCC',
+            'dialog.body label': '#9CDCFE',
+            'radio-checked': '#4EC9B0 bold',
+            'radio': '#9CDCFE',
+        })
+        
+        try:
+            result = radiolist_dialog(
+                title="L2M Approval Mode",
+                text=f"You are running L2M in {folder_path}\n\n"
+                     "Since this folder is not version controlled, we recommend requiring approval of all edits and commands.\n\n"
+                     "Use arrow keys to navigate, Enter to select:",
+                values=options,
+                default=True,  # Default to "require approval"
+                style=style,
+            ).run()
+            
+            # result is True for "require approval", False for "auto mode"
+            # We return the opposite of "require_approval" for easier logic
+            return result
+            
+        except (KeyboardInterrupt, EOFError):
+            # Default to require approval if user cancels
+            return True
+
     @restore_multiline
     def confirm_ask(
         self,
@@ -1038,7 +1081,7 @@ class InputOutput:
             if self.tool_output_color:
                 style["color"] = ensure_hash_prefix(self.tool_output_color)
             if bold:
-                style["bold"] = True
+                style["bold"] = False
                 # Don't use "reverse" as it creates white backgrounds in dark mode
 
         style = RichStyle(**style)

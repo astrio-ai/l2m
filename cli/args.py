@@ -751,6 +751,12 @@ def get_parser(default_config_files, git_root):
         default=None,
     )
     group.add_argument(
+        "--require-approval",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Require approval before applying each edit (default: None, prompt on first run)",
+    )
+    group.add_argument(
         "-v",
         "--verbose",
         action="store_true",
