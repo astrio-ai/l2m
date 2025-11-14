@@ -110,7 +110,7 @@ class Scraper:
             content, mime_type = self.scrape_with_httpx(url)
 
         if not content:
-            self.print_error(f"Failed to retrieve content from {url}")
+            # Error already printed by scraping method, just return None
             return None
 
         # Check if the content is HTML based on MIME type or content
@@ -173,7 +173,19 @@ class Scraper:
                     print(f"Page didn't quiesce, scraping content anyway: {url}")
                     response = None
                 except PlaywrightError as e:
-                    self.print_error(f"Error navigating to {url}: {str(e)}")
+                    # Make error messages more user-friendly
+                    error_str = str(e)
+                    if "ERR_NAME_NOT_RESOLVED" in error_str or "net::ERR_NAME_NOT_RESOLVED" in error_str:
+                        self.print_error(f"Cannot find website: {url}")
+                        self.print_error("Please check the URL spelling and try again.")
+                    elif "ERR_CONNECTION_REFUSED" in error_str:
+                        self.print_error(f"Connection refused: {url}")
+                        self.print_error("The website may be down or blocking requests.")
+                    elif "ERR_TIMED_OUT" in error_str:
+                        self.print_error(f"Connection timed out: {url}")
+                        self.print_error("The website is taking too long to respond.")
+                    else:
+                        self.print_error(f"Cannot access {url}: {error_str}")
                     return None, None
 
                 try:

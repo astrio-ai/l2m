@@ -244,12 +244,17 @@ class Commands:
                 verify_ssl=self.verify_ssl,
             )
 
-        content = self.scraper.scrape(url) or ""
+        content = self.scraper.scrape(url)
+        
+        # If scraping failed, don't add empty content to chat
+        if not content:
+            return None if return_content else None
+        
         content = f"Here is the content of {url}:\n\n" + content
         if return_content:
             return content
 
-        self.io.tool_output("... added to chat.")
+        self.io.tool_output("✓ Website content added to chat. You can now ask questions about it.")
 
         self.coder.cur_messages += [
             dict(role="user", content=content),
