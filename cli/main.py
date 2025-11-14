@@ -637,7 +637,6 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
         # Display ASCII art banner with proper color handling
         ascii_art = _get_ascii_art(light_mode=use_light_ascii)
         # Print directly to stdout to preserve ANSI color codes
-        import sys
         sys.stdout.write(ascii_art + "\n")
         sys.stdout.flush()
         io.tool_output()
