@@ -555,8 +555,11 @@ class Coder:
         # Show helpful command examples instead of technical details
         self.io.tool_output()  # Blank line before
         
-        # Show version first
-        self.io.tool_output(f"L2M v{__version__}", bold=True)
+        # Show version first in brand blue
+        from rich.text import Text
+        version_text = Text(f"L2M v{__version__}", style="#278ef5 bold")  # Brand blue and bold
+        self.io.console.print(version_text)
+        self.io.tool_output(f"L2M v{__version__}", log_only=True)  # Log to history
         self.io.tool_output()
         
         # Format: command (white #FFFFFF) - description (grayish #787878)
