@@ -32,6 +32,7 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.style import Style as RichStyle
 from rich.text import Text
+from rich.theme import Theme
 
 from src.utils.mdstream import MarkdownStream
 from src.utils.dump import dump  # noqa: F401
@@ -41,6 +42,14 @@ from cli.footer_hints import FooterHints
 
 # Constants
 NOTIFICATION_MESSAGE = "L2M is waiting for your input"
+
+# Custom dark theme for markdown to avoid white backgrounds
+DARK_THEME = Theme({
+    "markdown.code": "bold #DCDCAA on #1E1E1E",  # Pale yellow on dark gray
+    "markdown.code_block": "on #1E1E1E",  # Dark gray background for code blocks
+    "markdown.link": "#9CDCFE",  # Pale cyan for links
+    "markdown.link_url": "#9CDCFE underline",  # Pale cyan underlined
+})
 
 
 def ensure_hash_prefix(color):
