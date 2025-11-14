@@ -1442,7 +1442,7 @@ class Coder:
         self.io.llm_started()
         
         # Reset prefix flag for new message
-        self._response_prefix_printed = False
+        self._response_prefix_added = False
 
         self.cur_messages += [
             dict(role="user", content=inp),
@@ -1980,13 +1980,11 @@ class Coder:
 
             if received_content:
                 self._stop_waiting_spinner()
-                # Print white circle prefix once before first Live update
-                if not hasattr(self, '_response_prefix_printed'):
-                    import time
-                    sys.stdout.write("\n\033[38;2;255;255;255m●\033[0m ")
-                    sys.stdout.flush()
-                    time.sleep(0.05)  # Small delay to ensure it's visible before Live starts
-                    self._response_prefix_printed = True
+            
+            # Add white circle prefix to the first content chunk
+            if text and not hasattr(self, '_response_prefix_added'):
+                text = "\033[38;2;255;255;255m●\033[0m " + text
+                self._response_prefix_added = True
             
             self.partial_response_content += text
 
