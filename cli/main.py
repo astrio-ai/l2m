@@ -74,66 +74,6 @@ def save_approval_mode_config(require_approval, git_root=None):
         pass
 
 
-def _display_logo_image(light_mode=False):
-    """Display logo PNG image using terminal image protocols"""
-    try:
-        from pathlib import Path
-        import base64
-        from PIL import Image
-        import io
-        
-        # Try to find logo PNG in resources
-        resources_dir = Path(__file__).parent.parent / "src" / "resources"
-        if light_mode:
-            logo_paths = [
-                resources_dir / "logo-light.png",
-                resources_dir / "logo.png",
-            ]
-        else:
-            logo_paths = [
-                resources_dir / "logo-dark.png",
-                resources_dir / "logo.png",
-            ]
-        
-        logo_path = None
-        for path in logo_paths:
-            if path.exists():
-                logo_path = path
-                break
-        
-        if not logo_path:
-            return False
-        
-        # Read and encode image
-        with open(logo_path, "rb") as f:
-            img_data = f.read()
-        
-        # Try iTerm2 inline image protocol (macOS)
-        if os.environ.get("TERM_PROGRAM") == "iTerm.app":
-            img_b64 = base64.b64encode(img_data).decode()
-            # iTerm2 inline image: OSC 1337 ; File=name=filename;size=size;inline=1:base64data ST
-            filename = logo_path.name
-            size = len(img_data)
-            sys.stdout.write(f"\033]1337;File=name={filename};size={size};inline=1:{img_b64}\033\\\n")
-            sys.stdout.flush()
-            return True
-        
-        # Try kitty image protocol
-        elif os.environ.get("TERM") and "kitty" in os.environ.get("TERM", "").lower():
-            img_b64 = base64.b64encode(img_data).decode()
-            # Kitty image: OSC 1337 ; File=filename;size=size;inline=1:base64data ST
-            filename = logo_path.name
-            size = len(img_data)
-            sys.stdout.write(f"\033]1337;File={filename};size={size};inline=1:{img_b64}\033\\\n")
-            sys.stdout.flush()
-            return True
-        
-    except Exception:
-        pass
-    
-    return False
-
-
 def _get_ascii_art(light_mode=False, dark_mode=False) -> str:
     """Generate left-aligned ASCII art with theme-aware colors"""
     
@@ -638,7 +578,7 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
 
     if args.dark_mode:
         # Very muted colors: subdued tones, minimal brightness
-        args.user_input_color = "#278ef5"     # Brand blue for user input (commands)
+        args.user_input_color = "#FFFFFF"     # White for user input (commands)
         args.tool_error_color = "#B45A5A"     # Very muted red for errors
         args.tool_warning_color = "#B4825A"   # Very muted orange for warnings
         args.assistant_output_color = "#787878"  # Dim gray for secondary text
@@ -694,14 +634,11 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
     
     try:
         io.rule()
-        # Try to display PNG logo first, fall back to ASCII art
-        logo_displayed = _display_logo_image(light_mode=use_light_ascii)
-        if not logo_displayed:
-            # Fall back to ASCII art
-            ascii_art = _get_ascii_art(light_mode=use_light_ascii)
-            # Print directly to stdout to preserve ANSI color codes
-            sys.stdout.write(ascii_art + "\n")
-            sys.stdout.flush()
+        # Display ASCII art banner with proper color handling
+        ascii_art = _get_ascii_art(light_mode=use_light_ascii)
+        # Print directly to stdout to preserve ANSI color codes
+        sys.stdout.write(ascii_art + "\n")
+        sys.stdout.flush()
         io.tool_output()
     except UnicodeEncodeError as err:
         if not io.pretty:
