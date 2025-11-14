@@ -420,7 +420,8 @@ class InputOutput:
             return Style.from_dict(style_dict)
 
         if self.user_input_color:
-            style_dict.setdefault("", self.user_input_color)
+            # Add background to the input area
+            style_dict.setdefault("", f"{self.user_input_color} bg:#2b2b2b")
             style_dict.update(
                 {
                     "pygments.literal.string": f"bold italic {self.user_input_color}",
@@ -758,7 +759,7 @@ class InputOutput:
                 break
 
         print()
-        self.user_input(inp, log_only=False)
+        self.user_input(inp, log_only=True)  # Don't display again, just log
         return inp
 
     def add_to_input_history(self, inp):
