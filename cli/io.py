@@ -30,6 +30,7 @@ from rich.color import ColorParseError
 from rich.columns import Columns
 from rich.console import Console
 from rich.markdown import Markdown, CodeBlock
+from rich.panel import Panel
 from rich.style import Style as RichStyle
 from rich.text import Text
 from rich.theme import Theme
@@ -420,8 +421,6 @@ class InputOutput:
 
         if self.user_input_color:
             style_dict.setdefault("", self.user_input_color)
-            # Add background only to the user input token
-            style_dict["user_input"] = f"{self.user_input_color} bg:#2b2b2b"
             style_dict.update(
                 {
                     "pygments.literal.string": f"bold italic {self.user_input_color}",
@@ -795,13 +794,18 @@ class InputOutput:
 
     def display_user_input(self, inp):
         if self.pretty and self.user_input_color:
-            # Use RichStyle with background for user input
-            from rich.style import Style as RichStyle
-            style = dict(style=RichStyle(color=self.user_input_color, bgcolor="#2b2b2b"))
+            # Wrap user input in a Panel with background
+            self.console.print(
+                Panel(
+                    f"[{self.user_input_color}]{inp}[/{self.user_input_color}]",
+                    style="on #2b2b2b",     # background color
+                    border_style="#2b2b2b", # hide border by matching it
+                    padding=(0, 1),
+                    expand=False,
+                )
+            )
         else:
-            style = dict()
-
-        self.console.print(Text(inp), **style)
+            self.console.print(Text(inp))
 
     def user_input(self, inp, log_only=True):
         if not log_only:
