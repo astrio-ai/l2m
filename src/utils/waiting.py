@@ -19,6 +19,12 @@ import time
 
 from rich.console import Console
 
+try:
+    from cli.tui_utils import ShimmerEffect, StatusIndicator
+    SHIMMER_AVAILABLE = True
+except ImportError:
+    SHIMMER_AVAILABLE = False
+
 
 class Spinner:
     """
@@ -171,17 +177,59 @@ class Spinner:
 class WaitingSpinner:
     """Background spinner that can be started/stopped safely."""
 
-    def __init__(self, text: str = "Waiting for LLM", delay: float = 0.15):
-        self.spinner = Spinner(text)
+    def __init__(self, text: str = "Waiting for LLM", delay: float = 0.15, use_shimmer: bool = False):
+        self.use_shimmer = use_shimmer and SHIMMER_AVAILABLE
+        
+        if self.use_shimmer:
+            self.shimmer = ShimmerEffect(text)
+            self.text = text
+        else:
+            self.spinner = Spinner(text)
+            self.shimmer = None
+        
         self.delay = delay
         self._stop_event = threading.Event()
         self._thread = threading.Thread(target=self._spin, daemon=True)
+        self.is_tty = sys.stdout.isatty()
 
     def _spin(self):
+        if self.use_shimmer:
+            self._spin_shimmer()
+        else:
+            self._spin_standard()
+
+    def _spin_standard(self):
         while not self._stop_event.is_set():
             self.spinner.step()
             time.sleep(self.delay)
         self.spinner.end()
+
+    def _spin_shimmer(self):
+        """Shimmer effect spinner using TUI utilities."""
+        if not self.is_tty:
+            return
+        
+        console = Console()
+        console.show_cursor(False)
+        
+        try:
+            while not self._stop_event.is_set():
+                # Render shimmer effect
+                rendered = self.shimmer.render()
+                status = StatusIndicator.THINKING
+                line = f"\r{status} {rendered}"
+                
+                # Write and clear previous line
+                sys.stdout.write(line + " " * 10)  # Extra spaces to clear remnants
+                sys.stdout.flush()
+                
+                time.sleep(self.delay)
+            
+            # Clear the line on stop
+            sys.stdout.write("\r" + " " * 80 + "\r")
+            sys.stdout.flush()
+        finally:
+            console.show_cursor(True)
 
     def start(self):
         """Start the spinner in a background thread."""
@@ -193,7 +241,13 @@ class WaitingSpinner:
         self._stop_event.set()
         if self._thread.is_alive():
             self._thread.join(timeout=self.delay)
-        self.spinner.end()
+        
+        if self.use_shimmer and self.is_tty:
+            # Ensure the line is cleared
+            sys.stdout.write("\r" + " " * 80 + "\r")
+            sys.stdout.flush()
+        elif not self.use_shimmer:
+            self.spinner.end()
 
     # Allow use as a context-manager
     def __enter__(self):

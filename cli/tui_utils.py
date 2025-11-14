@@ -1,7 +1,7 @@
-"""TUI utilities for enhanced terminal UI (inspired by Codex CLI design).
+"""TUI utilities for L2M TUI.
 
 This module provides terminal color detection, intelligent blending,
-shimmer effects, and other visual enhancements.
+shimmer effects, and other visual enhancements for L2M TUI.
 """
 
 import os
@@ -230,7 +230,7 @@ class StatusIndicator:
 
 
 class StyleGuide:
-    """Codex-inspired style guide for consistent terminal output."""
+    """Style guide for consistent terminal output."""
 
     @staticmethod
     def header(text: str) -> str:
