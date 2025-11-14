@@ -37,6 +37,7 @@ from src.utils.mdstream import MarkdownStream
 from src.utils.dump import dump  # noqa: F401
 from src.ui.editor import pipe_editor
 from src.utils import is_image_file
+from cli.footer_hints import FooterHints
 
 # Constants
 NOTIFICATION_MESSAGE = "L2M is waiting for your input"
@@ -269,6 +270,7 @@ class InputOutput:
         self.editingmode = editingmode
         self.multiline_mode = multiline_mode
         self.bell_on_next_input = False
+        self.show_footer_hints = pretty  # Show footer hints when pretty mode is enabled
         self.notifications = notifications
         if notifications and notifications_command is None:
             self.notifications_command = self.get_default_notification_command()
@@ -509,6 +511,11 @@ class InputOutput:
         if self.pretty:
             style = dict(style=self.user_input_color) if self.user_input_color else dict()
             self.console.rule(**style)
+            
+            # Show footer hints if enabled
+            if self.show_footer_hints:
+                footer = FooterHints.show_input_footer()
+                print(footer)
         else:
             print()
 
