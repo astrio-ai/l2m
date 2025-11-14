@@ -576,14 +576,6 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
     if args.timeout:
         models.request_timeout = args.timeout
 
-    if args.dark_mode:
-        # Very muted colors: subdued tones, minimal brightness
-        args.user_input_color = "#FFFFFF"     # White for user input (commands)
-        args.tool_error_color = "#B45A5A"     # Very muted red for errors
-        args.tool_warning_color = "#B4825A"   # Very muted orange for warnings
-        args.assistant_output_color = "#787878"  # Dim gray for secondary text
-        args.code_theme = "monokai"
-
     if args.light_mode:
         # Muted colors for light backgrounds: darker tones, not too bright
         args.user_input_color = "#000000"     # Black for user input (readable on light)
@@ -591,6 +583,13 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
         args.tool_warning_color = "#AA7744"   # Muted brown/orange for warnings
         args.assistant_output_color = "#666666"  # Medium gray for secondary text
         args.code_theme = "default"
+    else:
+        # Default to dark mode: very muted colors, subdued tones, minimal brightness
+        args.user_input_color = "#FFFFFF"     # White for user input (commands)
+        args.tool_error_color = "#B45A5A"     # Very muted red for errors
+        args.tool_warning_color = "#B4825A"   # Very muted orange for warnings
+        args.assistant_output_color = "#787878"  # Dim gray for secondary text
+        args.code_theme = "monokai"
 
     if return_coder and args.yes_always is None:
         args.yes_always = True
