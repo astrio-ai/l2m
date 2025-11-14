@@ -82,24 +82,9 @@ func (m model) Init() tea.Cmd {
 
 // Start the Python L2M backend
 func startPythonBackend() tea.Msg {
-	// TODO: Adjust path to your L2M installation
-	cmd := exec.Command("python", "-m", "cli.main", "--yes-always")
-	
-	stdin, err := cmd.StdinPipe()
-	if err != nil {
-		return pythonResponseMsg{err: fmt.Errorf("failed to create stdin pipe: %w", err)}
-	}
-	
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return pythonResponseMsg{err: fmt.Errorf("failed to create stdout pipe: %w", err)}
-	}
-	
-	if err := cmd.Start(); err != nil {
-		return pythonResponseMsg{err: fmt.Errorf("failed to start Python backend: %w", err)}
-	}
-	
-	return pythonResponseMsg{content: "Backend started"}
+	// TODO: Implement Python backend communication
+	// For now, just return success
+	return pythonResponseMsg{content: "Backend ready (demo mode)"}
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
