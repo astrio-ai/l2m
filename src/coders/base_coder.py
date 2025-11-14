@@ -1441,8 +1441,9 @@ class Coder:
         # Notify IO that LLM processing is starting
         self.io.llm_started()
         
-        # Reset the response prefix flag for new message
+        # Reset the response prefix flags for new message
         self._response_prefix_shown = False
+        self._response_prefix_printed = False
 
         self.cur_messages += [
             dict(role="user", content=inp),
@@ -1980,6 +1981,12 @@ class Coder:
 
             if received_content:
                 self._stop_waiting_spinner()
+                # Print white circle prefix once at the start of response
+                if not hasattr(self, '_response_prefix_printed'):
+                    sys.stdout.write("\033[38;2;255;255;255m●\033[0m ")
+                    sys.stdout.flush()
+                    self._response_prefix_printed = True
+            
             self.partial_response_content += text
 
             if self.show_pretty():
