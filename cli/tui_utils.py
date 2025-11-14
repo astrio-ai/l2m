@@ -19,6 +19,7 @@ ANSI_ITALIC = "\033[3m"
 ANSI_WHITE = "\033[38;2;255;255;255m"     # Pure white for important text (#FFFFFF)
 ANSI_GRAY = "\033[38;2;120;120;120m"      # Dimmer gray for secondary text (#787878)
 ANSI_DARK_GRAY = "\033[38;2;80;80;80m"    # Dark gray for minimal importance (#505050)
+ANSI_BRAND = "\033[38;2;39;142;245m"      # Brand blue (#278ef5)
 ANSI_CYAN = "\033[38;2;33;150;243m"       # Bright blue for selected (#2196F3)
 ANSI_GREEN = "\033[38;2;120;150;120m"     # Very muted green for success (#789678)
 ANSI_RED = "\033[38;2;180;90;90m"         # Very muted red for errors (#B45A5A)
@@ -215,12 +216,12 @@ class ShimmerEffect:
 class StatusIndicator:
     """Visual status indicators for different agent states."""
 
-    THINKING = f"{ANSI_CYAN}●{ANSI_RESET} "
-    TYPING = f"{ANSI_CYAN}▌{ANSI_RESET} "
+    THINKING = f"{ANSI_BRAND}●{ANSI_RESET} "
+    TYPING = f"{ANSI_BRAND}▌{ANSI_RESET} "
     SUCCESS = f"{ANSI_GREEN}✓{ANSI_RESET} "
     ERROR = f"{ANSI_RED}✗{ANSI_RESET} "
     WARNING = f"{ANSI_ORANGE}⚠{ANSI_RESET} "
-    INFO = f"{ANSI_CYAN}ℹ{ANSI_RESET} "
+    INFO = f"{ANSI_BRAND}ℹ{ANSI_RESET} "
 
     @staticmethod
     def spinner_frames() -> list:
@@ -231,7 +232,7 @@ class StatusIndicator:
     def get_spinner_frame(index: int) -> str:
         """Get a specific spinner frame."""
         frames = StatusIndicator.spinner_frames()
-        return f"{ANSI_CYAN}{frames[index % len(frames)]}{ANSI_RESET}"
+        return f"{ANSI_BRAND}{frames[index % len(frames)]}{ANSI_RESET}"
 
 
 class StyleGuide:
@@ -239,8 +240,8 @@ class StyleGuide:
 
     @staticmethod
     def header(text: str) -> str:
-        """Format text as a header (light gray, important)."""
-        return f"{ANSI_WHITE}{text}{ANSI_RESET}"
+        """Format text as a header (brand color)."""
+        return f"{ANSI_BRAND}{text}{ANSI_RESET}"
 
     @staticmethod
     def secondary(text: str) -> str:
@@ -259,8 +260,8 @@ class StyleGuide:
 
     @staticmethod
     def selected(text: str) -> str:
-        """Format text as selected/highlighted (muted cyan)."""
-        return f"{ANSI_CYAN}{text}{ANSI_RESET}"
+        """Format text as selected/highlighted (brand color)."""
+        return f"{ANSI_BRAND}{text}{ANSI_RESET}"
 
     @staticmethod
     def success(text: str) -> str:
@@ -279,8 +280,8 @@ class StyleGuide:
 
     @staticmethod
     def command(text: str) -> str:
-        """Format text as command (muted cyan, highlighted)."""
-        return f"{ANSI_CYAN}{text}{ANSI_RESET}"
+        """Format text as command (brand color, highlighted)."""
+        return f"{ANSI_BRAND}{text}{ANSI_RESET}"
 
     @staticmethod
     def code(text: str) -> str:
