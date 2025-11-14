@@ -555,16 +555,16 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
         models.request_timeout = args.timeout
 
     if args.dark_mode:
-        args.user_input_color = "#FFFFFF"
-        args.tool_error_color = "#FF3333"
-        args.tool_warning_color = "#FFFF00"
-        args.assistant_output_color = "#00FFFF"
+        args.user_input_color = "#9CDCFE"
+        args.tool_error_color = "#F46A6A"
+        args.tool_warning_color = "#CE9178"
+        args.assistant_output_color = "#C586C0"
         args.code_theme = "monokai"
 
     if args.light_mode:
         args.user_input_color = "#000000"
         args.tool_error_color = "red"
-        args.tool_warning_color = "#FFA500"
+        args.tool_warning_color = "#CE9178"
         args.assistant_output_color = "blue"
         args.code_theme = "default"
 

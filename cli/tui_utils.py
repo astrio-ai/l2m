@@ -15,8 +15,6 @@ ANSI_BOLD = "\033[1m"
 ANSI_DIM = "\033[2m"
 ANSI_ITALIC = "\033[3m"
 
-# VS Code-inspired pale colors (24-bit)
-# Using softer, muted tones similar to VS Code Dark+ theme
 ANSI_CYAN = "\033[38;2;156;220;254m"      # Pale blue (#9CDCFE)
 ANSI_GREEN = "\033[38;2;181;206;168m"     # Pale green (#B5CEA8)
 ANSI_RED = "\033[38;2;244;106;106m"       # Pale red/coral (#F46A6A)
