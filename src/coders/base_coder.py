@@ -1984,7 +1984,8 @@ class Coder:
             
             # Add white circle prefix to the first content
             if text and not hasattr(self, '_response_prefix_added'):
-                text = "● " + text
+                # Add newline before to ensure it's on its own line after spinner
+                text = "\n● " + text
                 self._response_prefix_added = True
             
             self.partial_response_content += text
