@@ -419,11 +419,7 @@ class InputOutput:
             return Style.from_dict(style_dict)
 
         if self.user_input_color:
-            # Add a slightly lighter background for the input area
-            input_style = f"{self.user_input_color} bg:#2A2A2A"  # Paler gray background
-            style_dict.setdefault("", input_style)
-            # Add background that fills the entire line (including trailing space)
-            style_dict["trailing-input"] = "bg:#2A2A2A"
+            style_dict.setdefault("", self.user_input_color)
             style_dict.update(
                 {
                     "pygments.literal.string": f"bold italic {self.user_input_color}",
