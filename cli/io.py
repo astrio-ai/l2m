@@ -523,7 +523,7 @@ class InputOutput:
                 raise
 
     def rule(self, show_footer=False):
-        """Print a blank line instead of separator (Codex-style clean UI).
+        """Print a blank line instead of separator.
         
         Args:
             show_footer: If True, show footer hints (no separator line)
