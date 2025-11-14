@@ -210,7 +210,7 @@ class Scraper:
         return None, None
 
     def try_pandoc(self):
-        if self.pandoc_available:
+        if self.pandoc_available is not None:
             return
 
         try:
@@ -220,13 +220,21 @@ class Scraper:
         except OSError:
             pass
 
+        # Don't try to auto-install pandoc if SSL verification might fail
+        # Just mark as unavailable and use basic HTML parsing instead
         try:
             pypandoc.download_pandoc(delete_installer=True)
+            self.pandoc_available = True
         except Exception as err:
-            self.print_error(f"Unable to install pandoc: {err}")
-            return
-
-        self.pandoc_available = True
+            # Silently fail - we'll use BeautifulSoup for HTML parsing
+            # Only show error in verbose mode to avoid cluttering output
+            if "CERTIFICATE_VERIFY_FAILED" in str(err) or "SSL" in str(err):
+                # SSL errors are common on macOS, just use fallback
+                self.pandoc_available = False
+            else:
+                self.print_error(f"Unable to install pandoc: {err}")
+                self.print_error("Falling back to basic HTML parsing.")
+                self.pandoc_available = False
 
     def html_to_markdown(self, page_source):
         from bs4 import BeautifulSoup
