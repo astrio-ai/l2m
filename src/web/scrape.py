@@ -142,6 +142,9 @@ class Scraper:
 
     # Internals...
     def scrape_with_playwright(self, url):
+        """
+        Scrape a URL using Playwright, specifically handling dynamic content.
+        """
         import playwright  # noqa: F401
         from playwright.sync_api import Error as PlaywrightError
         from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
@@ -166,9 +169,10 @@ class Scraper:
 
                 page.set_extra_http_headers({"User-Agent": user_agent})
 
+                # Navigate to the page and wait for it to load
                 response = None
                 try:
-                    response = page.goto(url, wait_until="networkidle", timeout=5000)
+                    response = page.goto(url, wait_until="domcontentloaded", timeout=10000)
                 except PlaywrightTimeoutError:
                     print(f"Page didn't quiesce, scraping content anyway: {url}")
                     response = None
