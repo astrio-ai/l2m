@@ -1037,7 +1037,9 @@ class InputOutput:
         if self.pretty:
             if self.tool_output_color:
                 style["color"] = ensure_hash_prefix(self.tool_output_color)
-            style["reverse"] = bold
+            if bold:
+                style["bold"] = True
+                # Don't use "reverse" as it creates white backgrounds in dark mode
 
         style = RichStyle(**style)
         self.console.print(*messages, style=style)
