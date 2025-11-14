@@ -8,6 +8,7 @@ from textual.app import App, ComposeResult
 from textual.containers import Container, VerticalScroll
 from textual.widgets import TextArea, Static, Footer, RichLog
 from textual.binding import Binding
+from textual.message import Message
 from rich.markdown import Markdown
 from rich.text import Text
 from queue import Queue
@@ -46,6 +47,29 @@ class ChatInput(TextArea):
         dock: bottom;
     }
     """
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.placeholder = "> Type your message and press Enter..."
+    
+    def on_key(self, event) -> None:
+        """Handle key press in input area."""
+        from textual.events import Key
+        if event.key == "enter" and not event.shift:
+            # Enter without shift: submit
+            text = self.text.strip()
+            if text:
+                # Post a custom message
+                self.post_message(self.Submitted(self, text))
+                self.clear()
+            event.prevent_default()
+    
+    class Submitted(Message):
+        """Message sent when Enter is pressed."""
+        def __init__(self, input_widget, text: str):
+            super().__init__()
+            self.input_widget = input_widget
+            self.text = text
 
 
 class L2MTUI(App):
@@ -77,14 +101,11 @@ class L2MTUI(App):
         """Initialize after mounting."""
         self.query_one("#input", ChatInput).focus()
     
-    def on_text_area_submitted(self, event: TextArea.Submitted) -> None:
+    def on_chat_input_submitted(self, event: ChatInput.Submitted) -> None:
         """Handle user input submission."""
-        text = event.text_area.text.strip()
+        text = event.text.strip()
         if not text:
             return
-        
-        # Clear input
-        event.text_area.clear()
         
         # Display user message
         chat = self.query_one("#chat", ChatDisplay)
@@ -92,7 +113,6 @@ class L2MTUI(App):
         
         # Send to queue
         self.input_queue.put(text)
-        self.waiting_for_input.set()
     
     def action_clear_input(self) -> None:
         """Clear the input field."""
