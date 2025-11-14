@@ -74,10 +74,9 @@ def save_approval_mode_config(require_approval, git_root=None):
         pass
 
 
-def _get_ascii_art(light_mode=False, dark_mode=False) -> str:
-    """Generate left-aligned ASCII art with theme-aware colors"""
+def _get_ascii_art() -> str:
+    """Generate left-aligned ASCII art"""
     
-    # Same ASCII art characters for both themes
     ascii_lines = [
         "██╗     ██████╗ ███╗   ███╗",
         "██║     ╚════██╗████╗ ████║",
@@ -87,15 +86,9 @@ def _get_ascii_art(light_mode=False, dark_mode=False) -> str:
         "╚══════╝╚══════╝╚═╝     ╚═╝",
     ]
     
+    # Join lines (left-aligned, no centering)
     art = "\n".join(ascii_lines)
-    
-    # Select appropriate color based on theme
-    if light_mode:
-        # Dark gray for light theme - ensure it's visible
-        return f"\033[38;2;30;30;30m{art}\033[0m"
-    else:
-        # White for dark theme (default)
-        return f"\033[38;2;255;255;255m{art}\033[0m"
+    return StyleGuide.header(art)
 
 
 def check_config_files_for_yes(config_files):
@@ -576,17 +569,14 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
     if args.timeout:
         models.request_timeout = args.timeout
 
-    # Check if running in Cursor's terminal - it often has dark background but may report as light
-    # Force dark mode for Cursor unless --light-mode is explicitly set
-    term_program = os.environ.get('TERM_PROGRAM', '').lower()
-    is_cursor_terminal = 'cursor' in term_program
-    
-    # Note: We default to dark mode unless --light-mode is explicitly set
-    # For Cursor terminal, always use dark mode unless explicitly overridden
-    if is_cursor_terminal and not args.light_mode:
-        # Ensure dark mode for Cursor terminal
-        args.light_mode = False
-    
+    if args.dark_mode:
+        # Very muted colors: subdued tones, minimal brightness
+        args.user_input_color = "#FFFFFF"     # White for user input (commands)
+        args.tool_error_color = "#B45A5A"     # Very muted red for errors
+        args.tool_warning_color = "#B4825A"   # Very muted orange for warnings
+        args.assistant_output_color = "#787878"  # Dim gray for secondary text
+        args.code_theme = "monokai"
+
     if args.light_mode:
         # Muted colors for light backgrounds: darker tones, not too bright
         args.user_input_color = "#000000"     # Black for user input (readable on light)
@@ -594,13 +584,6 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
         args.tool_warning_color = "#AA7744"   # Muted brown/orange for warnings
         args.assistant_output_color = "#666666"  # Medium gray for secondary text
         args.code_theme = "default"
-    else:
-        # Default to dark mode: very muted colors, subdued tones, minimal brightness
-        args.user_input_color = "#FFFFFF"     # White for user input (commands)
-        args.tool_error_color = "#B45A5A"     # Very muted red for errors
-        args.tool_warning_color = "#B4825A"   # Very muted orange for warnings
-        args.assistant_output_color = "#787878"  # Dim gray for secondary text
-        args.code_theme = "monokai"
 
     if return_coder and args.yes_always is None:
         args.yes_always = True
@@ -637,18 +620,10 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
         )
 
     io = get_io(args.pretty)
-    
-    # Determine if we should use light mode for ASCII art
-    # If light_mode is explicitly set, use that; otherwise default to dark (white text)
-    use_light_ascii = getattr(args, 'light_mode', False)
-    
     try:
         io.rule()
-        # Display ASCII art banner with proper color handling
-        ascii_art = _get_ascii_art(light_mode=use_light_ascii)
-        # Print directly to stdout to preserve ANSI color codes
-        sys.stdout.write(ascii_art + "\n")
-        sys.stdout.flush()
+        # Display ASCII art banner
+        io.tool_output(_get_ascii_art())
         io.tool_output()
     except UnicodeEncodeError as err:
         if not io.pretty:
@@ -657,7 +632,7 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
         io.tool_warning("Terminal does not support pretty output (UnicodeDecodeError)")
         # Display ASCII art banner (without color if terminal doesn't support it)
         try:
-            ascii_art = _get_ascii_art(light_mode=use_light_ascii)
+            ascii_art = _get_ascii_art()
             # Remove ANSI color codes if terminal doesn't support them
             import re
             ascii_art = re.sub(r'\033\[[0-9;]*m', '', ascii_art)

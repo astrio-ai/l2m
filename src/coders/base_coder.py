@@ -555,30 +555,18 @@ class Coder:
         # Show helpful command examples instead of technical details
         self.io.tool_output()  # Blank line before
         
-        # Show version first in brand blue
-        from rich.text import Text
-        version_text = Text(f"L2M v{__version__}", style="#278ef5")  # Brand blue and bold
-        self.io.console.print(version_text)
-        self.io.tool_output(f"L2M v{__version__}", log_only=True)  # Log to history
+        # Show version first
+        self.io.tool_output(f"L2M v{__version__}", bold=True)
         self.io.tool_output()
         
-        # Determine theme from user_input_color: black = light mode, white = dark mode
-        is_light_theme = False
-        if hasattr(self.io, 'user_input_color') and self.io.user_input_color:
-            # Check if user_input_color is black (light theme) or white (dark theme)
-            user_color = self.io.user_input_color.lower().replace('#', '')
-            if user_color == '000000' or user_color == '000':
-                is_light_theme = True
-        
-        # Format: command (white in dark theme, black in light theme) - description (grayish #787878)
-        command_color = "0;0;0" if is_light_theme else "255;255;255"  # Black for light, white for dark
+        # Format: command (brand color #278ef5) - description (grayish #787878)
         examples = [
-            f"\033[38;2;{command_color}m/add\033[0m - \033[38;2;120;120;120madd files to the chat\033[0m",
-            f"\033[38;2;{command_color}m/drop\033[0m - \033[38;2;120;120;120mremove files from the chat\033[0m",
-            f"\033[38;2;{command_color}m/ls\033[0m - \033[38;2;120;120;120mview chat context\033[0m",
-            f"\033[38;2;{command_color}m/clear\033[0m - \033[38;2;120;120;120mclear chat history\033[0m",
-            f"\033[38;2;{command_color}m/undo\033[0m - \033[38;2;120;120;120mundo last changes\033[0m",
-            f"\033[38;2;{command_color}m/help\033[0m - \033[38;2;120;120;120mview available commands\033[0m",
+            "\033[38;2;39;142;245m/add\033[0m - \033[38;2;120;120;120madd files to the chat\033[0m",
+            "\033[38;2;39;142;245m/drop\033[0m - \033[38;2;120;120;120mremove files from the chat\033[0m",
+            "\033[38;2;39;142;245m/ls\033[0m - \033[38;2;120;120;120mview chat context\033[0m",
+            "\033[38;2;39;142;245m/clear\033[0m - \033[38;2;120;120;120mclear chat history\033[0m",
+            "\033[38;2;39;142;245m/undo\033[0m - \033[38;2;120;120;120mundo last changes\033[0m",
+            "\033[38;2;39;142;245m/help\033[0m - \033[38;2;120;120;120mview available commands\033[0m",
         ]
         
         for line in examples:
