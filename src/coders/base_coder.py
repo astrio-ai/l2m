@@ -1441,9 +1441,9 @@ class Coder:
         # Notify IO that LLM processing is starting
         self.io.llm_started()
         
-        # Reset the response prefix flags for new message
-        self._response_prefix_shown = False
-        self._response_prefix_added = False
+        # Reset mdstream for new message (will show prefix again)
+        if hasattr(self.mdstream, '_live_started'):
+            self.mdstream._live_started = False
 
         self.cur_messages += [
             dict(role="user", content=inp),
@@ -1981,12 +1981,6 @@ class Coder:
 
             if received_content:
                 self._stop_waiting_spinner()
-            
-            # Add white circle prefix to the first content
-            if text and not hasattr(self, '_response_prefix_added'):
-                # Add newline before to ensure it's on its own line after spinner
-                text = "\n● " + text
-                self._response_prefix_added = True
             
             self.partial_response_content += text
 
