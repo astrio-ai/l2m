@@ -420,14 +420,10 @@ class InputOutput:
             return Style.from_dict(style_dict)
 
         if self.user_input_color:
-            # Add background to the input area
-            # Using 'text-area' class for the input region background
-            style_dict[""] = f"{self.user_input_color} bg:#2b2b2b"
-            style_dict["prompt"] = f"{self.user_input_color} bg:#2b2b2b"
-            style_dict["text-area"] = "bg:#2b2b2b"
+            style_dict.setdefault("", self.user_input_color)
             style_dict.update(
                 {
-                    "pygments.literal.string": f"bold italic {self.user_input_color} bg:#2b2b2b",
+                    "pygments.literal.string": f"bold italic {self.user_input_color}",
                 }
             )
 
@@ -665,6 +661,16 @@ class InputOutput:
                 # In normal mode, Alt+Enter adds a newline
                 event.current_buffer.insert_text("\n")
 
+        # Print input frame top
+        if self.pretty:
+            import shutil
+            try:
+                term_width = shutil.get_terminal_size().columns
+            except:
+                term_width = 80
+            frame_line = "─" * term_width
+            print(f"\033[38;2;80;80;80m{frame_line}\033[0m")  # Dark gray frame
+        
         while True:
             if multiline_input:
                 show = self.prompt_prefix
@@ -761,6 +767,16 @@ class InputOutput:
                 inp = line
                 break
 
+        # Print input frame bottom
+        if self.pretty:
+            import shutil
+            try:
+                term_width = shutil.get_terminal_size().columns
+            except:
+                term_width = 80
+            frame_line = "─" * term_width
+            print(f"\033[38;2;80;80;80m{frame_line}\033[0m")  # Dark gray frame
+        
         print()
         self.user_input(inp, log_only=True)
         return inp
