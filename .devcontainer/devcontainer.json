@@ -1,0 +1,33 @@
+{
+  "name": "L2M Development Container",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "target": "l2m"
+  },
+  "features": {},
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-python.black-formatter",
+        "ms-python.isort"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/venv/bin/python",
+        "python.formatting.provider": "black",
+        "editor.formatOnSave": true
+      }
+    }
+  },
+  "remoteUser": "appuser",
+  "workspaceFolder": "/app",
+  "mounts": [
+    "source=${localWorkspaceFolder},target=/app,type=bind,consistency=cached"
+  ],
+  "postCreateCommand": "git config --global --add safe.directory /app",
+  "remoteEnv": {
+    "HOME": "/app"
+  }
+}
+

@@ -1,37 +1,77 @@
-# Core OpenAI Agents SDK
-openai-agents>=0.4.0
+# Core LLM and AI
+litellm>=1.75.0
 
-# Data Validation
+# Browser automation for dynamic content scraping
+playwright>=1.0.0
+
+# Git operations
+gitpython>=3.1.0
+
+# Caching and storage
+diskcache>=5.6.0
+
+# Codebase parsing and analysis
+grep-ast>=0.9.0
+pathspec>=0.12.0
+
+# CLI and user interface
+prompt-toolkit>=3.0.0
+rich>=14.0.0
+shtab>=1.7.0
+configargparse>=1.7.0
+
+# File watching
+watchfiles>=1.0.0
+
+# Data validation and parsing
 pydantic>=2.0.0
-pydantic-settings>=2.0.0
-
-# Environment Variables
 python-dotenv>=1.0.0
+json5>=0.12.0
+pyyaml>=6.0.0
 
-# Testing
-pytest>=7.0.0
-pytest-asyncio>=0.21.0
+# Code diffing and manipulation
+diff-match-patch>=20241021
 
-# Type evaluation backport for Python < 3.10 (if needed)
-# eval-type-backport>=0.1.0  # Uncomment if using Python 3.9
+# HTML and document processing
+beautifulsoup4>=4.13.0
+pypandoc>=1.15
+markdown-it-py>=4.0.0
 
-# Async Support (included in Python 3.10+, but explicit for clarity)
-# asyncio is built-in
+# System and process management
+psutil>=7.0.0
+pexpect>=4.9.0
 
-# Optional: Redis Session Support
-# Uncomment if using Redis for distributed sessions
-# redis>=5.0.0
+# Media processing
+pillow>=11.0.0
+pydub>=0.25.0
+sounddevice>=0.5.0
+soundfile>=0.13.0
 
-# Optional: Voice Support
-# Uncomment if using voice features
-# openai-agents[voice]>=0.4.0
+# Network and utilities
+socksio>=1.0.0
+pyperclip>=1.9.0
 
-# Development Dependencies (optional)
-# Uncomment for development
-# pytest>=7.0.0
-# pytest-asyncio>=0.21.0
-# pytest-cov>=4.0.0
-# black>=23.0.0
-# ruff>=0.1.0
-# mypy>=1.0.0
+# Scientific computing and graph processing
+networkx>=3.4.0
+scipy>=1.15.0
 
+# Progress and output
+tqdm>=4.67.0
+pygments>=2.19.0
+
+# Version and packaging
+packaging>=25.0
+importlib-resources>=6.0.0
+
+# Linting
+flake8>=7.0.0
+
+# Retry logic
+backoff>=2.2.0
+
+# Analytics
+posthog>=6.5.0
+mixpanel>=4.10.0
+
+# Shell command parsing
+oslex>=0.1.3
