@@ -149,6 +149,20 @@ class TestScrape(unittest.TestCase):
         # Assert that the result is the same as the input plain text
         self.assertEqual(result, plain_text)
 
+    def test_scrape_facebook(self):
+        # Create a Scraper instance with a mock print_error function
+        mock_print_error = MagicMock()
+        scraper = Scraper(print_error=mock_print_error, playwright_available=True)
+
+        # Scrape Facebook.com
+        result = scraper.scrape("https://www.facebook.com")
+
+        # Assert that the result is not None
+        self.assertIsNotNone(result)
+
+        # Assert that print_error was not called
+        mock_print_error.assert_not_called()
+
     def test_scrape_text_html(self):
         # Create a Scraper instance
         scraper = Scraper(print_error=MagicMock(), playwright_available=True)
