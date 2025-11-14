@@ -576,6 +576,17 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
     if args.timeout:
         models.request_timeout = args.timeout
 
+    # Check if running in Cursor's terminal - it often has dark background but may report as light
+    # Force dark mode for Cursor unless --light-mode is explicitly set
+    term_program = os.environ.get('TERM_PROGRAM', '').lower()
+    is_cursor_terminal = 'cursor' in term_program
+    
+    # Note: We default to dark mode unless --light-mode is explicitly set
+    # For Cursor terminal, always use dark mode unless explicitly overridden
+    if is_cursor_terminal and not args.light_mode:
+        # Ensure dark mode for Cursor terminal
+        args.light_mode = False
+    
     if args.light_mode:
         # Muted colors for light backgrounds: darker tones, not too bright
         args.user_input_color = "#000000"     # Black for user input (readable on light)
