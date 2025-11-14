@@ -9,18 +9,21 @@ import re
 import time
 from typing import Optional, Tuple
 
-# ANSI color codes
+# ANSI color codes - Codex-inspired
 ANSI_RESET = "\033[0m"
 ANSI_BOLD = "\033[1m"
 ANSI_DIM = "\033[2m"
 ANSI_ITALIC = "\033[3m"
 
-ANSI_CYAN = "\033[38;2;156;220;254m"      # Pale blue (#9CDCFE)
-ANSI_GREEN = "\033[38;2;181;206;168m"     # Pale green (#B5CEA8)
-ANSI_RED = "\033[38;2;244;106;106m"       # Pale red/coral (#F46A6A)
-ANSI_MAGENTA = "\033[38;2;197;134;192m"   # Pale purple (#C586C0)
-ANSI_YELLOW = "\033[38;2;220;220;170m"    # Pale yellow/cream (#DCDCAA)
-ANSI_ORANGE = "\033[38;2;206;145;120m"    # Pale orange (#CE9178)
+# Codex-style colors: white for important, gray for less important, cyan for selected
+ANSI_WHITE = "\033[38;2;255;255;255m"     # Pure white for important text
+ANSI_GRAY = "\033[38;2;128;128;128m"      # Gray for secondary text
+ANSI_DARK_GRAY = "\033[38;2;80;80;80m"    # Darker gray for less important
+ANSI_CYAN = "\033[38;2;0;200;200m"        # Bright cyan for selected/highlighted
+ANSI_GREEN = "\033[38;2;0;200;100m"       # Bright green for success
+ANSI_RED = "\033[38;2;255;80;80m"         # Bright red for errors
+ANSI_ORANGE = "\033[38;2;255;165;0m"      # Orange for warnings
+ANSI_PROMPT_BG = "\033[48;2;30;30;30m"    # Darker background for input prompt
 
 
 class TerminalColors:
@@ -212,7 +215,7 @@ class ShimmerEffect:
 class StatusIndicator:
     """Visual status indicators for different agent states."""
 
-    THINKING = f"{ANSI_MAGENTA}●{ANSI_RESET} "
+    THINKING = f"{ANSI_CYAN}●{ANSI_RESET} "
     TYPING = f"{ANSI_CYAN}▌{ANSI_RESET} "
     SUCCESS = f"{ANSI_GREEN}✓{ANSI_RESET} "
     ERROR = f"{ANSI_RED}✗{ANSI_RESET} "
@@ -232,57 +235,62 @@ class StatusIndicator:
 
 
 class StyleGuide:
-    """Style guide for consistent terminal output with VS Code-inspired colors."""
+    """Codex-inspired style guide: white for important, gray for secondary, cyan for selected."""
 
     @staticmethod
     def header(text: str) -> str:
-        """Format text as a header (bold pale cyan)."""
-        return f"{ANSI_BOLD}{ANSI_CYAN}{text}{ANSI_RESET}"
+        """Format text as a header (white, important)."""
+        return f"{ANSI_WHITE}{text}{ANSI_RESET}"
 
     @staticmethod
     def secondary(text: str) -> str:
-        """Format text as secondary (dim)."""
-        return f"{ANSI_DIM}{text}{ANSI_RESET}"
+        """Format text as secondary (gray, less important)."""
+        return f"{ANSI_GRAY}{text}{ANSI_RESET}"
+
+    @staticmethod
+    def dim(text: str) -> str:
+        """Format text as dimmed (dark gray, minimal importance)."""
+        return f"{ANSI_DARK_GRAY}{text}{ANSI_RESET}"
 
     @staticmethod
     def user_input(text: str) -> str:
-        """Format text as user input (pale cyan)."""
+        """Format text as user input (white, important)."""
+        return f"{ANSI_WHITE}{text}{ANSI_RESET}"
+
+    @staticmethod
+    def selected(text: str) -> str:
+        """Format text as selected/highlighted (cyan)."""
         return f"{ANSI_CYAN}{text}{ANSI_RESET}"
 
     @staticmethod
     def success(text: str) -> str:
-        """Format text as success (pale green)."""
+        """Format text as success (green)."""
         return f"{ANSI_GREEN}{text}{ANSI_RESET}"
 
     @staticmethod
     def error(text: str) -> str:
-        """Format text as error (pale red)."""
+        """Format text as error (red)."""
         return f"{ANSI_RED}{text}{ANSI_RESET}"
 
     @staticmethod
     def warning(text: str) -> str:
-        """Format text as warning (pale orange)."""
+        """Format text as warning (orange)."""
         return f"{ANSI_ORANGE}{text}{ANSI_RESET}"
 
     @staticmethod
-    def agent(text: str) -> str:
-        """Format text as agent response (pale purple)."""
-        return f"{ANSI_MAGENTA}{text}{ANSI_RESET}"
+    def command(text: str) -> str:
+        """Format text as command (cyan, highlighted)."""
+        return f"{ANSI_CYAN}{text}{ANSI_RESET}"
 
     @staticmethod
     def code(text: str) -> str:
-        """Format text as inline code (pale yellow)."""
-        return f"{ANSI_YELLOW}{text}{ANSI_RESET}"
+        """Format text as inline code (gray)."""
+        return f"{ANSI_GRAY}{text}{ANSI_RESET}"
 
     @staticmethod
-    def keyword(text: str) -> str:
-        """Format text as keyword (pale purple)."""
-        return f"{ANSI_MAGENTA}{text}{ANSI_RESET}"
-
-    @staticmethod
-    def string(text: str) -> str:
-        """Format text as string (pale orange)."""
-        return f"{ANSI_ORANGE}{text}{ANSI_RESET}"
+    def prompt_background(text: str) -> str:
+        """Format text with darker background for input prompt area."""
+        return f"{ANSI_PROMPT_BG}{text}{ANSI_RESET}"
 
 
 def format_separator(width: Optional[int] = None, char: str = "─") -> str:

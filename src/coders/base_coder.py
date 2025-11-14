@@ -552,24 +552,15 @@ class Coder:
             self.linter.set_linter(lang, cmd)
 
     def show_announcements(self):
-        from cli.tui_utils import format_separator
-        
-        # Print separator before announcements
-        try:
-            import shutil
-            width = shutil.get_terminal_size().columns
-        except Exception:
-            width = 80
-        
-        self.io.tool_output(format_separator(width))
+        # Show announcements without separators (Codex-style clean UI)
+        self.io.tool_output()  # Blank line before
         
         bold = True
         for line in self.get_announcements():
             self.io.tool_output(line, bold=bold)
             bold = False
         
-        # Print separator after announcements
-        self.io.tool_output(format_separator(width))
+        self.io.tool_output()  # Blank line after
 
     def add_rel_fname(self, rel_fname):
         self.abs_fnames.add(self.abs_root_path(rel_fname))

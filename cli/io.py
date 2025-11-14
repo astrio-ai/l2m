@@ -46,7 +46,7 @@ NOTIFICATION_MESSAGE = "L2M is waiting for your input"
 # Custom dark theme for markdown to avoid white backgrounds
 DARK_THEME = Theme({
     # Use repr.str style for inline code (no white background)
-    "markdown.code": "#DCDCAA",  # Pale yellow text, no background
+    "markdown.code": "#9CDCFE",  # Pale cyan text, no background
     "markdown.link": "#9CDCFE",  # Pale cyan
     "markdown.link_url": "#9CDCFE underline",
     "markdown.h1": "bold #9CDCFE",
@@ -523,21 +523,17 @@ class InputOutput:
                 raise
 
     def rule(self, show_footer=False):
-        """Print a separator line, optionally with footer hints.
+        """Print a blank line instead of separator (Codex-style clean UI).
         
         Args:
-            show_footer: If True, show footer hints below the rule
+            show_footer: If True, show footer hints (no separator line)
         """
-        if self.pretty:
-            style = dict(style=self.user_input_color) if self.user_input_color else dict()
-            self.console.rule(**style)
-            
-            # Only show footer hints if explicitly requested
-            if show_footer and self.show_footer_hints:
-                footer = FooterHints.render_shortcuts("input")
-                print(f"  {footer}")
+        # Codex-style: no horizontal lines, just blank space
+        if show_footer and self.show_footer_hints and self.pretty:
+            footer = FooterHints.render_shortcuts("input")
+            print(f"  {footer}")
         else:
-            print()
+            print()  # Just a blank line for spacing
 
     def interrupt_input(self):
         if self.prompt_session and self.prompt_session.app:
