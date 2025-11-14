@@ -684,18 +684,6 @@ class InputOutput:
                     def get_continuation(width, line_number, is_soft_wrap):
                         return self.prompt_prefix
 
-                    # Create rprompt to fill the line with background color
-                    def get_rprompt():
-                        from prompt_toolkit.formatted_text import ANSI
-                        import shutil
-                        try:
-                            terminal_width = shutil.get_terminal_size().columns
-                        except:
-                            terminal_width = 80
-                        # Fill remaining space with background (estimate space used by prompt and input)
-                        remaining = max(0, terminal_width - len(show) - 20)
-                        return ANSI("\033[48;2;42;42;42m" + " " * remaining + "\033[0m")
-
                     line = self.prompt_session.prompt(
                         show,
                         default=default,
@@ -706,7 +694,6 @@ class InputOutput:
                         key_bindings=kb,
                         complete_while_typing=True,
                         prompt_continuation=get_continuation,
-                        rprompt=get_rprompt,
                     )
                 else:
                     line = input(show)
