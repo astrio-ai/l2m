@@ -758,7 +758,7 @@ class InputOutput:
                 break
 
         print()
-        self.user_input(inp)
+        self.user_input(inp, log_only=False)
         return inp
 
     def add_to_input_history(self, inp):
