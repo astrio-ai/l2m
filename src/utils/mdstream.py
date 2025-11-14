@@ -163,8 +163,13 @@ class MarkdownStream:
         Markdown going to the console works better in terminal scrollback buffers.
         The live window doesn't play nice with terminal scrollback.
         """
-        # On the first call, stop the spinner and start the Live renderer
+        # On the first call, print prefix and start the Live renderer
         if not getattr(self, "_live_started", False):
+            # Print white circle prefix before starting Live
+            import sys
+            sys.stdout.write("\033[38;2;255;255;255m●\033[0m ")
+            sys.stdout.flush()
+            
             self.live = Live(Text(""), refresh_per_second=1.0 / self.min_delay)
             self.live.start()
             self._live_started = True
