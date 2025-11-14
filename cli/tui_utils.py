@@ -9,20 +9,20 @@ import re
 import time
 from typing import Optional, Tuple
 
-# ANSI color codes - Codex-inspired
+# ANSI color codes - Muted, comfortable colors
 ANSI_RESET = "\033[0m"
 ANSI_BOLD = "\033[1m"
 ANSI_DIM = "\033[2m"
 ANSI_ITALIC = "\033[3m"
 
-# Codex-style colors: white for important, gray for less important, cyan for selected
-ANSI_WHITE = "\033[38;2;255;255;255m"     # Pure white for important text
-ANSI_GRAY = "\033[38;2;128;128;128m"      # Gray for secondary text
-ANSI_DARK_GRAY = "\033[38;2;80;80;80m"    # Darker gray for less important
-ANSI_CYAN = "\033[38;2;0;200;200m"        # Bright cyan for selected/highlighted
-ANSI_GREEN = "\033[38;2;0;200;100m"       # Bright green for success
-ANSI_RED = "\033[38;2;255;80;80m"         # Bright red for errors
-ANSI_ORANGE = "\033[38;2;255;165;0m"      # Orange for warnings
+# Muted color palette: no bright colors, easy on the eyes
+ANSI_WHITE = "\033[38;2;204;204;204m"     # Light gray for important text (#CCCCCC)
+ANSI_GRAY = "\033[38;2;128;128;128m"      # Gray for secondary text (#808080)
+ANSI_DARK_GRAY = "\033[38;2;80;80;80m"    # Darker gray for less important (#505050)
+ANSI_CYAN = "\033[38;2;102;153;153m"      # Muted cyan for selected (#669999)
+ANSI_GREEN = "\033[38;2;153;204;153m"     # Muted green for success (#99CC99)
+ANSI_RED = "\033[38;2;204;102;102m"       # Muted red for errors (#CC6666)
+ANSI_ORANGE = "\033[38;2;204;153;102m"    # Muted orange for warnings (#CC9966)
 ANSI_PROMPT_BG = "\033[48;2;30;30;30m"    # Darker background for input prompt
 
 
@@ -235,11 +235,11 @@ class StatusIndicator:
 
 
 class StyleGuide:
-    """Codex-inspired style guide: white for important, gray for secondary, cyan for selected."""
+    """Muted color style guide: comfortable colors, no brightness."""
 
     @staticmethod
     def header(text: str) -> str:
-        """Format text as a header (white, important)."""
+        """Format text as a header (light gray, important)."""
         return f"{ANSI_WHITE}{text}{ANSI_RESET}"
 
     @staticmethod
@@ -254,32 +254,32 @@ class StyleGuide:
 
     @staticmethod
     def user_input(text: str) -> str:
-        """Format text as user input (white, important)."""
+        """Format text as user input (light gray, important)."""
         return f"{ANSI_WHITE}{text}{ANSI_RESET}"
 
     @staticmethod
     def selected(text: str) -> str:
-        """Format text as selected/highlighted (cyan)."""
+        """Format text as selected/highlighted (muted cyan)."""
         return f"{ANSI_CYAN}{text}{ANSI_RESET}"
 
     @staticmethod
     def success(text: str) -> str:
-        """Format text as success (green)."""
+        """Format text as success (muted green)."""
         return f"{ANSI_GREEN}{text}{ANSI_RESET}"
 
     @staticmethod
     def error(text: str) -> str:
-        """Format text as error (red)."""
+        """Format text as error (muted red)."""
         return f"{ANSI_RED}{text}{ANSI_RESET}"
 
     @staticmethod
     def warning(text: str) -> str:
-        """Format text as warning (orange)."""
+        """Format text as warning (muted orange)."""
         return f"{ANSI_ORANGE}{text}{ANSI_RESET}"
 
     @staticmethod
     def command(text: str) -> str:
-        """Format text as command (cyan, highlighted)."""
+        """Format text as command (muted cyan, highlighted)."""
         return f"{ANSI_CYAN}{text}{ANSI_RESET}"
 
     @staticmethod
