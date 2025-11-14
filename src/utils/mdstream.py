@@ -118,6 +118,7 @@ class MarkdownStream:
         # Defer Live creation until the first update.
         self.live = None
         self._live_started = False
+        self._circle_added = False
 
     def _render_markdown_to_lines(self, text):
         """Render markdown text to a list of lines.
@@ -136,7 +137,14 @@ class MarkdownStream:
         output = string_io.getvalue()
 
         # Split rendered output into lines
-        return output.splitlines(keepends=True)
+        lines = output.splitlines(keepends=True)
+        
+        # Add white circle prefix to first line if not already added
+        if lines and not getattr(self, '_circle_added', False):
+            lines[0] = "\033[38;2;255;255;255m●\033[0m " + lines[0]
+            self._circle_added = True
+        
+        return lines
 
     def __del__(self):
         """Destructor to ensure Live display is properly cleaned up."""
