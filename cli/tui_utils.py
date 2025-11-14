@@ -9,20 +9,20 @@ import re
 import time
 from typing import Optional, Tuple
 
-# ANSI color codes - Muted, comfortable colors
+# ANSI color codes - Very muted, minimal brightness
 ANSI_RESET = "\033[0m"
 ANSI_BOLD = "\033[1m"
 ANSI_DIM = "\033[2m"
 ANSI_ITALIC = "\033[3m"
 
-# Muted color palette: no bright colors, easy on the eyes
-ANSI_WHITE = "\033[38;2;204;204;204m"     # Light gray for important text (#CCCCCC)
-ANSI_GRAY = "\033[38;2;128;128;128m"      # Gray for secondary text (#808080)
-ANSI_DARK_GRAY = "\033[38;2;80;80;80m"    # Darker gray for less important (#505050)
-ANSI_CYAN = "\033[38;2;102;153;153m"      # Muted cyan for selected (#669999)
-ANSI_GREEN = "\033[38;2;153;204;153m"     # Muted green for success (#99CC99)
-ANSI_RED = "\033[38;2;204;102;102m"       # Muted red for errors (#CC6666)
-ANSI_ORANGE = "\033[38;2;204;153;102m"    # Muted orange for warnings (#CC9966)
+# Very muted palette: subdued tones, minimal eye strain
+ANSI_WHITE = "\033[38;2;180;180;180m"     # Medium gray for important text (#B4B4B4)
+ANSI_GRAY = "\033[38;2;120;120;120m"      # Dimmer gray for secondary text (#787878)
+ANSI_DARK_GRAY = "\033[38;2;80;80;80m"    # Dark gray for minimal importance (#505050)
+ANSI_CYAN = "\033[38;2;90;130;130m"       # Very muted cyan for selected (#5A8282)
+ANSI_GREEN = "\033[38;2;120;150;120m"     # Very muted green for success (#789678)
+ANSI_RED = "\033[38;2;180;90;90m"         # Very muted red for errors (#B45A5A)
+ANSI_ORANGE = "\033[38;2;180;130;90m"     # Very muted orange for warnings (#B4825A)
 ANSI_PROMPT_BG = "\033[48;2;30;30;30m"    # Darker background for input prompt
 
 

@@ -570,11 +570,11 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
         models.request_timeout = args.timeout
 
     if args.dark_mode:
-        # Muted colors: light gray for important, gray for secondary
-        args.user_input_color = "#CCCCCC"     # Light gray for user input
-        args.tool_error_color = "#CC6666"     # Muted red for errors
-        args.tool_warning_color = "#CC9966"   # Muted orange for warnings
-        args.assistant_output_color = "#808080"  # Gray for secondary text
+        # Very muted colors: subdued tones, minimal brightness
+        args.user_input_color = "#B4B4B4"     # Medium gray for user input
+        args.tool_error_color = "#B45A5A"     # Very muted red for errors
+        args.tool_warning_color = "#B4825A"   # Very muted orange for warnings
+        args.assistant_output_color = "#787878"  # Dim gray for secondary text
         args.code_theme = "monokai"
 
     if args.light_mode:
