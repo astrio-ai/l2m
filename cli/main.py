@@ -578,10 +578,11 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
         args.code_theme = "monokai"
 
     if args.light_mode:
-        args.user_input_color = "#000000"
-        args.tool_error_color = "red"
-        args.tool_warning_color = "orange"
-        args.assistant_output_color = "#666666"  # Dark gray for secondary
+        # Muted colors for light backgrounds: darker tones, not too bright
+        args.user_input_color = "#333333"     # Dark gray for user input (readable)
+        args.tool_error_color = "#A64444"     # Muted dark red for errors
+        args.tool_warning_color = "#AA7744"   # Muted brown/orange for warnings
+        args.assistant_output_color = "#666666"  # Medium gray for secondary text
         args.code_theme = "default"
 
     if return_coder and args.yes_always is None:
