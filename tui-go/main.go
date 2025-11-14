@@ -58,7 +58,7 @@ type model struct {
 	err             error
 	terminalHeight  int
 	terminalWidth   int
-	currentResponse strings.Builder
+	currentResponse *strings.Builder
 	mu              sync.Mutex
 }
 
@@ -79,10 +79,11 @@ type pythonErrorMsg struct {
 
 func initialModel() model {
 	return model{
-		input:    "",
-		cursor:   0,
-		messages: []message{},
-		waiting:  false,
+		input:           "",
+		cursor:          0,
+		messages:        []message{},
+		waiting:         false,
+		currentResponse: &strings.Builder{},
 	}
 }
 
