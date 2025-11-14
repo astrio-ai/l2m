@@ -1982,8 +1982,10 @@ class Coder:
                 self._stop_waiting_spinner()
                 # Print white circle prefix once before first Live update
                 if not hasattr(self, '_response_prefix_printed'):
-                    sys.stdout.write("\033[38;2;255;255;255m●\033[0m ")
+                    import time
+                    sys.stdout.write("\n\033[38;2;255;255;255m●\033[0m ")
                     sys.stdout.flush()
+                    time.sleep(0.05)  # Small delay to ensure it's visible before Live starts
                     self._response_prefix_printed = True
             
             self.partial_response_content += text
