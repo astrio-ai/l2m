@@ -419,7 +419,9 @@ class InputOutput:
             return Style.from_dict(style_dict)
 
         if self.user_input_color:
-            style_dict.setdefault("", self.user_input_color)
+            # Add a slightly lighter background for the input area (Codex-style)
+            input_style = f"{self.user_input_color} bg:#2A2A2A"  # Paler gray background
+            style_dict.setdefault("", input_style)
             style_dict.update(
                 {
                     "pygments.literal.string": f"bold italic {self.user_input_color}",
