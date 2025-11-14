@@ -69,7 +69,8 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for setup instructions, coding guidelin
 ## Contributors
 
 <a href="https://github.com/astrio-ai/l2m/graphs/contributors">
-  <img alt="contributors" src="https://contrib.rocks/image?repo=astrio-ai/l2m"/>
+  <img alt="contributors" src="https://contrib.rocks/image?repo=astrio-ai/l2m&v=1" />
+
 </a>
 
 ## Community & Support
