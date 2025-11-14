@@ -757,13 +757,7 @@ class InputOutput:
                 inp = line
                 break
 
-        # Add visual separation after user input
-        if self.pretty and self.assistant_output_color:
-            # Print a subtle indicator before LLM response
-            print(f"\n\033[38;2;120;120;120m▌\033[0m\n")  # Vertical bar in dim gray
-        else:
-            print("\n")
-        
+        print()
         self.user_input(inp, log_only=True)
         return inp
 
