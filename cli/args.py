@@ -751,12 +751,6 @@ def get_parser(default_config_files, git_root):
         default=None,
     )
     group.add_argument(
-        "--tui-mode",
-        action="store_true",
-        help="Run in TUI backend mode (for Go TUI frontend)",
-        default=False,
-    )
-    group.add_argument(
         "--require-approval",
         action=argparse.BooleanOptionalAction,
         default=None,
