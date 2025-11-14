@@ -646,7 +646,7 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
                 app.write_output("")
                 
                 # Continue with the rest of main() logic
-                _continue_main_with_io(io, args, parser, git_root, input, output)
+                _continue_main_with_io(io, args, parser, git_root, force_git_root, input, output, return_coder)
             except Exception as e:
                 import traceback
                 app.write_output(f"Error: {e}", style="#B45A5A")
@@ -686,10 +686,10 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
         except Exception:
             pass
     
-    return _continue_main_with_io(io, args, parser, git_root, input, output)
+    return _continue_main_with_io(io, args, parser, git_root, force_git_root, input, output, return_coder)
 
 
-def _continue_main_with_io(io, args, parser, git_root, input, output):
+def _continue_main_with_io(io, args, parser, git_root, force_git_root, input, output, return_coder):
     """
     Continue main() execution after IO is set up.
     This is split out so it can run in a background thread for Textual mode.
