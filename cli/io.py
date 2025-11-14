@@ -507,15 +507,20 @@ class InputOutput:
                 self.tool_error(f"Unable to write file {filename}: {err}")
                 raise
 
-    def rule(self):
+    def rule(self, show_footer=False):
+        """Print a separator line, optionally with footer hints.
+        
+        Args:
+            show_footer: If True, show footer hints below the rule
+        """
         if self.pretty:
             style = dict(style=self.user_input_color) if self.user_input_color else dict()
             self.console.rule(**style)
             
-            # Show footer hints if enabled
-            if self.show_footer_hints:
-                footer = FooterHints.show_input_footer()
-                print(footer)
+            # Only show footer hints if explicitly requested
+            if show_footer and self.show_footer_hints:
+                footer = FooterHints.render_shortcuts("input")
+                print(f"  {footer}")
         else:
             print()
 
@@ -547,6 +552,11 @@ class InputOutput:
                 get_rel_fname(fname, root) for fname in (abs_read_only_fnames or [])
             ]
             show = self.format_files_for_input(rel_fnames, rel_read_only_fnames)
+
+        # Show footer hints right before the prompt
+        if self.show_footer_hints and self.pretty:
+            footer = FooterHints.render_shortcuts("input")
+            print(f"  {footer}")
 
         prompt_prefix = ""
         if edit_format:
