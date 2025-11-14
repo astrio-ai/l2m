@@ -794,18 +794,13 @@ class InputOutput:
 
     def display_user_input(self, inp):
         if self.pretty and self.user_input_color:
-            # Wrap user input in a Panel with background
-            self.console.print(
-                Panel(
-                    f"[{self.user_input_color}]{inp}[/{self.user_input_color}]",
-                    style="on #2b2b2b",     # background color
-                    border_style="#2b2b2b", # hide border by matching it
-                    padding=(0, 1),
-                    expand=False,
-                )
-            )
+            # Display with background using Rich style
+            from rich.style import Style as RichStyle
+            text = Text(f"> {inp}")
+            text.stylize(RichStyle(color=self.user_input_color, bgcolor="#2b2b2b"))
+            self.console.print(text)
         else:
-            self.console.print(Text(inp))
+            self.console.print(Text(f"> {inp}"))
 
     def user_input(self, inp, log_only=True):
         if not log_only:
