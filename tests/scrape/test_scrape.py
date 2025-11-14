@@ -108,8 +108,7 @@ class TestScrape(unittest.TestCase):
             raise playwright._impl._errors.Error("Test error")
 
         # Mock the necessary objects and methods
-        scraper.scrape_with_playwright = MagicMock()
-        scraper.scrape_with_playwright.return_value = (None, None)
+        scraper.scrape_with_playwright = MagicMock(side_effect=playwright._impl._errors.Error("Test error"))
 
         # Call the scrape method
         result = scraper.scrape("https://example.com")
