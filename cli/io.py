@@ -419,9 +419,11 @@ class InputOutput:
             return Style.from_dict(style_dict)
 
         if self.user_input_color:
-            # Add a slightly lighter background for the input area (Codex-style)
+            # Add a slightly lighter background for the input area
             input_style = f"{self.user_input_color} bg:#2A2A2A"  # Paler gray background
             style_dict.setdefault("", input_style)
+            # Add background that fills the entire line (including trailing space)
+            style_dict["trailing-input"] = "bg:#2A2A2A"
             style_dict.update(
                 {
                     "pygments.literal.string": f"bold italic {self.user_input_color}",
@@ -680,7 +682,22 @@ class InputOutput:
                             self.clipboard_watcher.start()
 
                     def get_continuation(width, line_number, is_soft_wrap):
-                        return self.prompt_prefix
+                        # Return continuation prompt with background that fills the line
+                        from prompt_toolkit.formatted_text import ANSI
+                        # Calculate padding to fill the rest of the line
+                        padding = " " * (width - len(self.prompt_prefix))
+                        return ANSI(f"\033[48;2;42;42;42m{self.prompt_prefix}{padding}\033[0m\033[{len(self.prompt_prefix)}D")
+
+                    # Create rprompt to fill the line with background color
+                    def get_rprompt():
+                        from prompt_toolkit.formatted_text import ANSI
+                        import shutil
+                        try:
+                            terminal_width = shutil.get_terminal_size().columns
+                        except:
+                            terminal_width = 80
+                        # Fill remaining space with background
+                        return ANSI("\033[48;2;42;42;42m" + " " * (terminal_width - len(show) - 10) + "\033[0m")
 
                     line = self.prompt_session.prompt(
                         show,
@@ -692,6 +709,8 @@ class InputOutput:
                         key_bindings=kb,
                         complete_while_typing=True,
                         prompt_continuation=get_continuation,
+                        rprompt=get_rprompt,
+                        erase_when_done=False,
                     )
                 else:
                     line = input(show)
