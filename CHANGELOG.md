@@ -8,36 +8,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Comprehensive documentation with Mermaid diagrams
-- Test suite with 47+ tests covering agents, tools, guardrails, and workflows
-- Issue templates for bug reports and feature requests
-- Code of Conduct and Contributing guidelines
-- Security policy
+- Docker support with `.devcontainer/` configuration for VS Code Dev Containers
+- Package data configuration for resource files (model-settings.yml, query files)
+- Default git configuration in Docker to suppress warnings
+- MANIFEST.in for proper package data inclusion
+
+### Fixed
+- Missing `oslex` dependency in package configuration
+- Resource files not being included in installed package
+- Git user configuration warnings in Docker containers
+
+### Changed
+- Migrated from OpenAI Agents SDK to Aider-based single-agent architecture
+- Improved package structure and dependency management
+- Updated project structure to align with Aider's architecture
 
 ## [0.1.0] - 2025-11-05
 
 ### Added
 - Initial release of Legacy2Modern (L2M)
-- Multi-agent architecture using OpenAI Agents SDK
-- Orchestrator Agent for workflow coordination
-- Analyzer Agent for COBOL code analysis
-- Translator Agent for COBOL to Python conversion
-- Reviewer Agent for code quality review
-- Tester Agent for test generation and execution
-- Refactor Agent for code improvement
-- Session management with SQLite
-- Tool integration (COBOL parser, Python synthesis, code quality, test runner)
-- Guardrails for input/output validation
-- Sequential and handoff workflow modes
-- Comprehensive documentation
-- Test suite
+- Interactive CLI for COBOL to Python modernization
+- Single-agent architecture with tool calling
+- Codebase indexing and repo map generation using tree-sitter
+- Support for multiple LLM providers via LiteLLM
+- Git integration for tracking changes
+- Session management with persistent chat history
+- Comprehensive test suite
 
 ### Infrastructure
-- Project structure with modular design
-- Configuration management with Pydantic
+- Python 3.10+ support
+- Modular package structure
+- Configuration management
 - Logging system
 - Environment variable support
 
 [Unreleased]: https://github.com/astrio-ai/l2m/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/astrio-ai/l2m/releases/tag/v0.1.0
-

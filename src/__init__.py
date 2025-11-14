@@ -1,7 +1,6 @@
-"""
-L2M OpenAI Agents - Legacy COBOL to Python Modernization System
-"""
-
 __version__ = "0.1.0"
-__author__ = "Astrio AI"
 
+__all__ = [__version__]
+
+# Note: We don't import submodules here to avoid circular imports.
+# Import directly from submodules: from src.core import models, etc.
