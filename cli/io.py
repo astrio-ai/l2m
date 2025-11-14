@@ -286,7 +286,7 @@ class InputOutput:
         self.editingmode = editingmode
         self.multiline_mode = multiline_mode
         self.bell_on_next_input = False
-        self.show_footer_hints = pretty  # Show footer hints when pretty mode is enabled
+        self.show_footer_hints = False  # Disable footer hints (keyboard shortcuts)
         self.notifications = notifications
         if notifications and notifications_command is None:
             self.notifications_command = self.get_default_notification_command()
