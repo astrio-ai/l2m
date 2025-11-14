@@ -29,7 +29,7 @@ from pygments.token import Token
 from rich.color import ColorParseError
 from rich.columns import Columns
 from rich.console import Console
-from rich.markdown import Markdown
+from rich.markdown import Markdown, CodeBlock
 from rich.style import Style as RichStyle
 from rich.text import Text
 from rich.theme import Theme
@@ -45,10 +45,16 @@ NOTIFICATION_MESSAGE = "L2M is waiting for your input"
 
 # Custom dark theme for markdown to avoid white backgrounds
 DARK_THEME = Theme({
-    "markdown.code": "bold #DCDCAA on #1E1E1E",  # Pale yellow on dark gray
-    "markdown.code_block": "on #1E1E1E",  # Dark gray background for code blocks
-    "markdown.link": "#9CDCFE",  # Pale cyan for links
-    "markdown.link_url": "#9CDCFE underline",  # Pale cyan underlined
+    # Use repr.str style for inline code (no white background)
+    "markdown.code": "#DCDCAA",  # Pale yellow text, no background
+    "markdown.link": "#9CDCFE",  # Pale cyan
+    "markdown.link_url": "#9CDCFE underline",
+    "markdown.h1": "bold #9CDCFE",
+    "markdown.h2": "bold #9CDCFE",
+    "markdown.h3": "bold #C586C0",
+    "markdown.emph": "italic #C586C0",
+    "markdown.strong": "bold",
+    "": "",  # Default - no background
 })
 
 
