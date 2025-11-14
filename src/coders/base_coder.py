@@ -1442,7 +1442,7 @@ class Coder:
         self.io.llm_started()
         
         # Reset mdstream for new message (will show prefix again)
-        if hasattr(self.mdstream, '_live_started'):
+        if hasattr(self, 'mdstream') and hasattr(self.mdstream, '_live_started'):
             self.mdstream._live_started = False
 
         self.cur_messages += [
