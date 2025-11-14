@@ -9,7 +9,7 @@
 [![Contributing Guide](https://img.shields.io/badge/Contributing-Guide-informational)](https://github.com/astrio-ai/l2m/CONTRIBUTING.md)
 </div>
 
-Legacy2Modern (L2M) is an open-source, AI-powered tool that helps you modernize legacy codebases into modern programming languages through an intuitive terminal interface.
+Legacy2Modern (L2M) is an open-source, AI coding agent that helps you modernize legacy codebases into modern programming languages within your terminal.
 
 ## Features
 
@@ -26,7 +26,7 @@ Legacy2Modern (L2M) is an open-source, AI-powered tool that helps you modernize 
 ### Prerequisites
 
 - Python 3.10+
-- API Key for your preferred LLM provider (OpenAI, Anthropic, etc.)
+- BYOK for your preferred LLM provider (OpenAI, Anthropic, etc.)
 
 ### Installation
 
@@ -51,43 +51,6 @@ cp .env.example .env
 ```bash
 # Start the interactive CLI
 l2m
-
-# Or specify a model
-l2m --model gpt-4o
-l2m --model claude-3-5-sonnet-20241022
-l2m --model mistral/mistral-large-latest
-```
-
-L2M supports 100+ LLM providers via LiteLLM. See [LiteLLM documentation](https://docs.litellm.ai/docs/providers) for all supported providers.
-
-### Common Commands
-
-Once in the L2M CLI, you can use these commands:
-
-- `/add <filename>` - Add files to the chat context
-- `/drop <filename>` - Remove files from the chat
-- `/ls` - View files currently in chat context
-- `/clear` - Clear chat history
-- `/undo` - Undo last changes
-- `/help` - View all available commands
-
-### Example Workflow
-
-```bash
-# Start L2M
-l2m
-
-# Add a file to work on
-/add legacy_code.cobol
-
-# Ask AI to modernize it
-Convert this COBOL code to Python
-
-# Review changes and apply
-/review
-
-# Undo if needed
-/undo
 ```
 
 ## Documentation
