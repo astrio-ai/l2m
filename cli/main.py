@@ -74,7 +74,7 @@ def save_approval_mode_config(require_approval, git_root=None):
         pass
 
 
-def _get_ascii_art(light_mode=False) -> str:
+def _get_ascii_art(light_mode=False, dark_mode=False) -> str:
     """Generate left-aligned ASCII art with theme-aware colors"""
     
     ascii_lines = [
@@ -90,11 +90,12 @@ def _get_ascii_art(light_mode=False) -> str:
     art = "\n".join(ascii_lines)
     
     # Use white for dark theme, dark for light theme
+    # If light_mode is explicitly set, use black; otherwise default to white (dark theme)
     if light_mode:
         # Dark color for light background
         return f"\033[38;2;0;0;0m{art}\033[0m"
     else:
-        # White for dark background
+        # White for dark background (default)
         return f"\033[38;2;255;255;255m{art}\033[0m"
 
 
@@ -627,10 +628,15 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
         )
 
     io = get_io(args.pretty)
+    
+    # Determine if we should use light mode for ASCII art
+    # If explicitly set, use that; otherwise default to dark (white text)
+    use_light_ascii = args.light_mode
+    
     try:
         io.rule()
         # Display ASCII art banner
-        io.tool_output(_get_ascii_art(light_mode=args.light_mode))
+        io.tool_output(_get_ascii_art(light_mode=use_light_ascii))
         io.tool_output()
     except UnicodeEncodeError as err:
         if not io.pretty:
@@ -639,7 +645,7 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
         io.tool_warning("Terminal does not support pretty output (UnicodeDecodeError)")
         # Display ASCII art banner (without color if terminal doesn't support it)
         try:
-            ascii_art = _get_ascii_art(light_mode=args.light_mode)
+            ascii_art = _get_ascii_art(light_mode=use_light_ascii)
             # Remove ANSI color codes if terminal doesn't support them
             import re
             ascii_art = re.sub(r'\033\[[0-9;]*m', '', ascii_art)
