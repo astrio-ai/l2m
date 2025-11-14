@@ -420,6 +420,8 @@ class InputOutput:
 
         if self.user_input_color:
             style_dict.setdefault("", self.user_input_color)
+            # Add background only to the user input token
+            style_dict["user_input"] = f"{self.user_input_color} bg:#2b2b2b"
             style_dict.update(
                 {
                     "pygments.literal.string": f"bold italic {self.user_input_color}",
@@ -793,7 +795,9 @@ class InputOutput:
 
     def display_user_input(self, inp):
         if self.pretty and self.user_input_color:
-            style = dict(style=self.user_input_color)
+            # Use RichStyle with background for user input
+            from rich.style import Style as RichStyle
+            style = dict(style=RichStyle(color=self.user_input_color, bgcolor="#2b2b2b"))
         else:
             style = dict()
 
