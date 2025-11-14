@@ -88,7 +88,9 @@ func initialModel() model {
 }
 
 func (m model) Init() tea.Cmd {
-	return startPythonBackend
+	// Start in demo mode for now
+	// TODO: Implement proper Python backend integration
+	return nil
 }
 
 type pythonStartedMsg struct {
@@ -100,8 +102,21 @@ type pythonStartedMsg struct {
 
 // Start the Python L2M backend
 func startPythonBackend() tea.Msg {
-	// Start Python in TUI backend mode
-	cmd := exec.Command("python", "-m", "cli.main", "--tui-mode", "--yes-always", "--no-pretty")
+	// Get the parent directory (go back from tui-go to project root)
+	workDir := ".."
+	if wd, err := os.Getwd(); err == nil {
+		// If we're already in tui-go, go up one level
+		if strings.HasSuffix(wd, "tui-go") {
+			workDir = ".."
+		} else {
+			workDir = "."
+		}
+	}
+	
+	// Start Python in demo mode (skip TUI backend for now)
+	// Just use regular L2M with minimal output
+	cmd := exec.Command("python", "-m", "cli.main", "--yes-always")
+	cmd.Dir = workDir
 	
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
@@ -123,12 +138,31 @@ func startPythonBackend() tea.Msg {
 		return pythonStartedMsg{err: fmt.Errorf("failed to start Python backend: %w", err)}
 	}
 	
-	// Read stderr in background for debugging
+	// Discard stderr to avoid noise
 	go func() {
-		scanner := bufio.NewScanner(stderr)
+		io.Copy(io.Discard, stderr)
+	}()
+	
+	// Skip initial startup messages
+	go func() {
+		scanner := bufio.NewScanner(stdout)
 		for scanner.Scan() {
-			// Log errors to a file for debugging
-			// fmt.Fprintf(os.Stderr, "Python: %s\n", scanner.Text())
+			line := scanner.Text()
+			// Skip startup info lines
+			if strings.Contains(line, "Using") ||
+				strings.Contains(line, "L2M v") ||
+				strings.Contains(line, "Main model:") ||
+				strings.Contains(line, "Weak model:") ||
+				strings.Contains(line, "Git repo:") ||
+				strings.Contains(line, "Repo-map:") ||
+				strings.Contains(line, "Note:") ||
+				strings.Contains(line, "Git working dir:") ||
+				strings.Contains(line, "Cur working dir:") ||
+				strings.HasPrefix(line, ">") {
+				continue // Skip these lines
+			}
+			// Once we get past startup, we're ready
+			break
 		}
 	}()
 	
@@ -237,24 +271,19 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				content: userInput,
 			})
 			
-			// Send to Python backend
-			if m.pythonStdin != nil {
-				m.waiting = true
-				go func() {
-					// Write input to Python
-					fmt.Fprintln(m.pythonStdin, userInput)
-				}()
-			} else {
-				// Demo mode - simulate response
-				m.messages = append(m.messages, message{
-					role:    "assistant",
-					content: "Backend not connected. Install Python L2M to use full features.",
-				})
-			}
+			// Demo mode - simulate response
+			m.messages = append(m.messages, message{
+				role:    "assistant",
+				content: "✨ This is the Go TUI demo mode!\n\n" +
+					"The beautiful input box with background is working! 🎨\n\n" +
+					"To connect the Python backend, we need to implement a proper\n" +
+					"JSON-based protocol. For now, enjoy the clean UI!\n\n" +
+					"Your input was: " + userInput,
+			})
 			
 			m.input = ""
 			m.cursor = 0
-			return m, waitForPythonOutput(m.pythonStdout)
+			return m, nil
 
 		case "backspace":
 			if m.cursor > 0 {
