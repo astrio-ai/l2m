@@ -31,12 +31,7 @@ from src.ui.copypaste import ClipboardWatcher
 from src.deprecated import handle_deprecated_model_args
 from src.utils.format_settings import format_settings, scrub_sensitive_info
 from src.help.history import ChatSummary
-try:
-    from cli.textual_io_adapter import TextualIOAdapter as InputOutput
-    USE_TEXTUAL = True
-except ImportError:
-    from cli.io import InputOutput
-    USE_TEXTUAL = False
+from cli.io import InputOutput
 from src.core.llm import litellm  # noqa: F401; properly init litellm on launch
 from src.core.models import ModelSettings
 from src.setup.onboarding import offer_openrouter_oauth, select_default_model
@@ -624,46 +619,6 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
             notifications_command=args.notifications_command,
         )
 
-    # If using Textual, we need to restructure the flow
-    if USE_TEXTUAL:
-        # Import what we need for Textual mode
-        from cli.l2m_tui import L2MTUI
-        import threading
-        
-        # Create the Textual app
-        app = L2MTUI()
-        
-        # Create IO with the app
-        io = get_io(args.pretty)
-        io.set_app(app)
-        
-        # Store the continuation of main() to run in background
-        def run_l2m_logic():
-            """Run the rest of main() logic in background thread."""
-            try:
-                # Display ASCII art banner
-                app.write_output(_get_ascii_art())
-                app.write_output("")
-                
-                # Continue with the rest of main() logic
-                _continue_main_with_io(io, args, parser, git_root, force_git_root, input, output, return_coder)
-            except Exception as e:
-                import traceback
-                app.write_output(f"Error: {e}", style="#B45A5A")
-                app.write_output(traceback.format_exc(), style="#787878")
-        
-        # Start L2M logic in background thread
-        logic_thread = threading.Thread(target=run_l2m_logic, daemon=False)
-        logic_thread.start()
-        
-        # Run Textual app in main thread (blocks until exit)
-        app.run()
-        
-        # After app exits, wait for logic thread to finish
-        logic_thread.join(timeout=1.0)
-        return
-    
-    # Original flow for non-Textual mode
     io = get_io(args.pretty)
     try:
         io.rule()
@@ -675,7 +630,7 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
             raise err
         io = get_io(False)
         io.tool_warning("Terminal does not support pretty output (UnicodeDecodeError)")
-        # Display ASCII art banner (without color if terminal doesn't support them)
+        # Display ASCII art banner (without color if terminal doesn't support it)
         try:
             ascii_art = _get_ascii_art()
             # Remove ANSI color codes if terminal doesn't support them
@@ -685,15 +640,6 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
             io.tool_output()
         except Exception:
             pass
-    
-    return _continue_main_with_io(io, args, parser, git_root, force_git_root, input, output, return_coder)
-
-
-def _continue_main_with_io(io, args, parser, git_root, force_git_root, input, output, return_coder):
-    """
-    Continue main() execution after IO is set up.
-    This is split out so it can run in a background thread for Textual mode.
-    """
 
     # Process any environment variables set via --set-env
     if args.set_env:
