@@ -1440,6 +1440,9 @@ class Coder:
 
         # Notify IO that LLM processing is starting
         self.io.llm_started()
+        
+        # Reset the response prefix flag for new message
+        self._response_prefix_shown = False
 
         self.cur_messages += [
             dict(role="user", content=inp),
@@ -2002,6 +2005,12 @@ class Coder:
         show_resp = self.render_incremental_response(final)
         # Apply any reasoning tag formatting
         show_resp = replace_reasoning_tags(show_resp, self.reasoning_tag_name)
+        
+        # Add white circle prefix to AI response (only once at the start)
+        if not hasattr(self, '_response_prefix_shown'):
+            show_resp = "\033[38;2;255;255;255m●\033[0m " + show_resp
+            self._response_prefix_shown = True
+        
         self.mdstream.update(show_resp, final=final)
 
     def render_incremental_response(self, final):
