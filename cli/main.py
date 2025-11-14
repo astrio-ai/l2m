@@ -31,7 +31,12 @@ from src.ui.copypaste import ClipboardWatcher
 from src.deprecated import handle_deprecated_model_args
 from src.utils.format_settings import format_settings, scrub_sensitive_info
 from src.help.history import ChatSummary
-from cli.io import InputOutput
+try:
+    from cli.textual_io_adapter import TextualIOAdapter as InputOutput
+    USE_TEXTUAL = True
+except ImportError:
+    from cli.io import InputOutput
+    USE_TEXTUAL = False
 from src.core.llm import litellm  # noqa: F401; properly init litellm on launch
 from src.core.models import ModelSettings
 from src.setup.onboarding import offer_openrouter_oauth, select_default_model
@@ -620,26 +625,51 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
         )
 
     io = get_io(args.pretty)
-    try:
-        io.rule()
-        # Display ASCII art banner
+    
+    # Start Textual app if using Textual IO
+    if USE_TEXTUAL:
+        from cli.l2m_tui import L2MTUI
+        import threading
+        
+        app = L2MTUI()
+        io.set_app(app)
+        
+        # Start the Textual app in a separate thread
+        def run_app():
+            app.run()
+        
+        app_thread = threading.Thread(target=run_app, daemon=True)
+        app_thread.start()
+        
+        # Wait for app to initialize
+        import time
+        time.sleep(0.5)
+        
+        # Display ASCII art banner in Textual
         io.tool_output(_get_ascii_art())
         io.tool_output()
-    except UnicodeEncodeError as err:
-        if not io.pretty:
-            raise err
-        io = get_io(False)
-        io.tool_warning("Terminal does not support pretty output (UnicodeDecodeError)")
-        # Display ASCII art banner (without color if terminal doesn't support it)
+    else:
+        # Original prompt_toolkit behavior
         try:
-            ascii_art = _get_ascii_art()
-            # Remove ANSI color codes if terminal doesn't support them
-            import re
-            ascii_art = re.sub(r'\033\[[0-9;]*m', '', ascii_art)
-            io.tool_output(ascii_art)
+            io.rule()
+            # Display ASCII art banner
+            io.tool_output(_get_ascii_art())
             io.tool_output()
-        except Exception:
-            pass
+        except UnicodeEncodeError as err:
+            if not io.pretty:
+                raise err
+            io = get_io(False)
+            io.tool_warning("Terminal does not support pretty output (UnicodeDecodeError)")
+            # Display ASCII art banner (without color if terminal doesn't support them)
+            try:
+                ascii_art = _get_ascii_art()
+                # Remove ANSI color codes if terminal doesn't support them
+                import re
+                ascii_art = re.sub(r'\033\[[0-9;]*m', '', ascii_art)
+                io.tool_output(ascii_art)
+                io.tool_output()
+            except Exception:
+                pass
 
     # Process any environment variables set via --set-env
     if args.set_env:
