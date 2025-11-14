@@ -561,11 +561,12 @@ class Coder:
         
         # Format: command (white #FFFFFF) - description (grayish #787878)
         examples = [
-            "\033[38;2;255;255;255m/init\033[0m - \033[38;2;120;120;120mcreate an AGENTS.md file with instructions for Codex\033[0m",
-            "\033[38;2;255;255;255m/status\033[0m - \033[38;2;120;120;120mshow current session configuration\033[0m",
-            "\033[38;2;255;255;255m/approvals\033[0m - \033[38;2;120;120;120mchoose what Codex can do without approval\033[0m",
-            "\033[38;2;255;255;255m/model\033[0m - \033[38;2;120;120;120mchoose what model and reasoning effort to use\033[0m",
-            "\033[38;2;255;255;255m/review\033[0m - \033[38;2;120;120;120mreview any changes and find issues\033[0m",
+            "\033[38;2;255;255;255m/add\033[0m - \033[38;2;120;120;120madd files to the chat\033[0m",
+            "\033[38;2;255;255;255m/drop\033[0m - \033[38;2;120;120;120mremove files from the chat\033[0m",
+            "\033[38;2;255;255;255m/ls\033[0m - \033[38;2;120;120;120mview chat context\033[0m",
+            "\033[38;2;255;255;255m/clear\033[0m - \033[38;2;120;120;120mclear chat history\033[0m",
+            "\033[38;2;255;255;255m/undo\033[0m - \033[38;2;120;120;120mundo last changes\033[0m",
+            "\033[38;2;255;255;255m/help\033[0m - \033[38;2;120;120;120mview available commands\033[0m",
         ]
         
         for line in examples:
