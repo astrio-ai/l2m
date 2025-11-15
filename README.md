@@ -31,19 +31,33 @@ Legacy2Modern (L2M) is an open-source, AI coding agent that helps you modernize 
 ### Installation
 
 ```bash
-# Clone the repository
-git clone https://github.com/astrio-ai/l2m.git
-cd l2m
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Install the package
-pip install -e .
+# Install L2M
+pip install l2m
 
 # Set up environment
+l2m --help  # Verify installation
+```
+
+### Set Up API Keys
+To set up your API key, create a `.env` file at the root of your project and add your provider key(s):
+
+```env
+# Example for OpenAI:
+OPENAI_API_KEY=sk-...
+
+# Example for Anthropic:
+ANTHROPIC_API_KEY=sk-ant-...
+
+# Example for DeepSeek:
+DEEPSEEK_API_KEY=...
+
+# Add other providers as needed
+```
+
+You can quickly start by copying the example environment file:
+
+```bash
 cp .env.example .env
-# Edit .env and add your API key (e.g., OPENAI_API_KEY, ANTHROPIC_API_KEY)
 ```
 
 ### Usage
