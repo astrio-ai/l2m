@@ -1,6 +1,6 @@
 [project]
 name = "l2m"
-version = "0.1.0"
+version = "0.2.0"
 description = "Legacy2Modern: COBOL to Python modernization"
 readme = "README.md"
 requires-python = ">=3.10"
