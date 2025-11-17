@@ -384,7 +384,7 @@ class GitRepo:
                 current_branch_has_commits = any(commits)
             except ANY_GIT_ERROR:
                 pass
-        except (TypeError,) + ANY_GIT_ERROR:
+        except (TypeError, *ANY_GIT_ERROR):
             pass
 
         if not fnames:
@@ -604,7 +604,7 @@ class GitRepo:
     def get_head_commit(self):
         try:
             return self.repo.head.commit
-        except (ValueError,) + ANY_GIT_ERROR:
+        except (ValueError, *ANY_GIT_ERROR):
             return None
 
     def get_head_commit_sha(self, short=False):
