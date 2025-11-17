@@ -6,7 +6,7 @@ Provides context-aware keyboard shortcuts and status information.
 import shutil
 from typing import List, Optional
 
-from cli.tui_utils import format_footer_hint, format_separator, ANSI_DIM, ANSI_RESET, ANSI_BOLD
+from cli.tui_utils import format_footer_hint, format_separator, ANSI_BRAND, ANSI_RESET, ANSI_BOLD
 
 
 class FooterHints:
@@ -45,7 +45,7 @@ class FooterHints:
     @staticmethod
     def format_shortcut(key: str, description: str) -> str:
         """Format a single keyboard shortcut."""
-        return f"{ANSI_BOLD}{key}{ANSI_RESET}{ANSI_DIM}: {description}{ANSI_RESET}"
+        return f"{ANSI_BOLD}{key}{ANSI_RESET}{ANSI_BRAND}: {description}{ANSI_RESET}"
 
     @classmethod
     def render_shortcuts(cls, category: str = "input", max_items: int = 4) -> str:
@@ -59,7 +59,7 @@ class FooterHints:
         formatted = [cls.format_shortcut(key, desc) for key, desc in shortcuts]
         
         # Join with separator
-        return f"{ANSI_DIM}  │  {ANSI_RESET}".join(formatted)
+        return f"{ANSI_BRAND}  │  {ANSI_RESET}".join(formatted)
 
     @classmethod
     def render_footer(
@@ -90,7 +90,7 @@ class FooterHints:
         
         if status:
             # Calculate available space for shortcuts
-            status_text = f"{ANSI_DIM}{status}{ANSI_RESET}"
+            status_text = f"{ANSI_BRAND}{status}{ANSI_RESET}"
             # Account for ANSI codes not taking visual space
             visible_status_len = len(status)
             available_width = width - visible_status_len - 4  # 4 for spacing

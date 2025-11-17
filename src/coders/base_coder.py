@@ -1471,6 +1471,7 @@ class Coder:
             self.mdstream = None
 
         retry_delay = 0.125
+        max_retry_timeout = RETRY_TIMEOUT
 
         litellm_ex = LiteLLMExceptions()
 
@@ -1492,11 +1493,45 @@ class Coder:
                         exhausted = True
                         break
 
+                    # Special handling for rate limit errors - use longer delays and timeout
+                    is_rate_limit = ex_info.name in ("RateLimitError", "RouterRateLimitError")
+                    if is_rate_limit:
+                        # For rate limits, start with longer delay and allow longer total wait time
+                        if retry_delay < 5.0:
+                            retry_delay = 5.0  # Start with 5 seconds for rate limits
+                        max_retry_timeout = RETRY_TIMEOUT * 3  # Allow 3x longer for rate limits
+                        
+                        # Check if it's a free tier model and suggest adding API key
+                        model_name = self.main_model.name if hasattr(self, "main_model") else ""
+                        err_str = str(err).lower()
+                        if ":free" in model_name.lower() or "free" in err_str:
+                            self.io.tool_output(
+                                "\n💡 Tip: Free tier models have strict rate limits."
+                            )
+                            self.io.tool_output(
+                                "   Consider adding your own API key for better rate limits:"
+                            )
+                            self.io.tool_output(
+                                "   https://openrouter.ai/settings/integrations"
+                            )
+
                     should_retry = ex_info.retry
                     if should_retry:
                         retry_delay *= 2
-                        if retry_delay > RETRY_TIMEOUT:
+                        if retry_delay > max_retry_timeout:
                             should_retry = False
+                            if is_rate_limit:
+                                self.io.tool_error(
+                                    f"\n⚠️  Rate limit retry timeout reached ({max_retry_timeout}s)."
+                                )
+                                self.io.tool_error(
+                                    "   The API provider is still rate limiting. Try again later or:"
+                                )
+                                self.io.tool_error("   1. Switch to a different model")
+                                self.io.tool_error(
+                                    "   2. Add your own API key for better rate limits"
+                                )
+                                self.io.tool_error("   3. Wait a few minutes before retrying")
 
                     if not should_retry:
                         self.mdstream = None

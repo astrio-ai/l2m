@@ -303,12 +303,12 @@ def format_separator(width: Optional[int] = None, char: str = "─") -> str:
             width = shutil.get_terminal_size().columns
         except Exception:
             width = 80
-    return f"{ANSI_DIM}{char * width}{ANSI_RESET}"
+    return f"{ANSI_BRAND}{char * width}{ANSI_RESET}"
 
 
 def format_footer_hint(text: str) -> str:
     """Format footer hint text with proper styling."""
-    return f"  {ANSI_DIM}{text}{ANSI_RESET}"
+    return f"  {ANSI_BRAND}{text}{ANSI_RESET}"
 
 
 def truncate_with_ellipsis(text: str, max_length: int) -> str:
