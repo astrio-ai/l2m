@@ -47,14 +47,20 @@ NOTIFICATION_MESSAGE = "L2M is waiting for your input"
 # Custom dark theme for markdown to avoid white backgrounds
 DARK_THEME = Theme({
     # Use repr.str style for inline code (no white background)
-    "markdown.code": "#9CDCFE",  # Pale cyan text, no background
-    "markdown.link": "#9CDCFE",  # Pale cyan
-    "markdown.link_url": "#9CDCFE underline",
-    "markdown.h1": "bold #9CDCFE",
-    "markdown.h2": "bold #9CDCFE",
-    "markdown.h3": "bold #C586C0",
-    "markdown.emph": "italic #C586C0",
+    "markdown.code": "#278ef5",  # Brand blue
+    "markdown.link": "#278ef5",  # Brand blue
+    "markdown.link_url": "#278ef5 underline",
+    "markdown.h1": "bold #278ef5",
+    "markdown.h2": "bold #278ef5",
+    "markdown.h3": "bold #278ef5",
+    "markdown.emph": "italic #278ef5",
     "markdown.strong": "bold",
+    # List styles - use brand blue (#278ef5) instead of yellow
+    "markdown.list": "#278ef5",  # Brand blue for list items
+    "markdown.list.bullet": "#278ef5",  # Brand blue for bullet points
+    "markdown.list.number": "#278ef5",  # Brand blue for numbered list numbers
+    "markdown.item.bullet": "#278ef5",  # Brand blue for bullet characters
+    "markdown.item.number": "#278ef5",  # Brand blue for number characters
     "": "",  # Default - no background
 })
 

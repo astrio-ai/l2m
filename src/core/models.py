@@ -1002,11 +1002,13 @@ class Model(ModelSettings):
 
     def simple_send_with_retries(self, messages):
         from src.core.exceptions import LiteLLMExceptions
+        import litellm
 
         litellm_ex = LiteLLMExceptions()
         if "deepseek-reasoner" in self.name:
             messages = ensure_alternating_roles(messages)
         retry_delay = 0.125
+        max_retry_timeout = RETRY_TIMEOUT
 
         if self.verbose:
             dump(messages)
@@ -1032,11 +1034,33 @@ class Model(ModelSettings):
                 print(str(err))
                 if ex_info.description:
                     print(ex_info.description)
+                
+                # Special handling for rate limit errors - use longer delays and timeout
+                is_rate_limit = isinstance(err, litellm.RateLimitError) or isinstance(err, litellm.RouterRateLimitError)
+                if is_rate_limit:
+                    # For rate limits, start with longer delay and allow longer total wait time
+                    if retry_delay < 5.0:
+                        retry_delay = 5.0  # Start with 5 seconds for rate limits
+                    max_retry_timeout = RETRY_TIMEOUT * 3  # Allow 3x longer for rate limits
+                    
+                    # Check if it's a free tier model and suggest adding API key
+                    err_str = str(err).lower()
+                    if ":free" in self.name.lower() or "free" in err_str:
+                        print("\n💡 Tip: Free tier models have strict rate limits.")
+                        print("   Consider adding your own API key for better rate limits:")
+                        print("   https://openrouter.ai/settings/integrations")
+                
                 should_retry = ex_info.retry
                 if should_retry:
                     retry_delay *= 2
-                    if retry_delay > RETRY_TIMEOUT:
+                    if retry_delay > max_retry_timeout:
                         should_retry = False
+                        if is_rate_limit:
+                            print(f"\n⚠️  Rate limit retry timeout reached ({max_retry_timeout}s).")
+                            print("   The API provider is still rate limiting. Try again later or:")
+                            print("   1. Switch to a different model")
+                            print("   2. Add your own API key for better rate limits")
+                            print("   3. Wait a few minutes before retrying")
                 if not should_retry:
                     return None
                 print(f"Retrying in {retry_delay:.1f} seconds...")

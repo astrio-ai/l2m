@@ -131,7 +131,9 @@ class MarkdownStream:
         """
         # Render the markdown to a string buffer
         string_io = io.StringIO()
-        console = Console(file=string_io, force_terminal=True)
+        # Import theme here to avoid circular imports
+        from cli.io import DARK_THEME
+        console = Console(file=string_io, force_terminal=True, theme=DARK_THEME)
         markdown = NoInsetMarkdown(text, **self.mdargs)
         console.print(markdown)
         output = string_io.getvalue()
