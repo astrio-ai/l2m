@@ -31,11 +31,13 @@ Legacy2Modern (L2M) is an open-source, AI coding agent that helps you modernize 
 ### Installation
 
 ```bash
-# Install L2M
-pip install l2m
+curl -fsSL https://astrio.app/l2m/install | bash
+```
 
-# Set up environment
-l2m --help  # Verify installation
+or
+
+```bash
+pip install l2m
 ```
 
 ### Set Up API Keys
