@@ -2,175 +2,294 @@
 
 ## Overview
 
-Legacy2Modern (L2M) is built on a **multi-agent architecture** using the OpenAI Agents SDK. The system orchestrates specialized AI agents that work together to transform legacy COBOL code into modern Python.
+Legacy2Modern (L2M) is a **AI coding agent** that helps modernize legacy codebases such as COBOL, Fortran, Java 7, etc. to modern languages such as Python, Java, C++, etc. It uses Large Language Models (LLMs) to understand code, generate modern equivalents, and maintain conversation context throughout the modernization process.
 
 ## System Architecture
 
 ```mermaid
-graph TD
-    A[Modernization Pipeline] --> B[Orchestrator Agent]
-    B --> C[Coordinates all agents]
-    B --> D[Analyzer Agent]
-    B --> E[Translator Agent]
-    B --> F[Reviewer Agent]
-    B --> G[Tester Agent]
-    B --> H[Refactor Agent]
-    D --> I[Modernized Python]
-    E --> I
-    F --> I
-    G --> I
-    H --> I
+graph TB
+    A[User] -->|Commands & Messages| B[CLI Interface]
+    B -->|User Input| C[Coder System]
+    C -->|LLM Requests| D[LiteLLM]
+    D -->|API Calls| E[LLM Providers]
+    E -->|Responses| D
+    D -->|Code Generation| C
+    C -->|File Operations| F[Git Integration]
+    C -->|Session Data| G[Chat History]
+    C -->|Code Analysis| H[Repo Map]
     
     style B fill:#e1f5ff
-    style D fill:#fff4e1
-    style E fill:#fff4e1
-    style F fill:#fff4e1
-    style G fill:#fff4e1
-    style H fill:#fff4e1
-    style I fill:#e8f5e9
+    style C fill:#fff4e1
+    style D fill:#e8f5e9
+    style E fill:#f3e5f5
+    style F fill:#ffebee
+    style G fill:#e0f2f1
+    style H fill:#fff9c4
 ```
 
 ## Core Components
 
-### 1. Modernization Pipeline
+### 1. CLI Interface (`cli/`)
 
-The `ModernizationPipeline` class orchestrates the entire workflow. It supports two execution modes:
+The terminal user interface (TUI) provides an interactive conversational experience:
 
-- **Sequential Mode**: Agents run one after another in a fixed order
-- **Handoff Mode**: Orchestrator agent dynamically routes tasks to specialized agents
+- **Input/Output** (`cli/io.py`): Handles user input, command parsing, and formatted output
+- **Commands** (`cli/commands.py`): Implements CLI commands (`/add`, `/commit`, `/help`, etc.)
+- **Main Entry** (`cli/main.py`): Initializes the system, loads configuration, and starts the interactive loop
 
-**Location**: `src/workflows/modernization_pipeline.py`
+**Key Features**:
+- Minimalist user interface
+- Streaming responses with markdown rendering
+- Command autocompletion
+- File management commands
 
-### 2. Agent System
+### 2. Coder System (`src/coders/`)
 
-Each agent is a specialized AI assistant with specific capabilities:
+The heart of L2M - handles all LLM interactions and code generation:
 
-| Agent | Purpose | Tools | Output |
-|-------|---------|-------|--------|
-| **Orchestrator** | Coordinates workflow and handoffs | None | Routes tasks to appropriate agents |
-| **Analyzer** | Parses COBOL structure | `analyze_cobol` | Analysis report with structure, variables, procedures |
-| **Translator** | Converts COBOL to Python | `translate_to_python` | Python code equivalent |
-| **Reviewer** | Reviews code quality | `review_code` | Code review with suggestions |
-| **Tester** | Generates and runs tests | `create_tests`, `execute_tests` | Test suite and results |
-| **Refactor** | Improves code structure | `refactor_code` | Refactored Python code |
+- **Base Coder** (`base_coder.py`): Core class managing conversation, context, and file operations
+- **Edit Formats**: Multiple specialized coders for different editing styles:
+  - `wholefile` - Rewrite entire files
+  - `editblock` - Edit specific code blocks
+  - `udiff` - Unified diff format
+  - `patch` - Patch-based edits
+  - `context` - Context-aware editing
+  - `architect` - Design-first approach
+  - `ask` - Question-answering mode
+  - `help` - Interactive help system
 
-**Location**: `src/agents/`
+**Location**: `src/coders/`
 
-### 3. Tools
+### 3. LLM Integration (`src/core/`)
 
-Tools are functions that agents can call to perform specific tasks:
+Multi-provider LLM support via LiteLLM:
 
-- **COBOL Parser** (`src/tools/cobol_parser_tool.py`): Extracts structure from COBOL files
-- **Python Synthesis** (`src/tools/python_synth_tool.py`): Generates and validates Python code
-- **Code Quality** (`src/tools/code_quality_tool.py`): Checks code quality metrics
-- **Test Runner** (`src/tools/test_runner_tool.py`): Executes generated tests
+- **Models** (`core/models.py`): Model configuration and management
+- **LLM** (`core/llm.py`): LiteLLM integration for 100+ providers
+- **Prompts** (`core/prompts.py`): System prompts and message formatting
 
-### 4. Guardrails
+**Supported Providers**: OpenAI, Anthropic, DeepSeek, Gemini, and 100+ others via LiteLLM
 
-Guardrails validate inputs and outputs:
+### 4. Git Integration (`src/git/`)
 
-- **COBOL Input Guard** (`src/guardrails/cobol_input_guard.py`): Validates COBOL file before processing
-- **Python Output Guard** (`src/guardrails/python_output_guard.py`): Ensures generated Python code is safe and valid
+Repository tracking and change management:
 
-### 5. Session Management
+- **Repo** (`git/repo.py`): Git operations, commit tracking, change detection
+- **Repo Map** (`git/repomap.py`): Codebase indexing using tree-sitter for context
 
-The system uses SQLite sessions to maintain conversation history across agent interactions:
+**Features**:
+- Automatic commit support
+- Change tracking
+- Undo functionality
+- Repository-aware context
 
-- **Session Storage**: `data/sessions.db`
-- **Session ID**: Unique identifier for each modernization run
-- **Context Preservation**: Agents can reference previous analysis and translations
+### 5. Session Management (`src/help/`)
 
-**Location**: `src/sessions/`
+Persistent conversation history:
 
-### 6. Configuration
+- **History** (`help/history.py`): Chat summarization and context management
+- **Chat History**: Maintained across sessions for continuity
 
-Centralized configuration using Pydantic settings:
+### 6. Analysis Tools (`src/analysis/`)
 
-- **Settings** (`src/config/settings.py`): Model configuration, API keys, paths
-- **Environment Variables**: Loaded from `.env` file
-- **Default Values**: Sensible defaults for all settings
+Code analysis and quality checks:
+
+- **Linter** (`analysis/linter.py`): Integration with code linters
+- **Special** (`analysis/special.py`): Special code pattern detection
+
+## User Interaction Flow
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant CLI as CLI Interface
+    participant C as Coder
+    participant LLM as LiteLLM
+    participant G as Git
+    participant F as Filesystem
+
+    U->>CLI: Start l2m
+    CLI->>C: Initialize Coder
+    C->>G: Load repo context
+    C->>F: Load files
+    
+    loop Interactive Session
+        U->>CLI: Enter command/message
+        CLI->>C: Process input
+        
+        alt Command
+            C->>C: Execute command (/add, /commit, etc.)
+        else Message
+            C->>C: Build context (files, repo map, history)
+            C->>LLM: Send prompt with context
+            LLM->>C: Stream response
+            C->>CLI: Display response
+            C->>F: Apply code changes
+            C->>G: Track changes
+        end
+        
+        C->>CLI: Show results
+        CLI->>U: Display output
+    end
+```
+
+## Code Generation Flow
+
+```mermaid
+flowchart TD
+    A[User Message] --> B{Is Command?}
+    B -->|Yes| C[Execute Command]
+    B -->|No| D[Preprocess Input]
+    D --> E[Check File Mentions]
+    E --> F[Check URLs]
+    F --> G[Build Context]
+    G --> H[Add Files to Context]
+    G --> I[Add Repo Map]
+    G --> J[Add Chat History]
+    H --> K[Format Messages]
+    I --> K
+    J --> K
+    K --> L[Send to LLM]
+    L --> M[Stream Response]
+    M --> N{Edit Format?}
+    N -->|wholefile| O[Parse Full File]
+    N -->|editblock| P[Parse Code Blocks]
+    N -->|udiff| Q[Parse Unified Diff]
+    O --> R[Apply Changes]
+    P --> R
+    Q --> R
+    R --> S[Validate Syntax]
+    S --> T{Valid?}
+    T -->|No| U[Show Error]
+    T -->|Yes| V[Save Files]
+    V --> W[Auto Lint/Test]
+    W --> X[Show Diff]
+    X --> Y[Ready for Commit]
+    
+    style A fill:#e1f5ff
+    style L fill:#fff4e1
+    style R fill:#e8f5e9
+    style Y fill:#c8e6c9
+```
+
+## Component Relationships
+
+```mermaid
+graph LR
+    subgraph "User Interface"
+        CLI[CLI Interface]
+        IO[Input/Output]
+        CMD[Commands]
+    end
+    
+    subgraph "Core System"
+        CODER[Coder]
+        MODEL[Model Manager]
+        LLM[LiteLLM]
+    end
+    
+    subgraph "Supporting Systems"
+        GIT[Git Repo]
+        REPO[Repo Map]
+        HIST[Chat History]
+        LINT[Linter]
+    end
+    
+    CLI --> IO
+    CLI --> CMD
+    CLI --> CODER
+    CMD --> CODER
+    CODER --> MODEL
+    CODER --> GIT
+    CODER --> REPO
+    CODER --> HIST
+    CODER --> LINT
+    MODEL --> LLM
+    
+    style CODER fill:#fff4e1
+    style LLM fill:#e8f5e9
+```
+
+## Edit Format System
+
+L2M supports multiple edit formats, each optimized for different use cases:
+
+| Format | Use Case | Description |
+|--------|----------|-------------|
+| `wholefile` | Complete rewrites | Rewrites entire files |
+| `editblock` | Targeted edits | Edits specific code blocks |
+| `udiff` | Unified diffs | Standard diff format |
+| `patch` | Patch files | Apply patch-style changes |
+| `context` | Context-aware | Automatically identifies files to edit |
+| `architect` | Design-first | Design changes, then implement |
+| `ask` | Q&A mode | Answer questions without editing |
+| `help` | Interactive help | Get help about L2M usage |
+
+The system automatically selects the best format based on the model's capabilities, or you can specify it manually.
 
 ## Data Flow
 
 ```mermaid
-flowchart TD
-    A[COBOL File] --> B[Input Guardrail]
-    B -->|Validates file exists, is readable| C[Analyzer Agent]
-    C -->|Parses structure, extracts logic| D[Translator Agent]
-    D -->|Converts COBOL → Python| E[Output Guardrail]
-    E -->|Validates Python syntax| F[Reviewer Agent]
-    F -->|Reviews code quality| G[Tester Agent]
-    G -->|Generates & runs tests| H[Refactor Agent]
-    H -->|Improves structure| I[Python Code]
+flowchart LR
+    A[COBOL File] -->|User adds| B[File Context]
+    B --> C[Repo Map Index]
+    C --> D[Chat History]
+    D --> E[Message Builder]
+    E --> F[LLM Prompt]
+    F --> G[LLM Response]
+    G --> H[Response Parser]
+    H --> I[Code Changes]
+    I --> J[File Writer]
+    J --> K[Python File]
+    I --> L[Git Tracker]
+    L --> M[Commit Ready]
     
-    style B fill:#ffebee
-    style E fill:#ffebee
-    style C fill:#e3f2fd
-    style D fill:#e3f2fd
-    style F fill:#e3f2fd
-    style G fill:#e3f2fd
-    style H fill:#e3f2fd
-    style I fill:#e8f5e9
-```
-
-## Execution Modes
-
-### Sequential Mode
-
-Agents execute in a fixed order:
-
-1. **Analyzer** → Analyzes COBOL file
-2. **Translator** → Translates to Python
-3. **Reviewer** → Reviews translated code
-4. **Tester** → Generates and runs tests
-5. **Refactor** → Refactors code
-
-**Use Case**: When you want predictable, step-by-step execution.
-
-### Handoff Mode
-
-Orchestrator agent dynamically routes tasks:
-
-```mermaid
-graph TD
-    A[User Request] --> B[Orchestrator Agent]
-    B -->|if analysis needed| C[Analyzer]
-    B -->|if translation needed| D[Translator]
-    B -->|if review needed| E[Reviewer]
-    B -->|if testing needed| F[Tester]
-    B -->|if refactoring needed| G[Refactor]
-    
-    style B fill:#e1f5ff
-    style C fill:#fff4e1
-    style D fill:#fff4e1
-    style E fill:#fff4e1
+    style A fill:#ffebee
     style F fill:#fff4e1
-    style G fill:#fff4e1
+    style G fill:#e8f5e9
+    style K fill:#c8e6c9
 ```
-
-**Use Case**: When you want the orchestrator to intelligently decide which agents to use.
 
 ## Technology Stack
 
-- **OpenAI Agents SDK**: Multi-agent orchestration framework
-- **OpenAI GPT Models**: Language models for code understanding and generation
-- **SQLite**: Session storage and conversation history
+- **LiteLLM**: Multi-provider LLM abstraction layer
+- **Prompt Toolkit**: Terminal UI framework
+- **Rich**: Terminal formatting and markdown rendering
+- **GitPython**: Git repository operations
+- **Tree-sitter**: Code parsing and indexing
 - **Pydantic**: Configuration and data validation
 - **Python 3.10+**: Runtime environment
+
+## Configuration
+
+Configuration is loaded from multiple sources (in priority order):
+
+1. **Command-line arguments** - Highest priority
+2. **`.l2m.conf.yml`** - YAML configuration file
+3. **`.env`** - Environment variables
+4. **Model settings** - `.l2m.model.settings.yml`
+5. **Defaults** - Built-in defaults
+
+## Session Management
+
+- **Chat History**: Maintained in memory during session
+- **History Summarization**: Long conversations are summarized to save tokens
+- **Context Preservation**: Files and context persist across messages
+- **Session Files**: Optional persistence to disk
 
 ## Extensibility
 
 The architecture is designed for extensibility:
 
-1. **Add New Agents**: Create a new agent class in `src/agents/`
-2. **Add New Tools**: Create tool functions and register with agents
-3. **Add New Guardrails**: Create validation functions in `src/guardrails/`
-4. **Custom Workflows**: Create new pipeline classes in `src/workflows/`
+1. **Add New Edit Formats**: Create a new coder class in `src/coders/`
+2. **Add New Commands**: Add methods to `cli/commands.py`
+3. **Custom Prompts**: Modify prompts in `src/core/prompts.py`
+4. **New LLM Providers**: Automatically supported via LiteLLM
 
 ## Security Considerations
 
-- **Input Validation**: All COBOL files validated before processing
-- **Output Validation**: Generated Python code validated for syntax and safety
 - **API Key Management**: Secure storage via environment variables
-- **Session Isolation**: Each session maintains separate conversation history
-
+- **Input Validation**: File paths and user input are validated
+- **Output Validation**: Generated code syntax is validated
+- **Git Safety**: Changes are tracked and can be undone
+- **Session Isolation**: Each session maintains separate context
