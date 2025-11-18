@@ -54,26 +54,36 @@ EXCEPTIONS = [
 
 
 class LiteLLMExceptions:
-    exceptions = dict()
     exception_info = {exi.name: exi for exi in EXCEPTIONS}
 
     def __init__(self):
+        self.exceptions = dict()
         self._load()
 
     def _load(self, strict=False):
         import litellm
+        from builtins import BaseException
 
         for var in dir(litellm):
             if var.endswith("Error"):
                 if var not in self.exception_info:
-                    raise ValueError(f"{var} is in litellm but not in l2m's exceptions list")
+                    if strict:
+                        raise ValueError(f"{var} is in litellm but not in l2m's exceptions list")
 
         for var in self.exception_info:
-            ex = getattr(litellm, var)
-            self.exceptions[ex] = self.exception_info[var]
+            try:
+                ex = getattr(litellm, var)
+                # Only add if it's actually an exception class
+                if isinstance(ex, type) and issubclass(ex, BaseException):
+                    self.exceptions[ex] = self.exception_info[var]
+            except (AttributeError, TypeError):
+                # Skip if the attribute doesn't exist or isn't a class
+                pass
 
     def exceptions_tuple(self):
-        return tuple(self.exceptions)
+        # Ensure we only return exception classes
+        ex_classes = [ex for ex in self.exceptions.keys() if isinstance(ex, type)]
+        return tuple(ex_classes) if ex_classes else (Exception,)
 
     def get_ex_info(self, ex):
         """Return the ExInfo for a given exception instance"""

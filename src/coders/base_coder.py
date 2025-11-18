@@ -543,7 +543,10 @@ class Coder:
 
             if self.verbose:
                 self.io.tool_output("JSON Schema:")
-                self.io.tool_output(json.dumps(self.functions, indent=4))
+                try:
+                    self.io.tool_output(json.dumps(self.functions, indent=4, default=str))
+                except (TypeError, ValueError):
+                    self.io.tool_output(str(self.functions))
 
     def setup_lint_cmds(self, lint_cmds):
         if not lint_cmds:
@@ -1897,7 +1900,10 @@ class Coder:
                 # TODO: push this into subclasses
                 args = self.parse_partial_args()
                 if args:
-                    self.io.ai_output(json.dumps(args, indent=4))
+                    try:
+                        self.io.ai_output(json.dumps(args, indent=4, default=str))
+                    except (TypeError, ValueError):
+                        self.io.ai_output(str(args))
 
     def show_send_output(self, completion):
         # Stop spinner once we have a response
@@ -1937,7 +1943,9 @@ class Coder:
             function_call=str(self.partial_response_function_call),
             content=self.partial_response_content,
         )
-        resp_hash = hashlib.sha1(json.dumps(resp_hash, sort_keys=True).encode())
+        # Ensure all values are JSON serializable
+        serializable_hash = {k: str(v) for k, v in resp_hash.items()}
+        resp_hash = hashlib.sha1(json.dumps(serializable_hash, sort_keys=True).encode())
         self.chat_completion_response_hashes.append(resp_hash.hexdigest())
 
         if show_func_err and show_content_err:

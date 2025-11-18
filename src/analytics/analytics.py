@@ -205,12 +205,25 @@ class Analytics:
         if not model:
             return None
 
-        info = model_info_manager.get_model_from_cached_json_db(model.name)
-        if info:
-            return model.name
-        elif "/" in model.name:
-            return model.name.split("/")[0] + "/REDACTED"
-        return None
+        try:
+            # Handle MagicMock or other mock objects
+            model_name = getattr(model, "name", None)
+            if model_name is None:
+                return None
+            
+            # Convert to string in case it's a mock
+            model_name = str(model_name) if model_name else None
+            if not model_name:
+                return None
+                
+            info = model_info_manager.get_model_from_cached_json_db(model_name)
+            if info:
+                return model_name
+            elif "/" in model_name:
+                return model_name.split("/")[0] + "/REDACTED"
+            return None
+        except (AttributeError, TypeError):
+            return None
 
     def posthog_error(self):
         """disable posthog if we get an error"""
@@ -231,12 +244,16 @@ class Analytics:
 
         properties.update(kwargs)
 
-        # Handle numeric values
+        # Handle numeric values and convert non-serializable objects to strings
         for key, value in properties.items():
-            if isinstance(value, (int, float)):
+            if isinstance(value, (int, float, str, bool, type(None))):
                 properties[key] = value
             else:
-                properties[key] = str(value)
+                # Convert to string, handling MagicMock and other non-serializable objects
+                try:
+                    properties[key] = str(value)
+                except Exception:
+                    properties[key] = repr(value)
 
         if self.mp:
             try:
@@ -256,10 +273,10 @@ class Analytics:
             }
             try:
                 with open(self.logfile, "a") as f:
-                    json.dump(log_entry, f)
+                    json.dump(log_entry, f, default=str)
                     f.write("\n")
-            except OSError:
-                pass  # Ignore OS errors when writing to logfile
+            except (OSError, TypeError, ValueError):
+                pass  # Ignore errors when writing to logfile
 
 
 if __name__ == "__main__":

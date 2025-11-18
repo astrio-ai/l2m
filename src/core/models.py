@@ -84,6 +84,8 @@ MODEL_ALIASES = {
     "sonnet": "anthropic/claude-sonnet-4-20250514",
     "haiku": "claude-3-5-haiku-20241022",
     "opus": "claude-opus-4-20250514",
+    "claude sonnet 4.5": "anthropic/claude-sonnet-4-20250514",
+    "claude-sonnet-4.5": "anthropic/claude-sonnet-4-20250514",
     # GPT models
     "4": "gpt-4-0613",
     "4o": "gpt-4o",
@@ -91,13 +93,17 @@ MODEL_ALIASES = {
     "35turbo": "gpt-3.5-turbo",
     "35-turbo": "gpt-3.5-turbo",
     "3": "gpt-3.5-turbo",
+    "gpt-5.1-codex": "gpt-5.1-codex",
+    "gpt-5.1-codex": "gpt-5.1-codex",
     # Other models
     "deepseek": "deepseek/deepseek-chat",
+    "deepseek-v3.2-exp": "deepseek/deepseek-v3.2-exp",
     "flash": "gemini/gemini-2.5-flash",
     "flash-lite": "gemini/gemini-2.5-flash-lite",
     "quasar": "openrouter/openrouter/quasar-alpha",
     "r1": "deepseek/deepseek-reasoner",
     "gemini-2.5-pro": "gemini/gemini-2.5-pro",
+    "gemini 2.5 pro": "gemini/gemini-2.5-pro",
     "gemini": "gemini/gemini-2.5-pro",
     "gemini-exp": "gemini/gemini-2.5-pro-exp-03-25",
     "grok3": "xai/grok-3-beta",
@@ -312,8 +318,9 @@ class Model(ModelSettings):
     def __init__(
         self, model, weak_model=None, editor_model=None, editor_edit_format=None, verbose=False
     ):
-        # Map any alias to its canonical name
-        model = MODEL_ALIASES.get(model, model)
+        # Map any alias to its canonical name (case-insensitive lookup)
+        model_lower = model.lower()
+        model = MODEL_ALIASES.get(model_lower, MODEL_ALIASES.get(model, model))
 
         self.name = model
         self.verbose = verbose
@@ -976,7 +983,15 @@ class Model(ModelSettings):
         if self.is_ollama() and "num_ctx" not in kwargs:
             num_ctx = int(self.token_count(messages) * 1.25) + 8192
             kwargs["num_ctx"] = num_ctx
-        key = json.dumps(kwargs, sort_keys=True).encode()
+        # Filter out non-serializable objects before JSON encoding
+        serializable_kwargs = {}
+        for k, v in kwargs.items():
+            try:
+                json.dumps(v)
+                serializable_kwargs[k] = v
+            except (TypeError, ValueError):
+                serializable_kwargs[k] = str(v)
+        key = json.dumps(serializable_kwargs, sort_keys=True).encode()
 
         # dump(kwargs)
 
