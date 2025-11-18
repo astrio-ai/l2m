@@ -50,7 +50,7 @@ def test_model_info_manager_uses_openrouter_manager(monkeypatch):
     provides no data for an OpenRouter-prefixed model.
     """
     # Ensure litellm path returns no info so that fallback logic triggers
-    monkeypatch.setattr("l2m.models.litellm.get_model_info", lambda *a, **k: {})
+    monkeypatch.setattr("src.core.models.litellm.get_model_info", lambda *a, **k: {})
 
     stub_info = {
         "max_input_tokens": 512,
@@ -63,7 +63,7 @@ def test_model_info_manager_uses_openrouter_manager(monkeypatch):
 
     # Force OpenRouterModelManager to return our stub info
     monkeypatch.setattr(
-        "l2m.models.OpenRouterModelManager.get_model_info",
+        "src.core.models.OpenRouterModelManager.get_model_info",
         lambda self, model: stub_info,
     )
 

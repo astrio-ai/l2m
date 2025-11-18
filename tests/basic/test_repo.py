@@ -128,7 +128,7 @@ class TestRepo(unittest.TestCase):
             diffs = git_repo.diff_commits(False, "HEAD~1", "HEAD")
             self.assertIn("two", diffs)
 
-    @patch("l2m.models.Model.simple_send_with_retries")
+    @patch("src.core.models.Model.simple_send_with_retries")
     def test_get_commit_message(self, mock_send):
         mock_send.side_effect = ["", "a good commit message"]
 
@@ -152,7 +152,7 @@ class TestRepo(unittest.TestCase):
         second_call_messages = mock_send.call_args_list[1][0][0]  # Get messages from second call
         self.assertEqual(first_call_messages, second_call_messages)
 
-    @patch("l2m.models.Model.simple_send_with_retries")
+    @patch("src.core.models.Model.simple_send_with_retries")
     def test_get_commit_message_strip_quotes(self, mock_send):
         mock_send.return_value = '"a good commit message"'
 
@@ -163,7 +163,7 @@ class TestRepo(unittest.TestCase):
         # Assert that the returned message is the expected one
         self.assertEqual(result, "a good commit message")
 
-    @patch("l2m.models.Model.simple_send_with_retries")
+    @patch("src.core.models.Model.simple_send_with_retries")
     def test_get_commit_message_no_strip_unmatched_quotes(self, mock_send):
         mock_send.return_value = 'a good "commit message"'
 
@@ -174,7 +174,7 @@ class TestRepo(unittest.TestCase):
         # Assert that the returned message is the expected one
         self.assertEqual(result, 'a good "commit message"')
 
-    @patch("l2m.models.Model.simple_send_with_retries")
+    @patch("src.core.models.Model.simple_send_with_retries")
     def test_get_commit_message_with_custom_prompt(self, mock_send):
         mock_send.return_value = "Custom commit message"
         custom_prompt = "Generate a commit message in the style of Shakespeare"
@@ -188,7 +188,7 @@ class TestRepo(unittest.TestCase):
         self.assertEqual(args[0][0]["content"], custom_prompt)  # Check first message content
 
     @unittest.skipIf(platform.system() == "Windows", "Git env var behavior differs on Windows")
-    @patch("l2m.repo.GitRepo.get_commit_message")
+    @patch("src.git.repo.GitRepo.get_commit_message")
     def test_commit_with_custom_committer_name(self, mock_send):
         mock_send.return_value = '"a good commit message"'
 
@@ -620,7 +620,7 @@ class TestRepo(unittest.TestCase):
             self.assertNotIn(str(root_file), tracked_files)
             self.assertNotIn(str(another_subdir_file), tracked_files)
 
-    @patch("l2m.models.Model.simple_send_with_retries")
+    @patch("src.core.models.Model.simple_send_with_retries")
     def test_noop_commit(self, mock_send):
         mock_send.return_value = '"a good commit message"'
 
@@ -684,7 +684,7 @@ class TestRepo(unittest.TestCase):
             latest_commit_msg = raw_repo.head.commit.message
             self.assertEqual(latest_commit_msg.strip(), "Should succeed")
 
-    @patch("l2m.models.Model.simple_send_with_retries")
+    @patch("src.core.models.Model.simple_send_with_retries")
     def test_get_commit_message_uses_system_prompt_prefix(self, mock_send):
         """
         Verify that GitRepo.get_commit_message() prepends the model.system_prompt_prefix

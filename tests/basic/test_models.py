@@ -105,7 +105,7 @@ class TestModels(unittest.TestCase):
             any("bogus-model" in msg for msg in warning_messages)
         )  # Check that one of the warnings mentions the bogus model
 
-    @patch("l2m.models.check_for_dependencies")
+    @patch("src.core.models.check_for_dependencies")
     def test_sanity_check_model_calls_check_dependencies(self, mock_check_deps):
         """Test that sanity_check_model calls check_for_dependencies"""
         mock_io = MagicMock()
@@ -205,7 +205,7 @@ class TestModels(unittest.TestCase):
         model.set_thinking_tokens("0.5M")
         self.assertEqual(model.extra_params["thinking"]["budget_tokens"], 0.5 * 1024 * 1024)
 
-    @patch("l2m.models.check_pip_install_extra")
+    @patch("src.core.models.check_pip_install_extra")
     def test_check_for_dependencies_bedrock(self, mock_check_pip):
         """Test that check_for_dependencies calls check_pip_install_extra for Bedrock models"""
         from cli.io import InputOutput
@@ -222,7 +222,7 @@ class TestModels(unittest.TestCase):
             io, "boto3", "AWS Bedrock models require the boto3 package.", ["boto3"]
         )
 
-    @patch("l2m.models.check_pip_install_extra")
+    @patch("src.core.models.check_pip_install_extra")
     def test_check_for_dependencies_vertex_ai(self, mock_check_pip):
         """Test that check_for_dependencies calls check_pip_install_extra for Vertex AI models"""
         from cli.io import InputOutput
@@ -242,7 +242,7 @@ class TestModels(unittest.TestCase):
             ["google-cloud-aiplatform"],
         )
 
-    @patch("l2m.models.check_pip_install_extra")
+    @patch("src.core.models.check_pip_install_extra")
     def test_check_for_dependencies_other_model(self, mock_check_pip):
         """Test that check_for_dependencies doesn't call check_pip_install_extra for other models"""
         from cli.io import InputOutput
@@ -425,7 +425,7 @@ class TestModels(unittest.TestCase):
             except OSError:
                 pass
 
-    @patch("l2m.models.litellm.completion")
+    @patch("src.core.models.litellm.completion")
     @patch.object(Model, "token_count")
     def test_ollama_num_ctx_set_when_missing(self, mock_token_count, mock_completion):
         mock_token_count.return_value = 1000
@@ -446,7 +446,7 @@ class TestModels(unittest.TestCase):
             timeout=600,
         )
 
-    @patch("l2m.models.litellm.completion")
+    @patch("src.core.models.litellm.completion")
     def test_ollama_uses_existing_num_ctx(self, mock_completion):
         model = Model("ollama/llama3")
         model.extra_params = {"num_ctx": 4096}
@@ -464,7 +464,7 @@ class TestModels(unittest.TestCase):
             timeout=600,
         )
 
-    @patch("l2m.models.litellm.completion")
+    @patch("src.core.models.litellm.completion")
     def test_non_ollama_no_num_ctx(self, mock_completion):
         model = Model("gpt-4")
         messages = [{"role": "user", "content": "Hello"}]
@@ -496,7 +496,7 @@ class TestModels(unittest.TestCase):
         model.use_temperature = 0.7
         self.assertEqual(model.use_temperature, 0.7)
 
-    @patch("l2m.models.litellm.completion")
+    @patch("src.core.models.litellm.completion")
     def test_request_timeout_default(self, mock_completion):
         # Test default timeout is used when not specified in extra_params
         model = Model("gpt-4")
@@ -510,7 +510,7 @@ class TestModels(unittest.TestCase):
             timeout=600,  # Default timeout
         )
 
-    @patch("l2m.models.litellm.completion")
+    @patch("src.core.models.litellm.completion")
     def test_request_timeout_from_extra_params(self, mock_completion):
         # Test timeout from extra_params overrides default
         model = Model("gpt-4")
@@ -525,7 +525,7 @@ class TestModels(unittest.TestCase):
             timeout=300,  # From extra_params
         )
 
-    @patch("l2m.models.litellm.completion")
+    @patch("src.core.models.litellm.completion")
     def test_use_temperature_in_send_completion(self, mock_completion):
         # Test use_temperature=True sends temperature=0
         model = Model("gpt-4")

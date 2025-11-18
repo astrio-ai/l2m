@@ -1744,7 +1744,7 @@ class TestCommands(TestCase):
         commands = Commands(io, coder)
 
         # Mock sanity check to avoid network calls
-        with mock.patch("l2m.models.sanity_check_models"):
+        with mock.patch("src.core.models.sanity_check_models"):
             # Test switching the main model to gpt-4 (default 'whole')
             with self.assertRaises(SwitchCoder) as context:
                 commands.cmd_model("gpt-4")
@@ -1796,7 +1796,7 @@ class TestCommands(TestCase):
         commands = Commands(io, coder)
 
         # Mock sanity check to avoid network calls
-        with mock.patch("l2m.models.sanity_check_models"):
+        with mock.patch("src.core.models.sanity_check_models"):
             # Test switching the main model to gpt-4 (default 'whole')
             with self.assertRaises(SwitchCoder) as context:
                 commands.cmd_model("gpt-4")
@@ -1814,7 +1814,7 @@ class TestCommands(TestCase):
         question = "What is the meaning of life?"
         canned_reply = "The meaning of life is 42."
 
-        with mock.patch("l2m.coders.Coder.run") as mock_run:
+        with mock.patch("src.coders.Coder.run") as mock_run:
             mock_run.return_value = canned_reply
 
             with self.assertRaises(SwitchCoder):

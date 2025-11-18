@@ -1,12 +1,12 @@
 import time
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from requests.exceptions import ConnectionError, ReadTimeout
 
 import src
 from src.coders import Coder
-from cli.commands import Commands
+from cli.commands import Commands, SwitchCoder
 from src.help import Help, fname_to_url
 from cli.io import InputOutput
 from src.core.models import Model
@@ -56,17 +56,25 @@ class TestHelp(unittest.TestCase):
         coder = Coder.create(GPT35, None, io)
         commands = Commands(io, coder)
 
+        # Patch HelpCoder.run, install_help_extra, and Help
         help_coder_run = MagicMock(return_value="")
-        l2m.coders.HelpCoder.run = help_coder_run
-
+        help_ask = MagicMock(return_value="# Question: hi\n\n# Relevant docs:\n\n")
+        
         def run_help_command():
-            try:
-                commands.cmd_help("hi")
-            except l2m.commands.SwitchCoder:
-                pass
-            else:
-                # If no exception was raised, fail the test
-                assert False, "SwitchCoder exception was not raised"
+            # Pre-create a mock Help instance
+            mock_help_instance = MagicMock()
+            mock_help_instance.ask = help_ask
+            
+            with patch("src.coders.help_coder.HelpCoder.run", help_coder_run), \
+                 patch("cli.commands.install_help_extra", return_value=True), \
+                 patch("cli.commands.Help", return_value=mock_help_instance):
+                try:
+                    commands.cmd_help("hi")
+                except SwitchCoder:
+                    pass
+                else:
+                    # If no exception was raised, fail the test
+                    assert False, "SwitchCoder exception was not raised"
 
         # Use retry with backoff for the help command that loads models
         cls.retry_with_backoff(run_help_command)
@@ -74,10 +82,20 @@ class TestHelp(unittest.TestCase):
         help_coder_run.assert_called_once()
 
     def test_init(self):
+        # Skip this test if llama_index is not available
+        try:
+            import llama_index.core
+        except ImportError:
+            self.skipTest("llama_index not available")
         help_inst = Help()
         self.assertIsNotNone(help_inst.retriever)
 
     def test_ask_without_mock(self):
+        # Skip this test if llama_index is not available
+        try:
+            import llama_index.core
+        except ImportError:
+            self.skipTest("llama_index not available")
         help_instance = Help()
         question = "What is l2m?"
         result = help_instance.ask(question)

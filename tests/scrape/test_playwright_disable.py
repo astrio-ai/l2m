@@ -111,7 +111,7 @@ def test_commands_web_disable_playwright(monkeypatch):
             pass
 
     # Patch install_playwright to always return False (simulate not available)
-    monkeypatch.setattr("l2m.scrape.install_playwright", lambda io: False)
+    monkeypatch.setattr("src.web.scrape.install_playwright", lambda io: False)
 
     # Patch Scraper to always use scrape_with_httpx and never warn
     class DummyScraper:
@@ -122,7 +122,7 @@ def test_commands_web_disable_playwright(monkeypatch):
             self.called = True
             return "dummy content"
 
-    monkeypatch.setattr("l2m.commands.Scraper", DummyScraper)
+    monkeypatch.setattr("cli.commands.Scraper", DummyScraper)
 
     io = DummyIO()
     coder = DummyCoder()

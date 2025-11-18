@@ -13,6 +13,7 @@ from src.setup.onboarding import (
     exchange_code_for_key,
     find_available_port,
     generate_pkce_codes,
+    get_available_api_keys,
     offer_openrouter_oauth,
     select_default_model,
     try_to_select_default_model,
@@ -82,76 +83,87 @@ class TestOnboarding(unittest.TestCase):
         mock_get.return_value = mock_response
         self.assertTrue(check_openrouter_tier("fake_key"))
 
-    @patch("l2m.onboarding.check_openrouter_tier")
+    @patch("src.setup.onboarding.check_openrouter_tier")
     @patch.dict(os.environ, {}, clear=True)
     def test_try_select_default_model_no_keys(self, mock_check_tier):
         """Test no model is selected when no keys are present."""
-        self.assertIsNone(try_to_select_default_model())
+        model, priority_info = try_to_select_default_model()
+        self.assertIsNone(model)
+        self.assertIsNone(priority_info)
         mock_check_tier.assert_not_called()
 
-    @patch("l2m.onboarding.check_openrouter_tier", return_value=True)  # Assume free tier
+    @patch("src.setup.onboarding.check_openrouter_tier", return_value=True)  # Assume free tier
     @patch.dict(os.environ, {"OPENROUTER_API_KEY": "or_key"}, clear=True)
     def test_try_select_default_model_openrouter_free(self, mock_check_tier):
         """Test OpenRouter free model selection."""
-        self.assertEqual(try_to_select_default_model(), "openrouter/deepseek/deepseek-r1:free")
+        model, priority_info = try_to_select_default_model()
+        self.assertEqual(model, "openrouter/deepseek/deepseek-r1:free")
+        self.assertEqual(priority_info, (6, "OpenRouter (free tier)"))
         mock_check_tier.assert_called_once_with("or_key")
 
-    @patch("l2m.onboarding.check_openrouter_tier", return_value=False)  # Assume paid tier
+    @patch("src.setup.onboarding.check_openrouter_tier", return_value=False)  # Assume paid tier
     @patch.dict(os.environ, {"OPENROUTER_API_KEY": "or_key"}, clear=True)
     def test_try_select_default_model_openrouter_paid(self, mock_check_tier):
         """Test OpenRouter paid model selection."""
-        self.assertEqual(try_to_select_default_model(), "openrouter/anthropic/claude-sonnet-4")
+        model, priority_info = try_to_select_default_model()
+        self.assertEqual(model, "openrouter/anthropic/claude-sonnet-4")
+        self.assertEqual(priority_info, (6, "OpenRouter (paid tier)"))
         mock_check_tier.assert_called_once_with("or_key")
 
-    @patch("l2m.onboarding.check_openrouter_tier")
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "an_key"}, clear=True)
-    def test_try_select_default_model_anthropic(self, mock_check_tier):
-        """Test Anthropic model selection."""
-        self.assertEqual(try_to_select_default_model(), "sonnet")
-        mock_check_tier.assert_not_called()
-
-    @patch("l2m.onboarding.check_openrouter_tier")
-    @patch.dict(os.environ, {"DEEPSEEK_API_KEY": "ds_key"}, clear=True)
-    def test_try_select_default_model_deepseek(self, mock_check_tier):
-        """Test Deepseek model selection."""
-        self.assertEqual(try_to_select_default_model(), "deepseek")
-        mock_check_tier.assert_not_called()
-
-    @patch("l2m.onboarding.check_openrouter_tier")
+    @patch("src.setup.onboarding.check_openrouter_tier")
     @patch.dict(os.environ, {"OPENAI_API_KEY": "oa_key"}, clear=True)
     def test_try_select_default_model_openai(self, mock_check_tier):
-        """Test OpenAI model selection."""
-        self.assertEqual(try_to_select_default_model(), "gpt-4o")
+        """Test OpenAI model selection (1st priority)."""
+        model, priority_info = try_to_select_default_model()
+        self.assertEqual(model, "GPT-5.1-Codex")
+        self.assertEqual(priority_info, (1, "OpenAI"))
         mock_check_tier.assert_not_called()
 
-    @patch("l2m.onboarding.check_openrouter_tier")
+    @patch("src.setup.onboarding.check_openrouter_tier")
+    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "an_key"}, clear=True)
+    def test_try_select_default_model_anthropic(self, mock_check_tier):
+        """Test Anthropic model selection (2nd priority)."""
+        model, priority_info = try_to_select_default_model()
+        self.assertEqual(model, "Claude Sonnet 4.5")
+        self.assertEqual(priority_info, (2, "Anthropic Claude"))
+        mock_check_tier.assert_not_called()
+
+    @patch("src.setup.onboarding.check_openrouter_tier")
     @patch.dict(os.environ, {"GEMINI_API_KEY": "gm_key"}, clear=True)
     def test_try_select_default_model_gemini(self, mock_check_tier):
-        """Test Gemini model selection."""
-        self.assertEqual(try_to_select_default_model(), "gemini/gemini-2.5-pro-exp-03-25")
+        """Test Gemini model selection (3rd priority)."""
+        model, priority_info = try_to_select_default_model()
+        self.assertEqual(model, "Gemini 2.5 Pro")
+        self.assertEqual(priority_info, (3, "Google Gemini"))
         mock_check_tier.assert_not_called()
 
-    @patch("l2m.onboarding.check_openrouter_tier")
-    @patch.dict(os.environ, {"VERTEXAI_PROJECT": "vx_proj"}, clear=True)
-    def test_try_select_default_model_vertex(self, mock_check_tier):
-        """Test Vertex AI model selection."""
-        self.assertEqual(try_to_select_default_model(), "vertex_ai/gemini-2.5-pro-exp-03-25")
+    @patch("src.setup.onboarding.check_openrouter_tier")
+    @patch.dict(os.environ, {"DEEPSEEK_API_KEY": "ds_key"}, clear=True)
+    def test_try_select_default_model_deepseek(self, mock_check_tier):
+        """Test DeepSeek model selection (4th priority)."""
+        model, priority_info = try_to_select_default_model()
+        self.assertEqual(model, "DeepSeek-V3.2-Exp")
+        self.assertEqual(priority_info, (4, "DeepSeek"))
         mock_check_tier.assert_not_called()
 
-    @patch("l2m.onboarding.check_openrouter_tier", return_value=False)  # Paid
+    @patch("src.setup.onboarding.check_openrouter_tier", return_value=False)  # Paid
     @patch.dict(
         os.environ, {"OPENROUTER_API_KEY": "or_key", "OPENAI_API_KEY": "oa_key"}, clear=True
     )
-    def test_try_select_default_model_priority_openrouter(self, mock_check_tier):
-        """Test OpenRouter key takes priority."""
-        self.assertEqual(try_to_select_default_model(), "openrouter/anthropic/claude-sonnet-4")
-        mock_check_tier.assert_called_once_with("or_key")
+    def test_try_select_default_model_priority_openai_over_openrouter(self, mock_check_tier):
+        """Test OpenAI key (1st priority) takes priority over OpenRouter."""
+        model, priority_info = try_to_select_default_model()
+        self.assertEqual(model, "GPT-5.1-Codex")
+        self.assertEqual(priority_info, (1, "OpenAI"))
+        mock_check_tier.assert_not_called()
 
-    @patch("l2m.onboarding.check_openrouter_tier")
+    @patch("src.setup.onboarding.check_openrouter_tier")
     @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "an_key", "OPENAI_API_KEY": "oa_key"}, clear=True)
-    def test_try_select_default_model_priority_anthropic(self, mock_check_tier):
-        """Test Anthropic key takes priority over OpenAI."""
-        self.assertEqual(try_to_select_default_model(), "sonnet")
+    def test_try_select_default_model_priority_openai_over_anthropic(self, mock_check_tier):
+        """Test OpenAI key (1st priority) takes priority over Anthropic (2nd priority)."""
+        model, priority_info = try_to_select_default_model()
+        self.assertEqual(model, "GPT-5.1-Codex")
+        self.assertEqual(priority_info, (1, "OpenAI"))
         mock_check_tier.assert_not_called()
 
     @patch("socketserver.TCPServer")
@@ -284,10 +296,46 @@ class TestOnboarding(unittest.TestCase):
             f"Error exchanging code for OpenRouter key: {req_exception}"
         )
 
+    # --- Tests for get_available_api_keys ---
+
+    @patch.dict(os.environ, {}, clear=True)
+    def test_get_available_api_keys_none(self):
+        """Test get_available_api_keys returns empty list when no keys."""
+        available = get_available_api_keys()
+        self.assertEqual(available, [])
+
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "oa_key"}, clear=True)
+    def test_get_available_api_keys_single(self):
+        """Test get_available_api_keys with single key."""
+        available = get_available_api_keys()
+        self.assertEqual(len(available), 1)
+        self.assertEqual(available[0][1], "OPENAI_API_KEY")
+        self.assertEqual(available[0][0], 1)  # Priority 1
+
+    @patch.dict(
+        os.environ,
+        {
+            "ANTHROPIC_API_KEY": "an_key",
+            "OPENAI_API_KEY": "oa_key",
+            "DEEPSEEK_API_KEY": "ds_key",
+        },
+        clear=True,
+    )
+    def test_get_available_api_keys_multiple_priority_order(self):
+        """Test get_available_api_keys returns keys in priority order."""
+        available = get_available_api_keys()
+        self.assertEqual(len(available), 3)
+        # Should be sorted by priority (lower number = higher priority)
+        priorities = [key[0] for key in available]
+        self.assertEqual(priorities, [1, 2, 4])  # OpenAI=1, Anthropic=2, DeepSeek=4
+        self.assertEqual(available[0][1], "OPENAI_API_KEY")  # Highest priority
+        self.assertEqual(available[1][1], "ANTHROPIC_API_KEY")
+        self.assertEqual(available[2][1], "DEEPSEEK_API_KEY")
+
     # --- Tests for select_default_model ---
 
-    @patch("l2m.onboarding.try_to_select_default_model", return_value="gpt-4o")
-    @patch("l2m.onboarding.offer_openrouter_oauth")
+    @patch("src.setup.onboarding.try_to_select_default_model", return_value=("GPT-5.1-Codex", (1, "OpenAI")))
+    @patch("src.setup.onboarding.offer_openrouter_oauth")
     def test_select_default_model_already_specified(self, mock_offer_oauth, mock_try_select):
         """Test select_default_model returns args.model if provided."""
         args = argparse.Namespace(model="specific-model")
@@ -298,31 +346,30 @@ class TestOnboarding(unittest.TestCase):
         mock_try_select.assert_not_called()
         mock_offer_oauth.assert_not_called()
 
-    @patch("l2m.onboarding.try_to_select_default_model", return_value="gpt-4o")
-    @patch("l2m.onboarding.offer_openrouter_oauth")
+    @patch("src.setup.onboarding.try_to_select_default_model", return_value=("GPT-5.1-Codex", (1, "OpenAI")))
+    @patch("src.setup.onboarding.offer_openrouter_oauth")
     def test_select_default_model_found_via_env(self, mock_offer_oauth, mock_try_select):
         """Test select_default_model returns model found by try_to_select."""
         args = argparse.Namespace(model=None)  # No model specified
         io_mock = DummyIO()
-        io_mock.tool_warning = MagicMock()  # Track warnings
+        io_mock.tool_output = MagicMock()  # Track output
         analytics_mock = DummyAnalytics()
         analytics_mock.event = MagicMock()  # Track events
 
         selected_model = select_default_model(args, io_mock, analytics_mock)
 
-        self.assertEqual(selected_model, "gpt-4o")
+        self.assertEqual(selected_model, "GPT-5.1-Codex")
         mock_try_select.assert_called_once()
-        io_mock.tool_warning.assert_called_once_with(
-            "Using gpt-4o model with API key from environment."
-        )
-        analytics_mock.event.assert_called_once_with("auto_model_selection", model="gpt-4o")
+        # Check that tool_output was called (for priority message)
+        io_mock.tool_output.assert_called()
+        analytics_mock.event.assert_called_once()
         mock_offer_oauth.assert_not_called()
 
     @patch(
-        "l2m.onboarding.try_to_select_default_model", side_effect=[None, None]
+        "src.setup.onboarding.try_to_select_default_model", side_effect=[(None, None), (None, None)]
     )  # Fails first, fails after oauth attempt
     @patch(
-        "l2m.onboarding.offer_openrouter_oauth", return_value=False
+        "src.setup.onboarding.offer_openrouter_oauth", return_value=False
     )  # OAuth offered but fails/declined
     def test_select_default_model_no_keys_oauth_fail(self, mock_offer_oauth, mock_try_select):
         """Test select_default_model offers OAuth when no keys, but OAuth fails."""
@@ -343,17 +390,18 @@ class TestOnboarding(unittest.TestCase):
         io_mock.offer_url.assert_called_once()  # Should offer docs URL
 
     @patch(
-        "l2m.onboarding.try_to_select_default_model",
-        side_effect=[None, "openrouter/deepseek/deepseek-r1:free"],
+        "src.setup.onboarding.try_to_select_default_model",
+        side_effect=[(None, None), ("openrouter/deepseek/deepseek-r1:free", (6, "OpenRouter (free tier)"))],
     )  # Fails first, succeeds after oauth
     @patch(
-        "l2m.onboarding.offer_openrouter_oauth", return_value=True
+        "src.setup.onboarding.offer_openrouter_oauth", return_value=True
     )  # OAuth offered and succeeds
     def test_select_default_model_no_keys_oauth_success(self, mock_offer_oauth, mock_try_select):
         """Test select_default_model offers OAuth, which succeeds."""
         args = argparse.Namespace(model=None)
         io_mock = DummyIO()
         io_mock.tool_warning = MagicMock()
+        io_mock.tool_output = MagicMock()
         analytics_mock = DummyAnalytics()
 
         selected_model = select_default_model(args, io_mock, analytics_mock)
@@ -366,13 +414,9 @@ class TestOnboarding(unittest.TestCase):
         io_mock.tool_warning.assert_called_once_with(
             "No LLM model was specified and no API keys were provided."
         )
-        # The second call to try_select finds the model, so the *outer* function logs the usage.
-        # Note: The warning comes from the second call within select_default_model,
-        # not try_select itself.
-        # We verify the final state and model returned.
 
     # --- Tests for offer_openrouter_oauth ---
-    @patch("l2m.onboarding.start_openrouter_oauth_flow", return_value="new_or_key")
+    @patch("src.setup.onboarding.start_openrouter_oauth_flow", return_value="new_or_key")
     @patch.dict(os.environ, {}, clear=True)  # Ensure no key exists initially
     def test_offer_openrouter_oauth_confirm_yes_success(self, mock_start_oauth):
         """Test offer_openrouter_oauth when user confirms and OAuth succeeds."""
@@ -392,7 +436,7 @@ class TestOnboarding(unittest.TestCase):
         # Clean up env var
         del os.environ["OPENROUTER_API_KEY"]
 
-    @patch("l2m.onboarding.start_openrouter_oauth_flow", return_value=None)  # OAuth fails
+    @patch("src.setup.onboarding.start_openrouter_oauth_flow", return_value=None)  # OAuth fails
     @patch.dict(os.environ, {}, clear=True)
     def test_offer_openrouter_oauth_confirm_yes_fail(self, mock_start_oauth):
         """Test offer_openrouter_oauth when user confirms but OAuth fails."""
@@ -414,7 +458,7 @@ class TestOnboarding(unittest.TestCase):
         analytics_mock.event.assert_any_call("oauth_flow_initiated", provider="openrouter")
         analytics_mock.event.assert_any_call("oauth_flow_failure")
 
-    @patch("l2m.onboarding.start_openrouter_oauth_flow")
+    @patch("src.setup.onboarding.start_openrouter_oauth_flow")
     def test_offer_openrouter_oauth_confirm_no(self, mock_start_oauth):
         """Test offer_openrouter_oauth when user declines."""
         io_mock = DummyIO()

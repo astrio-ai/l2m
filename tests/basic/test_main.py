@@ -33,7 +33,7 @@ class TestMain(TestCase):
         os.environ["HOME"] = self.homedir_obj.name
         self.input_patcher = patch("builtins.input", return_value=None)
         self.mock_input = self.input_patcher.start()
-        self.webbrowser_patcher = patch("l2m.io.webbrowser.open")
+        self.webbrowser_patcher = patch("cli.io.webbrowser.open")
         self.mock_webbrowser = self.webbrowser_patcher.start()
 
     def tearDown(self):
@@ -52,13 +52,13 @@ class TestMain(TestCase):
         main(["foo.txt", "--yes", "--no-git", "--exit"], input=DummyInput(), output=DummyOutput())
         self.assertTrue(os.path.exists("foo.txt"))
 
-    @patch("l2m.repo.GitRepo.get_commit_message", return_value="mock commit message")
+    @patch("src.git.repo.GitRepo.get_commit_message", return_value="mock commit message")
     def test_main_with_empty_git_dir_new_file(self, _):
         make_repo()
         main(["--yes", "foo.txt", "--exit"], input=DummyInput(), output=DummyOutput())
         self.assertTrue(os.path.exists("foo.txt"))
 
-    @patch("l2m.repo.GitRepo.get_commit_message", return_value="mock commit message")
+    @patch("src.git.repo.GitRepo.get_commit_message", return_value="mock commit message")
     def test_main_with_empty_git_dir_new_files(self, _):
         make_repo()
         main(["--yes", "foo.txt", "bar.txt", "--exit"], input=DummyInput(), output=DummyOutput())
@@ -72,7 +72,7 @@ class TestMain(TestCase):
         res = main(["subdir", "foo.txt"], input=DummyInput(), output=DummyOutput())
         self.assertNotEqual(res, None)
 
-    @patch("l2m.repo.GitRepo.get_commit_message", return_value="mock commit message")
+    @patch("src.git.repo.GitRepo.get_commit_message", return_value="mock commit message")
     def test_main_with_subdir_repo_fnames(self, _):
         subdir = Path("subdir")
         subdir.mkdir()
@@ -89,13 +89,13 @@ class TestMain(TestCase):
         make_repo()
 
         Path(".l2m.conf.yml").write_text("auto-commits: false\n")
-        with patch("l2m.coders.Coder.create") as MockCoder:
+        with patch("src.coders.Coder.create") as MockCoder:
             main(["--yes"], input=DummyInput(), output=DummyOutput())
             _, kwargs = MockCoder.call_args
             assert kwargs["auto_commits"] is False
 
         Path(".l2m.conf.yml").write_text("auto-commits: true\n")
-        with patch("l2m.coders.Coder.create") as MockCoder:
+        with patch("src.coders.Coder.create") as MockCoder:
             main([], input=DummyInput(), output=DummyOutput())
             _, kwargs = MockCoder.call_args
             assert kwargs["auto_commits"] is True
@@ -261,30 +261,30 @@ class TestMain(TestCase):
             self.assertNotIn(abs_ignored_file, coder.abs_fnames)
 
     def test_main_args(self):
-        with patch("l2m.coders.Coder.create") as MockCoder:
+        with patch("src.coders.Coder.create") as MockCoder:
             # --yes will just ok the git repo without blocking on input
             # following calls to main will see the new repo already
             main(["--no-auto-commits", "--yes"], input=DummyInput())
             _, kwargs = MockCoder.call_args
             assert kwargs["auto_commits"] is False
 
-        with patch("l2m.coders.Coder.create") as MockCoder:
+        with patch("src.coders.Coder.create") as MockCoder:
             main(["--auto-commits"], input=DummyInput())
             _, kwargs = MockCoder.call_args
             assert kwargs["auto_commits"] is True
 
-        with patch("l2m.coders.Coder.create") as MockCoder:
+        with patch("src.coders.Coder.create") as MockCoder:
             main([], input=DummyInput())
             _, kwargs = MockCoder.call_args
             assert kwargs["dirty_commits"] is True
             assert kwargs["auto_commits"] is True
 
-        with patch("l2m.coders.Coder.create") as MockCoder:
+        with patch("src.coders.Coder.create") as MockCoder:
             main(["--no-dirty-commits"], input=DummyInput())
             _, kwargs = MockCoder.call_args
             assert kwargs["dirty_commits"] is False
 
-        with patch("l2m.coders.Coder.create") as MockCoder:
+        with patch("src.coders.Coder.create") as MockCoder:
             main(["--dirty-commits"], input=DummyInput())
             _, kwargs = MockCoder.call_args
             assert kwargs["dirty_commits"] is True
@@ -327,7 +327,7 @@ class TestMain(TestCase):
         with open(message_file_path, "w", encoding="utf-8") as message_file:
             message_file.write(message_file_content)
 
-        with patch("l2m.coders.Coder.create") as MockCoder:
+        with patch("src.coders.Coder.create") as MockCoder:
             MockCoder.return_value.run = MagicMock()
             main(
                 ["--yes", "--message-file", message_file_path],
@@ -342,8 +342,8 @@ class TestMain(TestCase):
         fname = "foo.py"
 
         with GitTemporaryDirectory():
-            with patch("l2m.coders.Coder.create") as MockCoder:  # noqa: F841
-                with patch("l2m.main.InputOutput") as MockSend:
+            with patch("src.coders.Coder.create") as MockCoder:  # noqa: F841
+                with patch("cli.main.InputOutput") as MockSend:
 
                     def side_effect(*args, **kwargs):
                         self.assertEqual(kwargs["encoding"], "iso-8859-15")
@@ -356,15 +356,15 @@ class TestMain(TestCase):
     def test_main_exit_calls_version_check(self):
         with GitTemporaryDirectory():
             with (
-                patch("l2m.main.check_version") as mock_check_version,
-                patch("l2m.main.InputOutput") as mock_input_output,
+                patch("cli.main.check_version") as mock_check_version,
+                patch("cli.main.InputOutput") as mock_input_output,
             ):
                 main(["--exit", "--check-update"], input=DummyInput(), output=DummyOutput())
                 mock_check_version.assert_called_once()
                 mock_input_output.assert_called_once()
 
-    @patch("l2m.main.InputOutput")
-    @patch("l2m.coders.base_coder.Coder.run")
+    @patch("cli.main.InputOutput")
+    @patch("src.coders.base_coder.Coder.run")
     def test_main_message_adds_to_input_history(self, mock_run, MockInputOutput):
         test_message = "test message"
         mock_io_instance = MockInputOutput.return_value
@@ -373,8 +373,8 @@ class TestMain(TestCase):
 
         mock_io_instance.add_to_input_history.assert_called_once_with(test_message)
 
-    @patch("l2m.main.InputOutput")
-    @patch("l2m.coders.base_coder.Coder.run")
+    @patch("cli.main.InputOutput")
+    @patch("src.coders.base_coder.Coder.run")
     def test_yes(self, mock_run, MockInputOutput):
         test_message = "test message"
 
@@ -382,8 +382,8 @@ class TestMain(TestCase):
         args, kwargs = MockInputOutput.call_args
         self.assertTrue(args[1])
 
-    @patch("l2m.main.InputOutput")
-    @patch("l2m.coders.base_coder.Coder.run")
+    @patch("cli.main.InputOutput")
+    @patch("src.coders.base_coder.Coder.run")
     def test_default_yes(self, mock_run, MockInputOutput):
         test_message = "test message"
 
@@ -393,7 +393,7 @@ class TestMain(TestCase):
 
     def test_dark_mode_sets_code_theme(self):
         # Mock InputOutput to capture the configuration
-        with patch("l2m.main.InputOutput") as MockInputOutput:
+        with patch("cli.main.InputOutput") as MockInputOutput:
             MockInputOutput.return_value.get_input.return_value = None
             main(["--dark-mode", "--no-git", "--exit"], input=DummyInput(), output=DummyOutput())
             # Ensure InputOutput was called
@@ -404,7 +404,7 @@ class TestMain(TestCase):
 
     def test_light_mode_sets_code_theme(self):
         # Mock InputOutput to capture the configuration
-        with patch("l2m.main.InputOutput") as MockInputOutput:
+        with patch("cli.main.InputOutput") as MockInputOutput:
             MockInputOutput.return_value.get_input.return_value = None
             main(["--light-mode", "--no-git", "--exit"], input=DummyInput(), output=DummyOutput())
             # Ensure InputOutput was called
@@ -420,7 +420,7 @@ class TestMain(TestCase):
 
     def test_env_file_flag_sets_automatic_variable(self):
         env_file_path = self.create_env_file(".env.test", "L2M_DARK_MODE=True")
-        with patch("l2m.main.InputOutput") as MockInputOutput:
+        with patch("cli.main.InputOutput") as MockInputOutput:
             MockInputOutput.return_value.get_input.return_value = None
             MockInputOutput.return_value.get_input.confirm_ask = True
             main(
@@ -435,7 +435,7 @@ class TestMain(TestCase):
 
     def test_default_env_file_sets_automatic_variable(self):
         self.create_env_file(".env", "L2M_DARK_MODE=True")
-        with patch("l2m.main.InputOutput") as MockInputOutput:
+        with patch("cli.main.InputOutput") as MockInputOutput:
             MockInputOutput.return_value.get_input.return_value = None
             MockInputOutput.return_value.get_input.confirm_ask = True
             main(["--no-git", "--exit"], input=DummyInput(), output=DummyOutput())
@@ -447,7 +447,7 @@ class TestMain(TestCase):
 
     def test_false_vals_in_env_file(self):
         self.create_env_file(".env", "L2M_SHOW_DIFFS=off")
-        with patch("l2m.coders.Coder.create") as MockCoder:
+        with patch("src.coders.Coder.create") as MockCoder:
             main(["--no-git", "--yes"], input=DummyInput(), output=DummyOutput())
             MockCoder.assert_called_once()
             _, kwargs = MockCoder.call_args
@@ -455,7 +455,7 @@ class TestMain(TestCase):
 
     def test_true_vals_in_env_file(self):
         self.create_env_file(".env", "L2M_SHOW_DIFFS=on")
-        with patch("l2m.coders.Coder.create") as MockCoder:
+        with patch("src.coders.Coder.create") as MockCoder:
             main(["--no-git", "--yes"], input=DummyInput(), output=DummyOutput())
             MockCoder.assert_called_once()
             _, kwargs = MockCoder.call_args
@@ -481,7 +481,7 @@ class TestMain(TestCase):
             os.chdir(subdir)
 
             # Mock the Linter class
-            with patch("l2m.linter.Linter.lint") as MockLinter:
+            with patch("src.analysis.linter.Linter.lint") as MockLinter:
                 MockLinter.return_value = ""
 
                 # Run main with --lint option
@@ -540,7 +540,7 @@ class TestMain(TestCase):
 
             with (
                 patch("pathlib.Path.home", return_value=fake_home),
-                patch("l2m.coders.Coder.create") as MockCoder,
+                patch("src.coders.Coder.create") as MockCoder,
             ):
                 # Test loading from specified config file
                 main(
@@ -576,7 +576,7 @@ class TestMain(TestCase):
 
     def test_map_tokens_option(self):
         with GitTemporaryDirectory():
-            with patch("l2m.coders.base_coder.RepoMap") as MockRepoMap:
+            with patch("src.coders.base_coder.RepoMap") as MockRepoMap:
                 MockRepoMap.return_value.max_map_tokens = 0
                 main(
                     ["--model", "gpt-4", "--map-tokens", "0", "--exit", "--yes"],
@@ -587,7 +587,7 @@ class TestMain(TestCase):
 
     def test_map_tokens_option_with_non_zero_value(self):
         with GitTemporaryDirectory():
-            with patch("l2m.coders.base_coder.RepoMap") as MockRepoMap:
+            with patch("src.coders.base_coder.RepoMap") as MockRepoMap:
                 MockRepoMap.return_value.max_map_tokens = 1000
                 main(
                     ["--model", "gpt-4", "--map-tokens", "1000", "--exit", "--yes"],
@@ -631,7 +631,7 @@ class TestMain(TestCase):
 
     def test_model_metadata_file(self):
         # Re-init so we don't have old data lying around from earlier test cases
-        from src import models
+        from src.core import models
 
         models.model_info_manager = models.ModelInfoManager()
 
@@ -664,7 +664,7 @@ class TestMain(TestCase):
 
     def test_sonnet_and_cache_options(self):
         with GitTemporaryDirectory():
-            with patch("l2m.coders.base_coder.RepoMap") as MockRepoMap:
+            with patch("src.coders.base_coder.RepoMap") as MockRepoMap:
                 mock_repo_map = MagicMock()
                 mock_repo_map.max_map_tokens = 1000  # Set a specific value
                 MockRepoMap.return_value = mock_repo_map
@@ -797,8 +797,8 @@ class TestMain(TestCase):
         with GitTemporaryDirectory():
             # Test model that accepts the thinking_tokens setting
             with (
-                patch("l2m.io.InputOutput.tool_warning") as mock_warning,
-                patch("l2m.models.Model.set_thinking_tokens") as mock_set_thinking,
+                patch("cli.io.InputOutput.tool_warning") as mock_warning,
+                patch("src.core.models.Model.set_thinking_tokens") as mock_set_thinking,
             ):
                 main(
                     [
@@ -820,8 +820,8 @@ class TestMain(TestCase):
 
             # Test model that doesn't have accepts_settings for thinking_tokens
             with (
-                patch("l2m.io.InputOutput.tool_warning") as mock_warning,
-                patch("l2m.models.Model.set_thinking_tokens") as mock_set_thinking,
+                patch("cli.io.InputOutput.tool_warning") as mock_warning,
+                patch("src.core.models.Model.set_thinking_tokens") as mock_set_thinking,
             ):
                 main(
                     [
@@ -847,8 +847,8 @@ class TestMain(TestCase):
 
             # Test model that accepts the reasoning_effort setting
             with (
-                patch("l2m.io.InputOutput.tool_warning") as mock_warning,
-                patch("l2m.models.Model.set_reasoning_effort") as mock_set_reasoning,
+                patch("cli.io.InputOutput.tool_warning") as mock_warning,
+                patch("src.core.models.Model.set_reasoning_effort") as mock_set_reasoning,
             ):
                 main(
                     ["--model", "o1", "--reasoning-effort", "3", "--yes", "--exit"],
@@ -863,8 +863,8 @@ class TestMain(TestCase):
 
             # Test model that doesn't have accepts_settings for reasoning_effort
             with (
-                patch("l2m.io.InputOutput.tool_warning") as mock_warning,
-                patch("l2m.models.Model.set_reasoning_effort") as mock_set_reasoning,
+                patch("cli.io.InputOutput.tool_warning") as mock_warning,
+                patch("src.core.models.Model.set_reasoning_effort") as mock_set_reasoning,
             ):
                 main(
                     ["--model", "gpt-3.5-turbo", "--reasoning-effort", "3", "--yes", "--exit"],
@@ -880,11 +880,11 @@ class TestMain(TestCase):
                 # Method should still be called by default
                 mock_set_reasoning.assert_not_called()
 
-    @patch("l2m.models.ModelInfoManager.set_verify_ssl")
+    @patch("src.core.models.ModelInfoManager.set_verify_ssl")
     def test_no_verify_ssl_sets_model_info_manager(self, mock_set_verify_ssl):
         with GitTemporaryDirectory():
             # Mock Model class to avoid actual model initialization
-            with patch("l2m.models.Model") as mock_model:
+            with patch("src.core.models.Model") as mock_model:
                 # Configure the mock to avoid the TypeError
                 mock_model.return_value.info = {}
                 mock_model.return_value.name = "gpt-4"  # Add a string name
@@ -894,7 +894,7 @@ class TestMain(TestCase):
                 }
 
                 # Mock fuzzy_match_models to avoid string operations on MagicMock
-                with patch("l2m.models.fuzzy_match_models", return_value=[]):
+                with patch("src.core.models.fuzzy_match_models", return_value=[]):
                     main(
                         ["--no-verify-ssl", "--exit", "--yes"],
                         input=DummyInput(),
@@ -1073,15 +1073,24 @@ class TestMain(TestCase):
 
     def test_default_model_selection(self):
         with GitTemporaryDirectory():
-            # Test Anthropic API key
+            # Test Anthropic API key (clear OpenAI key first since it has higher priority)
+            original_openai_key = os.environ.pop("OPENAI_API_KEY", None)
             os.environ["ANTHROPIC_API_KEY"] = "test-key"
             coder = main(
                 ["--exit", "--yes"], input=DummyInput(), output=DummyOutput(), return_coder=True
             )
-            self.assertIn("sonnet", coder.main_model.name.lower())
+            # Anthropic model name is "Claude Sonnet 4.5", which maps to "anthropic/claude-sonnet-4-20250514"
+            # Check for "claude" or "sonnet" in the mapped name
+            self.assertTrue(
+                "claude" in coder.main_model.name.lower() or "sonnet" in coder.main_model.name.lower()
+            )
             del os.environ["ANTHROPIC_API_KEY"]
+            if original_openai_key:
+                os.environ["OPENAI_API_KEY"] = original_openai_key
 
-            # Test DeepSeek API key
+            # Test DeepSeek API key (clear higher priority keys)
+            for key in ["OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GEMINI_API_KEY"]:
+                os.environ.pop(key, None)
             os.environ["DEEPSEEK_API_KEY"] = "test-key"
             coder = main(
                 ["--exit", "--yes"], input=DummyInput(), output=DummyOutput(), return_coder=True
@@ -1089,7 +1098,9 @@ class TestMain(TestCase):
             self.assertIn("deepseek", coder.main_model.name.lower())
             del os.environ["DEEPSEEK_API_KEY"]
 
-            # Test OpenRouter API key
+            # Test OpenRouter API key (clear all direct provider keys)
+            for key in ["OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GEMINI_API_KEY", "DEEPSEEK_API_KEY"]:
+                os.environ.pop(key, None)
             os.environ["OPENROUTER_API_KEY"] = "test-key"
             coder = main(
                 ["--exit", "--yes"], input=DummyInput(), output=DummyOutput(), return_coder=True
@@ -1097,15 +1108,20 @@ class TestMain(TestCase):
             self.assertIn("openrouter/", coder.main_model.name.lower())
             del os.environ["OPENROUTER_API_KEY"]
 
-            # Test OpenAI API key
+            # Test OpenAI API key (clear other keys)
+            for key in ["ANTHROPIC_API_KEY", "GEMINI_API_KEY", "DEEPSEEK_API_KEY", "OPENROUTER_API_KEY"]:
+                os.environ.pop(key, None)
             os.environ["OPENAI_API_KEY"] = "test-key"
             coder = main(
                 ["--exit", "--yes"], input=DummyInput(), output=DummyOutput(), return_coder=True
             )
-            self.assertIn("gpt-4", coder.main_model.name.lower())
+            # OpenAI model name is "GPT-5.1-Codex", which maps to "gpt-5.1-codex"
+            self.assertIn("gpt", coder.main_model.name.lower())
             del os.environ["OPENAI_API_KEY"]
 
-            # Test Gemini API key
+            # Test Gemini API key (clear other keys)
+            for key in ["OPENAI_API_KEY", "ANTHROPIC_API_KEY", "DEEPSEEK_API_KEY", "OPENROUTER_API_KEY"]:
+                os.environ.pop(key, None)
             os.environ["GEMINI_API_KEY"] = "test-key"
             coder = main(
                 ["--exit", "--yes"], input=DummyInput(), output=DummyOutput(), return_coder=True
@@ -1114,7 +1130,7 @@ class TestMain(TestCase):
             del os.environ["GEMINI_API_KEY"]
 
             # Test no API keys - should offer OpenRouter OAuth
-            with patch("l2m.onboarding.offer_openrouter_oauth") as mock_offer_oauth:
+            with patch("src.setup.onboarding.offer_openrouter_oauth") as mock_offer_oauth:
                 mock_offer_oauth.return_value = None  # Simulate user declining or failure
                 result = main(["--exit", "--yes"], input=DummyInput(), output=DummyOutput())
                 self.assertEqual(result, 1)  # Expect failure since no model could be selected
@@ -1122,13 +1138,14 @@ class TestMain(TestCase):
 
     def test_model_precedence(self):
         with GitTemporaryDirectory():
-            # Test that earlier API keys take precedence
+            # Test that OpenAI (priority 1) takes precedence over Anthropic (priority 2)
             os.environ["ANTHROPIC_API_KEY"] = "test-key"
             os.environ["OPENAI_API_KEY"] = "test-key"
             coder = main(
                 ["--exit", "--yes"], input=DummyInput(), output=DummyOutput(), return_coder=True
             )
-            self.assertIn("sonnet", coder.main_model.name.lower())
+            # OpenAI is priority 1, so it should be selected
+            self.assertIn("gpt", coder.main_model.name.lower())
             del os.environ["ANTHROPIC_API_KEY"]
             del os.environ["OPENAI_API_KEY"]
 
@@ -1264,7 +1281,7 @@ class TestMain(TestCase):
         # Test that --check-model-accepts-settings affects whether settings are applied
         with GitTemporaryDirectory():
             # When flag is on, setting shouldn't be applied to non-supporting model
-            with patch("l2m.models.Model.set_thinking_tokens") as mock_set_thinking:
+            with patch("src.core.models.Model.set_thinking_tokens") as mock_set_thinking:
                 main(
                     [
                         "--model",
@@ -1303,7 +1320,7 @@ class TestMain(TestCase):
             mock_files = MagicMock()
             mock_files.joinpath.return_value = mock_resource_path
 
-            with patch("l2m.main.importlib_resources.files", return_value=mock_files):
+            with patch("cli.main.importlib_resources.files", return_value=mock_files):
                 # Capture stdout to check the output
                 with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
                     main(
@@ -1317,7 +1334,7 @@ class TestMain(TestCase):
                     self.assertIn("resource-provider/special-model", output)
 
             # When flag is off, setting should be applied regardless of support
-            with patch("l2m.models.Model.set_reasoning_effort") as mock_set_reasoning:
+            with patch("src.core.models.Model.set_reasoning_effort") as mock_set_reasoning:
                 main(
                     [
                         "--model",
@@ -1337,7 +1354,7 @@ class TestMain(TestCase):
     def test_model_accepts_settings_attribute(self):
         with GitTemporaryDirectory():
             # Test with a model where we override the accepts_settings attribute
-            with patch("l2m.models.Model") as MockModel:
+            with patch("src.core.models.Model") as MockModel:
                 # Setup mock model instance to simulate accepts_settings attribute
                 mock_instance = MockModel.return_value
                 mock_instance.name = "test-model"
@@ -1371,7 +1388,7 @@ class TestMain(TestCase):
                 mock_instance.set_reasoning_effort.assert_called_once_with("3")
                 mock_instance.set_thinking_tokens.assert_not_called()
 
-    @patch("l2m.main.InputOutput")
+    @patch("cli.main.InputOutput")
     def test_stream_and_cache_warning(self, MockInputOutput):
         mock_io_instance = MockInputOutput.return_value
         with GitTemporaryDirectory():
@@ -1384,7 +1401,7 @@ class TestMain(TestCase):
             "Cost estimates may be inaccurate when using streaming and caching."
         )
 
-    @patch("l2m.main.InputOutput")
+    @patch("cli.main.InputOutput")
     def test_stream_without_cache_no_warning(self, MockInputOutput):
         mock_io_instance = MockInputOutput.return_value
         with GitTemporaryDirectory():
@@ -1470,7 +1487,7 @@ class TestMain(TestCase):
             # Restore CWD
             os.chdir(original_cwd)
 
-    @patch("l2m.main.InputOutput")
+    @patch("cli.main.InputOutput")
     def test_cache_without_stream_no_warning(self, MockInputOutput):
         mock_io_instance = MockInputOutput.return_value
         with GitTemporaryDirectory():
