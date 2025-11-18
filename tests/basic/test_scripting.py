@@ -8,7 +8,7 @@ from src.utils import GitTemporaryDirectory
 
 
 class TestScriptingAPI(unittest.TestCase):
-    @patch("l2m.coders.base_coder.Coder.send")
+    @patch("src.coders.base_coder.Coder.send")
     def test_basic_scripting(self, mock_send):
         with GitTemporaryDirectory():
             # Setup

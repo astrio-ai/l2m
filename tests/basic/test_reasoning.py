@@ -579,7 +579,7 @@ End"""
             expected_content = "Final answer after reasoning"
             self.assertEqual(coder.partial_response_content.strip(), expected_content)
 
-    @patch("l2m.models.litellm.completion")
+    @patch("src.core.models.litellm.completion")
     def test_simple_send_with_retries_removes_reasoning(self, mock_completion):
         """Test that simple_send_with_retries correctly removes reasoning content."""
         model = Model("deepseek-r1")  # This model has reasoning_tag="think"

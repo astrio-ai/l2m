@@ -21,8 +21,8 @@ class TestDeprecated(TestCase):
         os.environ.clear()
         os.environ.update(self.original_env)
 
-    @patch("l2m.io.InputOutput.tool_warning")
-    @patch("l2m.io.InputOutput.offer_url")
+    @patch("cli.io.InputOutput.tool_warning")
+    @patch("cli.io.InputOutput.offer_url")
     def test_deprecated_args_show_warnings(self, mock_offer_url, mock_tool_warning):
         # Prevent URL launches during tests
         mock_offer_url.return_value = False
@@ -48,7 +48,7 @@ class TestDeprecated(TestCase):
         for flag in deprecated_flags:
             mock_tool_warning.reset_mock()
 
-            with patch("l2m.models.Model"), self.subTest(flag=flag):
+            with patch("src.core.models.Model"), self.subTest(flag=flag):
                 main(
                     [flag, "--no-git", "--exit", "--yes"], input=DummyInput(), output=DummyOutput()
                 )
@@ -71,14 +71,14 @@ class TestDeprecated(TestCase):
                 self.assertIn("deprecated", warning_msg)
                 self.assertIn("use --model", warning_msg.lower())
 
-    @patch("l2m.io.InputOutput.tool_warning")
-    @patch("l2m.io.InputOutput.offer_url")
+    @patch("cli.io.InputOutput.tool_warning")
+    @patch("cli.io.InputOutput.offer_url")
     def test_model_alias_in_warning(self, mock_offer_url, mock_tool_warning):
         # Prevent URL launches during tests
         mock_offer_url.return_value = False
         # Test that the warning uses the model alias if available
-        with patch("l2m.models.MODEL_ALIASES", {"gpt4": "gpt-4-0613"}):
-            with patch("l2m.models.Model"):
+        with patch("src.core.models.MODEL_ALIASES", {"gpt4": "gpt-4-0613"}):
+            with patch("src.core.models.Model"):
                 main(
                     ["--4", "--no-git", "--exit", "--yes"], input=DummyInput(), output=DummyOutput()
                 )

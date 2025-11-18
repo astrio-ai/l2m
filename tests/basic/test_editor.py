@@ -126,7 +126,7 @@ def test_pipe_editor():
 
     # Mock the file operations and editor call
     with (
-        patch("l2m.editor.write_temp_file") as mock_write,
+        patch("src.ui.editor.write_temp_file") as mock_write,
         patch("builtins.open") as mock_open,
         patch("os.remove") as mock_remove,
         patch("subprocess.call") as mock_subprocess,

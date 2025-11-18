@@ -6,7 +6,7 @@ from unittest import mock
 import pytest
 from git import GitError, Repo
 
-from src import urls
+from src.core import urls
 from cli.main import sanity_check_repo
 
 
