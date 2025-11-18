@@ -1,355 +1,99 @@
 # Getting Started Guide
 
-## Quick Start
+Get up and running with L2M under 1 minute!
 
-Get up and running with L2M in 5 minutes!
-
-### 1. Installation
+## Installation
 
 ```bash
-# Clone the repository
+pip install l2m
+```
+
+Or install from source:
+```bash
 git clone https://github.com/astrio-ai/l2m.git
 cd l2m
-
-# Create virtual environment
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-
-# Install dependencies
 pip install -r requirements.txt
-```
-
-### 2. Configuration
-
-```bash
-# Create .env file
-cp .env.example .env
-
-# Edit .env and add your OpenAI API key
-# OPENAI_API_KEY=sk-your-key-here
-```
-
-### 3. Run Your First Modernization
-
-```python
-import asyncio
-from src.workflows.modernization_pipeline import ModernizationPipeline
-
-async def main():
-    # Create pipeline
-    pipeline = ModernizationPipeline()
-    
-    # Modernize a COBOL file
-    results = await pipeline.run("data/samples/sample1.cbl")
-    
-    # Print results
-    print(results["translation"])
-
-asyncio.run(main())
-```
-
-### Interactive CLI (Preview)
-
-For a guided, conversation-friendly workflow, launch the interactive shell:
-
-```bash
 pip install -e .
+```
+
+## Configuration
+
+Create a `.env` file in your project directory and add your API key:
+
+```env
+OPENAI_API_KEY=sk-your-key-here
+# or
+ANTHROPIC_API_KEY=sk-ant-your-key-here
+# or any provider supported by LiteLLM
+```
+
+## Quick Start
+
+Start the interactive CLI:
+
+```bash
 l2m
 ```
 
-Available commands include:
-- `modernize <file.cbl>` – run the pipeline on a single COBOL file
-- `batch --directory data/aws-samples-aws-mainframe-modernization-carddemo` – orchestrate multi-file runs with progress bars
-- `evaluate --save` – execute the evaluator and persist the report
-- `inspect`, `diff`, `ls`, `history`, `save_session`, `load_session`, `config` – streamline day-to-day exploration and debugging
-
-Type `help` (or `help <command>`) inside the shell to see detailed usage.
-
-### Classic CLI
-
-The legacy non-interactive CLI remains available via `l2m-pipeline` (equivalent to `python -m src.main`).
+Then in the terminal:
 
 ```bash
-l2m-pipeline --directory data/aws-samples-aws-mainframe-modernization-carddemo/
+/add data/hello/HELLO.cbl
+Modernize this COBOL file to Python
+/diff          # Review changes
+/commit        # Commit when satisfied
 ```
 
-## Detailed Setup
+## Common Commands
 
-### Prerequisites
+- `/add <file>` - Add files to context
+- `/drop <file>` - Remove files from context
+- `/ls` - List files in context
+- `/diff` - Show changes
+- `/undo` - Undo last change
+- `/commit` - Commit changes
+- `/help` - Get help
+- `/exit` or `Ctrl+D` - Exit
 
-- **Python 3.10+**: Required for type hints and modern features
-- **OpenAI API Key**: Get one from [platform.openai.com](https://platform.openai.com)
-- **Git**: For cloning the repository
+## Non-Interactive Mode
 
-### Step-by-Step Installation
-
-#### 1. Clone Repository
+Run with a single message:
 
 ```bash
-git clone https://github.com/astrio-ai/l2m.git
-cd l2m
-```
-
-#### 2. Set Up Virtual Environment
-
-**macOS/Linux**:
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-```
-
-**Windows**:
-```bash
-python -m venv .venv
-.venv\Scripts\activate
-```
-
-#### 3. Install Dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-Key dependencies:
-- `openai-agents>=0.4.0` - Multi-agent framework
-- `pydantic>=2.0.0` - Configuration management
-- `python-dotenv>=1.0.0` - Environment variable loading
-
-#### 4. Configure Environment
-
-Create `.env` file in project root:
-
-```bash
-# .env
-OPENAI_API_KEY=sk-your-key-here
-OPENAI_MODEL=gpt-4o-mini
-OPENAI_TEMPERATURE=0.3
-OPENAI_MAX_TOKENS=6000
-MAX_TURNS=10
-
-# Batch processing settings (optional)
-BATCH_FILE_DELAY_SECONDS=5.0
-BATCH_MAX_CONCURRENT=1
-BATCH_CONTINUE_ON_ERROR=true
-```
-
-#### 5. Verify Installation
-
-```bash
-# Run tests
-python -m pytest tests/ -v
-
-# Check imports
-python -c "from src.workflows.modernization_pipeline import ModernizationPipeline; print('✅ Installation successful')"
-```
-
-## Basic Usage
-
-### Simple Example
-
-```python
-import asyncio
-from src.workflows.modernization_pipeline import ModernizationPipeline
-
-async def main():
-    pipeline = ModernizationPipeline()
-    results = await pipeline.run("data/samples/sample1.cbl")
-    print(results["translation"])
-
-asyncio.run(main())
-```
-
-### Sequential Mode
-
-Execute agents one after another:
-
-```python
-pipeline = ModernizationPipeline(use_handoffs=False)
-results = await pipeline.run("file.cbl")
-
-# Access individual step results
-print("Analysis:", results["analysis"])
-print("Translation:", results["translation"])
-print("Review:", results["review"])
-```
-
-### Handoff Mode
-
-Let orchestrator route tasks intelligently:
-
-```python
-pipeline = ModernizationPipeline(use_handoffs=True)
-results = await pipeline.run("file.cbl")
-print("Output:", results["orchestrator_output"])
-```
-
-### With Session
-
-Maintain conversation history:
-
-```python
-pipeline = ModernizationPipeline(session_id="my_session")
-results = await pipeline.run("file1.cbl")
-results = await pipeline.run("file2.cbl")  # Uses same session context
-```
-
-## Working with COBOL Files
-
-### File Requirements
-
-- **File Extension**: `.cbl`, `.cob`, or `.cobol`
-- **Encoding**: UTF-8 (with error handling)
-- **Format**: Standard COBOL syntax
-
-### Sample COBOL File
-
-```cobol
-       IDENTIFICATION DIVISION.
-       PROGRAM-ID. HELLO.
-       PROCEDURE DIVISION.
-           DISPLAY 'HELLO WORLD!'.
-           GOBACK.
-```
-
-Save as `data/samples/hello.cbl`
-
-### Running Modernization
-
-**Single File (CLI)**:
-```bash
-python -m src.main data/samples/hello.cbl
-```
-
-**Single File (Programmatic)**:
-```python
-from pathlib import Path
-
-cobol_file = Path("data/samples/hello.cbl")
-pipeline = ModernizationPipeline()
-results = await pipeline.run(str(cobol_file))
-```
-
-**Batch Processing (CLI)**:
-```bash
-# Process all COBOL files in a directory
-python -m src.main --directory data/aws-samples/ --batch-delay 10.0
-
-# Process multiple specific files
-python -m src.main file1.cbl file2.cbl file3.cbl
-```
-
-**Batch Processing (Programmatic)**:
-```python
-from src.workflows.batch_pipeline import BatchModernizationPipeline, discover_cobol_files
-
-# Discover files
-cobol_files = discover_cobol_files("data/aws-samples/")
-
-# Process batch
-batch_pipeline = BatchModernizationPipeline()
-batch_result = await batch_pipeline.run_batch(cobol_files)
-```
-
-## Understanding Results
-
-### Result Structure
-
-```python
-results = {
-    "cobol_file": "path/to/file.cbl",
-    "analysis": "Analysis report from Analyzer Agent",
-    "translation": "Python code from Translator Agent",
-    "review": "Review report from Reviewer Agent",
-    "tests": "Test results from Tester Agent",
-    "refactored": "Refactored Python code from Refactor Agent",
-    "error": None  # or error message if failed
-}
-```
-
-### Accessing Results
-
-```python
-results = await pipeline.run("file.cbl")
-
-if "error" in results:
-    print(f"Error: {results['error']}")
-else:
-    print("Analysis:", results["analysis"])
-    print("\nTranslation:", results["translation"])
-    print("\nReview:", results["review"])
+l2m --message "Modernize data/hello/HELLO.cbl to Python"
+l2m data/hello/HELLO.cbl --message "Convert to Python"
 ```
 
 ## Configuration Options
 
-### Model Selection
-
-```python
-from src.config import get_settings
-
-settings = get_settings()
-settings.openai_model = "gpt-3.5-turbo"  # Faster, cheaper
-# or
-settings.openai_model = "gpt-4o"  # Better quality (default)
+Specify model:
+```bash
+l2m --model gpt-4o
 ```
 
-### Temperature Control
-
-```python
-settings.openai_temperature = 0.3  # More deterministic
-# or
-settings.openai_temperature = 0.7  # More creative (default)
-```
-
-### Session Database
-
-```python
-settings.db_path = Path("custom/path/sessions.db")
+Or in `.env`:
+```env
+L2M_MODEL=gpt-4o
 ```
 
 ## Troubleshooting
 
-### Common Issues
+**Command not found**: `pip install l2m` or ensure it's in your PATH
 
-#### 1. ModuleNotFoundError: No module named 'agents'
+**API key error**: Check `.env` file has correct key
 
-**Solution**: Activate virtual environment
-```bash
-source .venv/bin/activate
-```
+**Model not found**: Use `l2m --list-models` to see available models
 
-#### 2. API Key Error
-
-**Solution**: Check `.env` file has correct API key
-```bash
-cat .env | grep OPENAI_API_KEY
-```
-
-#### 3. File Not Found
-
-**Solution**: Verify file path is correct
-```python
-from pathlib import Path
-file_path = Path("data/samples/sample1.cbl")
-assert file_path.exists(), f"File not found: {file_path}"
-```
-
-#### 4. Import Errors
-
-**Solution**: Install dependencies
-```bash
-pip install -r requirements.txt
-```
+**Git errors**: Run `git init` or use `l2m --no-git`
 
 ## Next Steps
 
 - Read [Architecture Documentation](architecture.md) for system design
-- Explore [Agent System](agents.md) for agent details
-- Check [Workflow Documentation](workflows.md) for advanced usage
-- Review [Contributing Guide](../CONTRIBUTING.md) to contribute
+- Check the main [README.md](../README.md) for feature overview
+- Join [Discord](https://discord.gg/2BVwAUzW) for help
 
 ## Getting Help
 
 - **GitHub Issues**: [Report bugs](https://github.com/astrio-ai/l2m/issues)
 - **Discord**: [Join community](https://discord.gg/2BVwAUzW)
 - **Email**: naingoolwin.astrio@gmail.com
-

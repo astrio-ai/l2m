@@ -2,85 +2,75 @@
 
 Welcome to the Legacy2Modern (L2M) documentation!
 
-## 📚 Documentation Index
+## Documentation Index
 
 ### Getting Started
 - **[Getting Started Guide](getting_started.md)** - Quick start and installation instructions
 
 ### Architecture & Design
 - **[Architecture](architecture.md)** - System architecture, components, and data flow
-- **[Agent System](agents.md)** - Detailed documentation of all agents
-- **[Workflows](workflows.md)** - Workflow documentation and execution modes
 
-## 🚀 Quick Links
+## Quick Links
 
 - **Installation**: See [Getting Started](getting_started.md#installation)
 - **Basic Usage**: See [Getting Started](getting_started.md#basic-usage)
-- **Agent Details**: See [Agent System](agents.md)
-- **Workflow Modes**: See [Workflows](workflows.md#execution-modes)
+- **CLI Usage**: Run `l2m` for interactive terminal interface
+- **Architecture**: See [Architecture](architecture.md) for system design
 
-## 📖 Documentation Structure
+## Documentation Structure
 
 ```
 docs/
 ├── README.md              # This file
 ├── getting_started.md     # Installation and quick start
-├── architecture.md         # System architecture and design
-├── agents.md              # Agent system documentation
-└── workflows.md           # Workflow documentation
+└── architecture.md        # System architecture and design
 ```
 
-## 🎯 For Different Audiences
+## For Different Audiences
 
-### 👨‍💻 Developers
+### Developers
 - Start with [Getting Started](getting_started.md)
 - Read [Architecture](architecture.md) for system design
-- Explore [Agent System](agents.md) for implementation details
+- Explore the codebase in `src/coders/` and `cli/` for implementation details
 
-### 🔧 Contributors
+### Contributors
 - Read [Architecture](architecture.md) to understand the system
-- Check [Agent System](agents.md) for adding new agents
-- Review [Workflows](workflows.md) for extending workflows
+- Check `src/coders/` for different edit format implementations
+- Review `cli/commands.py` for CLI command structure
+- See [CONTRIBUTING.md](../CONTRIBUTING.md) for contribution guidelines
 
-### 📊 Users
+### Users
 - Follow [Getting Started](getting_started.md) for setup
-- Use [Workflows](workflows.md) for usage examples
-- Refer to [Agent System](agents.md) to understand capabilities
+- Use the interactive CLI: `l2m`
+- Type `help` in the CLI for available commands
+- See the main [README.md](../README.md) for feature overview
 
-## 🔍 Common Tasks
+## Common Tasks
 
-### Setting Up
+### Installation
 ```bash
-# Install dependencies
-pip install -r requirements.txt
+# Install the package via pypi
+pip install l2m
+# or from curl
+curl -fsSL https://astrio.app/l2m/install | bash
 
 # Configure environment
 cp .env.example .env
-# Edit .env with your API key
+# Edit .env with your API key (OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.)
 ```
 
-### Running Modernization
-```python
-from src.workflows.modernization_pipeline import ModernizationPipeline
-
-pipeline = ModernizationPipeline()
-results = await pipeline.run("file.cbl")
+### Usage
+```bash
+l2m
 ```
 
-### Understanding Agents
-See [Agent System](agents.md) for:
-- Agent purposes and capabilities
-- Tool descriptions
-- Usage examples
-- Adding new agents
+### Understanding the System
+- **Coder System**: See `src/coders/` for different edit formats (wholefile, editblock, udiff, etc.)
+- **LLM Integration**: See `src/core/` for model management and LiteLLM integration
+- **Git Integration**: See `src/git/` for repository tracking and commits
+- **CLI Interface**: See `cli/` for terminal UI and command handling
 
-### Customizing Workflows
-See [Workflows](workflows.md) for:
-- Sequential vs handoff modes
-- Custom workflow creation
-- Performance optimization
-
-## 📝 Documentation Standards
+## Documentation Standards
 
 All documentation follows these principles:
 - **Clear and concise** - Easy to understand
@@ -88,7 +78,7 @@ All documentation follows these principles:
 - **Visual diagrams** - ASCII diagrams for visualization
 - **Up-to-date** - Kept current with codebase
 
-## 🤝 Contributing to Documentation
+## Contributing to Documentation
 
 To improve documentation:
 1. Edit markdown files in `docs/`
@@ -97,7 +87,7 @@ To improve documentation:
 4. Update this README if adding new docs
 5. Submit PR with documentation changes
 
-## 📞 Support
+## Support
 
 - **GitHub Issues**: [Report documentation issues](https://github.com/astrio-ai/l2m/issues)
 - **Discord**: [Get help](https://discord.gg/2BVwAUzW)
