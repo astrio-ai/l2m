@@ -51,34 +51,13 @@ class OpenRouterModelManager:
         ``model`` should use the l2m naming convention, e.g.
         ``openrouter/nousresearch/deephermes-3-mistral-24b-preview:free``.
         """
-
-    def get_model_display_name(self, model: str) -> str:
-        """
-        Convert a model name to a human-friendly format, e.g.:
-        "openrouter/nousresearch/deephermes-3-mistral-24b-preview:free" becomes
-        "Deephermes 3 Mistral 24B Preview (Free)"
-        """
-        stripped = self._strip_prefix(model)
-        model_part = stripped.split('/')[-1]  # Get the part after last slash
-        name, _, variant = model_part.partition(':')
-        
-        # Convert name parts to title case and join with spaces
-        name_parts = name.split('-')
-        display_name = ' '.join(part.capitalize() for part in name_parts)
-        
-        # Add variant in parentheses if present
-        if variant:
-            variant_display = ' '.join(part.capitalize() for part in variant.split('-'))
-            display_name += f' ({variant_display})'
-            
-        return display_name
         self._ensure_content()
         if not self.content or "data" not in self.content:
             return {}
 
         route = self._strip_prefix(model)
 
-        # Consider both the exact id and id without any “:suffix”.
+        # Consider both the exact id and id without any ":suffix".
         candidates = {route}
         if ":" in route:
             candidates.add(route.split(":", 1)[0])
@@ -102,6 +81,27 @@ class OpenRouterModelManager:
             "output_cost_per_token": _cost_per_token(pricing.get("completion")),
             "litellm_provider": "openrouter",
         }
+
+    def get_model_display_name(self, model: str) -> str:
+        """
+        Convert a model name to a human-friendly format, e.g.:
+        "openrouter/nousresearch/deephermes-3-mistral-24b-preview:free" becomes
+        "Deephermes 3 Mistral 24B Preview (Free)"
+        """
+        stripped = self._strip_prefix(model)
+        model_part = stripped.split('/')[-1]  # Get the part after last slash
+        name, _, variant = model_part.partition(':')
+        
+        # Convert name parts to title case and join with spaces
+        name_parts = name.split('-')
+        display_name = ' '.join(part.capitalize() for part in name_parts)
+        
+        # Add variant in parentheses if present
+        if variant:
+            variant_display = ' '.join(part.capitalize() for part in variant.split('-'))
+            display_name += f' ({variant_display})'
+            
+        return display_name
 
     # ------------------------------------------------------------------ #
     # Internal helpers                                                   #

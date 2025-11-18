@@ -41,39 +41,72 @@ def check_openrouter_tier(api_key):
         return True
 
 
+def get_available_api_keys():
+    """
+    Returns a list of available API keys in priority order.
+    
+    Returns:
+        List of tuples (priority, env_key, model_name) for available keys, sorted by priority.
+    """
+    # Priority order: Lower number = higher priority
+    # Priority 1 = Highest priority, Priority 6 = Lowest priority (fallback)
+    priority_key_pairs = [
+        (1, "OPENAI_API_KEY", "GPT-5.1-Codex", "OpenAI"),
+        (2, "ANTHROPIC_API_KEY", "Claude Sonnet 4.5", "Anthropic Claude"),
+        (3, "GEMINI_API_KEY", "Gemini 2.5 Pro", "Google Gemini"),
+        (4, "DEEPSEEK_API_KEY", "DeepSeek-V3.2-Exp", "DeepSeek"),
+        (5, "OPENROUTER_API_KEY", None, "OpenRouter"),  # Model determined by tier check
+    ]
+    
+    available = []
+    for priority, env_key, model_name, provider_name in priority_key_pairs:
+        api_key_value = os.environ.get(env_key)
+        if api_key_value:
+            available.append((priority, env_key, model_name, provider_name))
+    
+    return sorted(available, key=lambda x: x[0])
+
+
 def try_to_select_default_model():
     """
     Attempts to select a default model based on available API keys.
-    Checks OpenRouter tier status to select appropriate model.
+    Uses priority order: GPT-5.1-Codex > Claude Sonnet 4.5 > Gemini 2.5 Pro > DeepSeek-V3.2-Exp > OpenRouter.
+    
+    Priority order:
+        1. OPENAI_API_KEY → GPT-5.1-Codex (GPT-5.1-Codex)
+        2. ANTHROPIC_API_KEY → Claude Sonnet 4.5 (Claude Sonnet 4.5)
+        3. GEMINI_API_KEY → Gemini 2.5 Pro (Gemini 2.5 Pro)
+        4. DEEPSEEK_API_KEY → DeepSeek-V3.2-Exp (DeepSeek-V3.2-Exp)
+        5. OPENROUTER_API_KEY → (determined by tier: free or paid)
 
     Returns:
-        The name of the selected model, or None if no suitable default is found.
+        Tuple of (model_name, priority_info) where priority_info is (priority, provider_name),
+        or (None, None) if no suitable default is found.
     """
-    # Special handling for OpenRouter
+    # Check direct provider API keys in priority order
+    priority_key_pairs = [
+        (1, "OPENAI_API_KEY", "GPT-5.1-Codex", "OpenAI"),
+        (2, "ANTHROPIC_API_KEY", "Claude Sonnet 4.5", "Anthropic Claude"),
+        (3, "GEMINI_API_KEY", "Gemini 2.5 Pro", "Google Gemini"),
+        (4, "DEEPSEEK_API_KEY", "DeepSeek-V3.2-Exp", "DeepSeek"),
+    ]
+
+    for priority, env_key, model_name, provider_name in priority_key_pairs:
+        api_key_value = os.environ.get(env_key)
+        if api_key_value:
+            return model_name, (priority, provider_name)
+
+    # Only use OpenRouter if no direct provider keys are found (Priority 6)
     openrouter_key = os.environ.get("OPENROUTER_API_KEY")
     if openrouter_key:
         # Check if the user is on a free tier
         is_free_tier = check_openrouter_tier(openrouter_key)
         if is_free_tier:
-            return "openrouter/deepseek/deepseek-r1:free"
+            return "openrouter/deepseek/deepseek-r1:free", (6, "OpenRouter (free tier)")
         else:
-            return "openrouter/anthropic/claude-sonnet-4"
+            return "openrouter/anthropic/claude-sonnet-4", (6, "OpenRouter (paid tier)")
 
-    # Select model based on other available API keys
-    model_key_pairs = [
-        ("ANTHROPIC_API_KEY", "sonnet"),
-        ("DEEPSEEK_API_KEY", "deepseek"),
-        ("OPENAI_API_KEY", "gpt-4o"),
-        ("GEMINI_API_KEY", "gemini/gemini-2.5-pro-exp-03-25"),
-        ("VERTEXAI_PROJECT", "vertex_ai/gemini-2.5-pro-exp-03-25"),
-    ]
-
-    for env_key, model_name in model_key_pairs:
-        api_key_value = os.environ.get(env_key)
-        if api_key_value:
-            return model_name
-
-    return None
+    return None, None
 
 
 def offer_openrouter_oauth(io, analytics):
@@ -117,6 +150,7 @@ def select_default_model(args, io, analytics):
     """
     Selects a default model based on available API keys if no model is specified.
     Offers OAuth flow for OpenRouter if no keys are found.
+    Shows which priority key is being used when multiple keys are available.
 
     Args:
         args: The command line arguments object.
@@ -129,12 +163,42 @@ def select_default_model(args, io, analytics):
     if args.model:
         return args.model  # Model already specified
 
-    model = try_to_select_default_model()
+    model, priority_info = try_to_select_default_model()
     if model:
         # Color the model name with brand color #278ef5
         colored_model = f"\033[38;2;39;142;245m{model}\033[0m"
-        io.tool_output(f"Using {colored_model} model with API key from environment.")
-        analytics.event("auto_model_selection", model=model)
+        
+        # Show priority information if available
+        if priority_info:
+            priority, provider_name = priority_info
+            try:
+                available_keys = get_available_api_keys()
+                
+                if len(available_keys) > 1:
+                    # Multiple keys available - show which one is being used
+                    priority_names = {
+                        1: "1st priority",
+                        2: "2nd priority", 
+                        3: "3rd priority",
+                        4: "4th priority",
+                        5: "5th priority",
+                        6: "6th priority (fallback)"
+                    }
+                    priority_label = priority_names.get(priority, f"Priority {priority}")
+                    io.tool_output(
+                        f"Using {colored_model} model ({priority_label}: {provider_name}) "
+                        f"from {len(available_keys)} available API key(s)."
+                    )
+                else:
+                    # Single key available
+                    io.tool_output(f"Using {colored_model} model with API key from environment ({provider_name}).")
+            except Exception:
+                # Fallback if get_available_api_keys fails
+                io.tool_output(f"Using {colored_model} model with API key from environment ({provider_name}).")
+        else:
+            io.tool_output(f"Using {colored_model} model with API key from environment.")
+        
+        analytics.event("auto_model_selection", model=model, priority=priority_info[0] if priority_info else None)
         return model
 
     no_model_msg = "No LLM model was specified and no API keys were provided."
@@ -144,7 +208,7 @@ def select_default_model(args, io, analytics):
     offer_openrouter_oauth(io, analytics)
 
     # Check again after potential OAuth success
-    model = try_to_select_default_model()
+    model, priority_info = try_to_select_default_model()
     if model:
         return model
 

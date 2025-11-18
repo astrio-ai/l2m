@@ -62,6 +62,9 @@ data/test_cases/
 temp/
 tmp/
 
+# Harbor benchmarking results
+jobs/
+
 # Generated Python files from modernization
 *.modernized.py
 data/output/**/*.py

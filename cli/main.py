@@ -67,9 +67,11 @@ def save_approval_mode_config(require_approval, git_root=None):
     """Save approval mode config to file."""
     config_path = get_approval_mode_config_path(git_root)
     try:
+        # Ensure require_approval is a boolean, not a MagicMock
+        require_approval_bool = bool(require_approval) if require_approval is not None else False
         with open(config_path, "w") as f:
-            json.dump({"require_approval": require_approval}, f, indent=2)
-    except IOError as e:
+            json.dump({"require_approval": require_approval_bool}, f, indent=2)
+    except (IOError, TypeError, ValueError):
         # Silently fail if we can't write the config
         pass
 
@@ -929,13 +931,19 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
 
     if args.verbose:
         io.tool_output("Model metadata:")
-        io.tool_output(json.dumps(main_model.info, indent=4))
+        try:
+            io.tool_output(json.dumps(main_model.info, indent=4, default=str))
+        except (TypeError, ValueError):
+            io.tool_output(str(main_model.info))
 
         io.tool_output("Model settings:")
         for attr in sorted(fields(ModelSettings), key=lambda x: x.name):
             val = getattr(main_model, attr.name)
-            val = json.dumps(val, indent=4)
-            io.tool_output(f"{attr.name}: {val}")
+            try:
+                val_str = json.dumps(val, indent=4, default=str)
+            except (TypeError, ValueError):
+                val_str = str(val)
+            io.tool_output(f"{attr.name}: {val_str}")
 
     lint_cmds = parse_lint_cmds(args.lint_cmd, io)
     if lint_cmds is None:
@@ -1231,6 +1239,8 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
 
     if args.exit:
         analytics.event("exit", reason="Exit flag set")
+        if return_coder:
+            return coder
         return
 
     analytics.event("cli session", main_model=main_model, edit_format=main_model.edit_format)
