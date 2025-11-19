@@ -1,3 +1,10 @@
+"""Python translation of the COBOL CM104M queue-bridging program.
+
+The module mirrors the original program’s behavior by polling two input queues,
+relaying their messages to the opposite output queues, logging every transfer,
+and halting when a message beginning with the literal “KILL” is received.
+"""
+
 from __future__ import annotations
 
 import argparse
