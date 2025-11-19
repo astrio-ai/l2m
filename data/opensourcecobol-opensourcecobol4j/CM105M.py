@@ -1,12 +1,13 @@
-"""Python translation of the CM105M COBOL communications-queue validation program."""
+"""Modern Python conversion of the CM105M COBOL communications-queue validation program."""
 from __future__ import annotations
 
 import argparse
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Sequence
 
 DEFAULT_REPORT_PATH = Path("report.log")
+DEFAULT_MIN_MESSAGES = 10
 
 
 def pad_field(value: str, length: int) -> str:
@@ -103,29 +104,87 @@ class QueueTest:
     paragraph: str
 
 
-class ReportWriter:
-    """Accumulates the formatted report lines and writes them to disk."""
+@dataclass(frozen=True)
+class QueueMessage:
+    key: str
+    contents: str
 
-    def __init__(self, output_path: str | Path):
-        self.path = Path(output_path)
+
+@dataclass(frozen=True)
+class QueueTestResult:
+    feature: str
+    status: str
+    paragraph: str
+    computed: str = ""
+    correct: str = ""
+    remark: str = ""
+
+
+class ReportWriter:
+    """Accumulated output that mirrors the original CM105M report layout."""
+
+    def __init__(self, destination: Path | str) -> None:
+        self.path = Path(destination)
         self.lines: List[str] = []
 
-    def write_line(self, text: str = "") -> None:
-        self.lines.append(text.rstrip("\n"))
+    def line(self, text: str = "") -> None:
+        self.lines.append(text)
+
+    def blank_line(self, times: int = 1) -> None:
+        for _ in range(times):
+            self.line("")
+
+    def write_header(self, test_id: str) -> None:
+        self.line(CCVS_H1)
+        self.line(build_ccvs_h2(test_id))
+        self.line(CCVS_H3)
+        self.line(HYPHEN_LINE)
+
+    def write_column_headers(self) -> None:
+        self.line(COLUMNS_LINE_1)
+        self.line(COLUMNS_LINE_2)
+        self.blank_line()
+
+    def write_result(self, result: QueueTestResult) -> None:
+        self.line(
+            format_result_line(
+                result.feature,
+                result.status,
+                result.paragraph,
+                result.computed,
+                result.correct,
+                result.remark,
+            )
+        )
+
+    def write_footer(self, test_id: str, errors: int, deletes: int) -> None:
+        self.line(HYPHEN_LINE)
+        self.blank_line(4)
+        self.line(build_ccvs_e1(test_id))
+        self.blank_line()
+        error_text = " NO" if errors == 0 else f"{errors:3d}"
+        self.line(build_ccvs_e2(error_text, "ERRORS ENCOUNTERED"))
+        delete_text = " NO" if deletes == 0 else f"{deletes:3d}"
+        self.line(build_ccvs_e2(delete_text, "TESTS DELETED"))
+        self.line(CCVS_E3)
 
     def save(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        content = "\n".join(self.lines)
-        if content and not content.endswith("\n"):
-            content += "\n"
+        content = self.content
         self.path.write_text(content, encoding="utf-8")
+
+    @property
+    def content(self) -> str:
+        if not self.lines:
+            return ""
+        return "\n".join(self.lines) + "\n"
 
 
 class MessageQueueSystem:
-    """Simple in-memory stand-in for the COBOL communications queues."""
+    """Simple in-memory recreation of the CM105M communication queues."""
 
-    BASE_QUEUES = ("PPPP", "PPPS", "PPSP", "PSPP")
-    ALIAS_MAP = {
+    BASE_QUEUES: Sequence[str] = ("PPPP", "PPPS", "PPSP", "PSPP")
+    ALIAS_MAP: Dict[str, str] = {
         "P": "PPPP",
         "PP": "PPPP",
         "PPP": "PPPP",
@@ -134,46 +193,49 @@ class MessageQueueSystem:
         "PPS": "PPSP",
     }
 
-    def __init__(self, min_messages: int = 10) -> None:
-        self.min_messages = min_messages
+    def __init__(self, min_messages: int = DEFAULT_MIN_MESSAGES) -> None:
+        self.min_messages = max(1, min_messages)
         self.queues: Dict[str, List[str]] = {name: [] for name in self.BASE_QUEUES}
-        self.build_up_queues()
+        self._prime_queues()
 
-    def build_up_queues(self) -> None:
+    def _prime_queues(self) -> None:
         for name in self.queues:
             self._ensure_min_messages(name)
 
-    def _ensure_min_messages(self, name: str) -> None:
-        queue = self.queues[name]
+    def _ensure_min_messages(self, queue_name: str) -> None:
+        queue = self.queues[queue_name]
         while len(queue) < self.min_messages:
             index = len(queue) + 1
-            queue.append(f"{name}{index:02d} MESSAGE {index:02d}")
+            queue.append(f"{queue_name}{index:02d} MESSAGE {index:02d}")
 
-    def resolve_queue(self, queue_set: str) -> str | None:
-        if queue_set in self.queues:
-            return queue_set
-        return self.ALIAS_MAP.get(queue_set)
+    def _resolve_queue(self, queue_name: str) -> str | None:
+        normalized = queue_name.strip().upper()
+        if normalized in self.queues:
+            return normalized
+        return self.ALIAS_MAP.get(normalized)
 
-    def receive(self, queue_set: str) -> Tuple[str, str]:
-        actual = self.resolve_queue(queue_set)
+    def receive(self, queue_name: str) -> QueueMessage:
+        actual = self._resolve_queue(queue_name)
         if actual is None:
-            raise KeyError(f"Unknown queue set '{queue_set}'")
+            raise KeyError(f"Unknown queue set '{queue_name.strip()}'")
         queue = self.queues[actual]
         if not queue:
             raise RuntimeError(f"No messages available for queue {actual}")
-        message = queue.pop(0)
-        return message[:4], message[:30]
+        payload = queue.pop(0)
+        key = payload[:4].strip() or actual
+        return QueueMessage(key=key, contents=payload[:30])
 
-    def accept_count(self, queue_set: str) -> Tuple[str, int]:
-        actual = self.resolve_queue(queue_set)
+    def accept_count(self, queue_name: str) -> tuple[str, int]:
+        actual = self._resolve_queue(queue_name)
         if actual is None:
             return "91", 0
         return "00", len(self.queues[actual])
 
 
-class CM105MReport:
-    """Recreates the PROCEDURE DIVISION of CM105M."""
+class CM105MRunner:
+    """Coordinates the queue tests, accept tests, and report generation."""
 
+    TEST_ID = "CM105M"
     QUEUE_TESTS = [
         QueueTest("QUEUE SERIES PPPP", "PPPP", "PPPP", "QUEUE-TEST-01"),
         QueueTest("QUEUE SERIES PPPS", "PPPS", "PPPS", "QUEUE-TEST-02"),
@@ -199,60 +261,61 @@ class CM105MReport:
         "PPS",
     ]
 
-    def __init__(self, output_path: str | Path = DEFAULT_REPORT_PATH) -> None:
-        self.test_id = "CM105M"
-        self.writer = ReportWriter(output_path)
-        self.queue_system = MessageQueueSystem()
+    def __init__(
+        self,
+        report_path: Path | str = DEFAULT_REPORT_PATH,
+        min_messages: int = DEFAULT_MIN_MESSAGES,
+    ) -> None:
+        self.report_path = Path(report_path)
+        self.writer = ReportWriter(self.report_path)
+        self.queue_system = MessageQueueSystem(min_messages=min_messages)
         self.error_counter = 0
         self.delete_counter = 0
+        self.results: List[QueueTestResult] = []
 
-    def run(self) -> None:
-        self.write_header()
-        self.write_column_names()
+    def run(self, show: bool = False) -> Path:
+        self.writer.write_header(self.TEST_ID)
+        self.writer.write_column_headers()
         self.run_queue_tests()
         self.run_accept_tests()
-        self.write_footer()
+        self.writer.write_footer(self.TEST_ID, self.error_counter, self.delete_counter)
         self.writer.save()
-
-    def write_header(self) -> None:
-        self.writer.write_line(CCVS_H1)
-        self.writer.write_line(build_ccvs_h2(self.test_id))
-        self.writer.write_line(CCVS_H3)
-        self.writer.write_line(HYPHEN_LINE)
-
-    def write_column_names(self) -> None:
-        self.writer.write_line(COLUMNS_LINE_1)
-        self.writer.write_line(COLUMNS_LINE_2)
-        self.blank_line()
+        if show:
+            print(self.writer.content, end="")
+        return self.report_path
 
     def run_queue_tests(self) -> None:
         for test in self.QUEUE_TESTS:
             self.execute_queue_test(test)
 
     def execute_queue_test(self, test: QueueTest) -> None:
-        feature = test.feature
-        paragraph = test.paragraph
-        expected = test.expected_key
-        remark: str
         try:
-            queue_key, message = self.queue_system.receive(test.queue_set)
-            success = queue_key == expected
-            remark = message
+            message = self.queue_system.receive(test.queue_set)
+            success = message.key == test.expected_key
+            remark = message.contents
         except Exception as exc:  # noqa: BLE001
             success = False
-            remark = f"{test.queue_set} {exc}"
+            remark = f"{test.queue_set.strip()} {exc}"
 
         if success:
-            status = "PASS"
-            computed = ""
-            correct = ""
+            result = QueueTestResult(
+                feature=test.feature,
+                status="PASS",
+                paragraph=test.paragraph,
+                remark=remark,
+            )
         else:
-            status = "FAIL*"
-            computed = " SEE REMARKS COLUMN "
-            correct = expected
             self.error_counter += 1
+            result = QueueTestResult(
+                feature=test.feature,
+                status="FAIL*",
+                paragraph=test.paragraph,
+                computed=" SEE REMARKS COLUMN ",
+                correct=test.expected_key,
+                remark=remark,
+            )
 
-        self.record_result(feature, status, paragraph, computed, correct, remark)
+        self.record_result(result)
 
     def run_accept_tests(self) -> None:
         feature = "ACCEPT GROUP QUEUE"
@@ -265,43 +328,29 @@ class CM105MReport:
             else:
                 computed = status_code
                 remark = f"BAD STATUS FOR {queue_name}"
-            self.record_result(feature, "INFO", paragraph, computed, "", remark)
+            result = QueueTestResult(
+                feature=feature,
+                status="INFO",
+                paragraph=paragraph,
+                computed=computed,
+                remark=remark,
+            )
+            self.record_result(result)
 
-    def record_result(
-        self,
-        feature: str,
-        status: str,
-        paragraph: str,
-        computed: str,
-        correct: str,
-        remark: str,
-    ) -> None:
-        line = format_result_line(feature, status, paragraph, computed, correct, remark)
-        self.writer.write_line(line)
-
-    def write_footer(self) -> None:
-        self.writer.write_line(HYPHEN_LINE)
-        self.blank_line(4)
-        self.writer.write_line(build_ccvs_e1(self.test_id))
-        self.blank_line()
-        error_text = " NO" if self.error_counter == 0 else f"{self.error_counter:3d}"
-        self.writer.write_line(build_ccvs_e2(error_text, "ERRORS ENCOUNTERED"))
-        delete_text = (
-            " NO" if self.delete_counter == 0 else f"{self.delete_counter:3d}"
-        )
-        self.writer.write_line(build_ccvs_e2(delete_text, "TESTS DELETED"))
-        self.writer.write_line(CCVS_E3)
-
-    def blank_line(self, times: int = 1) -> None:
-        for _ in range(times):
-            self.writer.write_line("")
+    def record_result(self, result: QueueTestResult) -> None:
+        self.results.append(result)
+        self.writer.write_result(result)
 
 
-def run(report_path: Path | str = DEFAULT_REPORT_PATH) -> Path:
+def run(
+    report_path: Path | str = DEFAULT_REPORT_PATH,
+    *,
+    min_messages: int = DEFAULT_MIN_MESSAGES,
+    show: bool = False,
+) -> Path:
     """Convenience helper for programmatic use."""
-    reporter = CM105MReport(report_path)
-    reporter.run()
-    return Path(report_path)
+    runner = CM105MRunner(report_path=report_path, min_messages=min_messages)
+    return runner.run(show=show)
 
 
 def parse_args() -> argparse.Namespace:
@@ -314,12 +363,23 @@ def parse_args() -> argparse.Namespace:
         default=DEFAULT_REPORT_PATH,
         help="Destination for the generated report (default: report.log).",
     )
+    parser.add_argument(
+        "--min-messages",
+        type=int,
+        default=DEFAULT_MIN_MESSAGES,
+        help="Minimum number of messages to seed into each base queue (default: 10).",
+    )
+    parser.add_argument(
+        "--show",
+        action="store_true",
+        help="Also print the generated report to stdout.",
+    )
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
-    run(args.report)
+    run(report_path=args.report, min_messages=args.min_messages, show=args.show)
 
 
 if __name__ == "__main__":
