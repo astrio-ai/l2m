@@ -1,35 +1,31 @@
-"""
-Ground Truth Python Equivalent for CBTRN01C.cbl
+from __future__ import annotations
 
-Program: CBTRN01C
-Application: CardDemo
-Type: BATCH COBOL Program
-Function: Post the records from daily transaction file.
-
-Copyright Amazon.com, Inc. or its affiliates.
-All Rights Reserved.
-Licensed under the Apache License, Version 2.0
-"""
-
+import argparse
 import sys
 from dataclasses import dataclass
-from typing import Optional, Dict
+from enum import IntEnum
 from pathlib import Path
+from typing import Dict, Optional, TextIO
+
+
+class AppResult(IntEnum):
+    """Application-level return codes mirroring the COBOL program."""
+    OK = 0
+    ERROR = 12
+    EOF = 16
 
 
 @dataclass
 class DailyTranRecord:
-    """Daily transaction record (FD-TRAN-RECORD)."""
-    tran_id: str = ""  # PIC X(16) - 16 chars
-    tran_data: str = ""  # PIC X(334) - 334 chars
-    
+    tran_id: str = ""
+    tran_data: str = ""
+
     @property
-    def dalytran_id(self) -> str:
-        return self.tran_id
-    
+    def raw(self) -> str:
+        return f"{self.tran_id}{self.tran_data}"
+
     @property
-    def dalytran_card_num(self) -> str:
-        # Extract card number from tran_data (simplified)
+    def card_number(self) -> str:
         if len(self.tran_data) >= 16:
             return self.tran_data[:16]
         return ""
@@ -37,19 +33,18 @@ class DailyTranRecord:
 
 @dataclass
 class CardXrefRecord:
-    """Card cross-reference record (CARD-XREF-RECORD)."""
-    card_num: str = ""  # 16 chars
-    cust_num: str = ""  # 9 chars
-    acct_id: str = ""  # 11 chars
-    
+    card_num: str = ""
+    cust_num: str = ""
+    acct_id: str = ""
+
     @property
     def xref_card_num(self) -> str:
         return self.card_num
-    
+
     @property
     def xref_cust_id(self) -> str:
         return self.cust_num
-    
+
     @property
     def xref_acct_id(self) -> str:
         return self.acct_id
@@ -57,382 +52,296 @@ class CardXrefRecord:
 
 @dataclass
 class AccountRecord:
-    """Account record (ACCOUNT-RECORD)."""
-    acct_id: str = ""  # 11 chars
-    acct_data: str = ""  # 289 chars
-    
-    @property
-    def acct_id_prop(self) -> str:
-        return self.acct_id
+    acct_id: str = ""
+    acct_data: str = ""
 
 
-class SequentialFileHandler:
-    """Handler for sequential files."""
-    
-    def __init__(self, filename: str):
-        self.filename = filename
-        self.file_handle: Optional[object] = None
+class FileHandler:
+    """Base class for simulated COBOL file handlers."""
+
+    def __init__(self, logical_name: str, path: Path):
+        self.logical_name = logical_name
+        self.path = path
         self.file_status = "00"
+
+    def display_io_status(self):
+        """Emit IO status using the same formatting as Z-DISPLAY-IO-STATUS."""
+        io_status = self.file_status if len(self.file_status) == 2 else "00"
+        if io_status.isdigit() and not io_status.startswith("9"):
+            status_04 = f"00{io_status}"
+        else:
+            left = io_status[0] if io_status else "0"
+            right = io_status[1] if len(io_status) > 1 else "0"
+            status_04 = f"{left}00{right}"
+        print(f'FILE STATUS IS: NNNN {status_04}')
+
+
+class SequentialFileHandler(FileHandler):
+    """Handler that simulates COBOL sequential file access."""
+
+    def __init__(self, logical_name: str, path: Path):
+        super().__init__(logical_name, path)
+        self.file_handle: Optional[TextIO] = None
         self.end_of_file = False
-    
-    def open_file(self, mode: str = "r") -> int:
-        """Open file."""
+
+    def open_file(self, mode: str = "r") -> AppResult:
         try:
-            self.file_handle = open(self.filename, mode, encoding='utf-8')
+            self.file_handle = open(self.path, mode, encoding="utf-8")
             self.file_status = "00"
             self.end_of_file = False
-            return 0
+            return AppResult.OK
         except FileNotFoundError:
             self.file_status = "23"
-            return 12
-        except Exception as e:
+            return AppResult.ERROR
+        except Exception:
             self.file_status = "99"
-            return 12
-    
-    def read_next(self) -> tuple[Optional[str], int]:
-        """Read next record."""
+            return AppResult.ERROR
+
+    def read_next(self) -> tuple[Optional[str], AppResult]:
         if self.end_of_file:
-            return None, 16
-        
+            return None, AppResult.EOF
+        if not self.file_handle:
+            self.file_status = "90"
+            return None, AppResult.ERROR
         try:
             line = self.file_handle.readline()
-            if not line:
-                self.end_of_file = True
-                self.file_status = "10"
-                return None, 16
-            
-            line = line.rstrip('\n\r')
-            self.file_status = "00"
-            return line, 0
-        except Exception as e:
+        except Exception:
             self.file_status = "99"
-            return None, 12
-    
-    def close_file(self) -> int:
-        """Close file."""
+            return None, AppResult.ERROR
+        if line == "":
+            self.end_of_file = True
+            self.file_status = "10"
+            return None, AppResult.EOF
+        self.file_status = "00"
+        return line.rstrip("\n\r"), AppResult.OK
+
+    def close_file(self) -> AppResult:
         try:
             if self.file_handle:
                 self.file_handle.close()
                 self.file_handle = None
             self.file_status = "00"
-            return 0
-        except Exception as e:
+            return AppResult.OK
+        except Exception:
             self.file_status = "99"
-            return 12
-    
-    def display_io_status(self):
-        """Display I/O status."""
-        io_status = self.file_status
-        if len(io_status) != 2:
-            io_status = "00"
-        
-        if io_status[0].isdigit() and io_status[1].isdigit() and io_status[0] != '9':
-            status_04 = f"00{io_status}"
-            print(f'FILE STATUS IS: NNNN {status_04}')
-        else:
-            left = io_status[0] if len(io_status) > 0 else '0'
-            right = io_status[1] if len(io_status) > 1 else '0'
-            status_04 = f"{left}00{right}"
-            print(f'FILE STATUS IS: NNNN {status_04}')
+            return AppResult.ERROR
 
 
-class IndexedFileHandler:
-    """Handler for indexed files (simulated with dictionary)."""
-    
-    def __init__(self, filename: str):
-        self.filename = filename
-        self.file_handle: Optional[object] = None
-        self.file_status = "00"
+class IndexedFileHandler(FileHandler):
+    """Simulated indexed file using an in-memory dictionary."""
+
+    def __init__(self, logical_name: str, path: Path):
+        super().__init__(logical_name, path)
         self._data: Dict[str, str] = {}
-    
-    def open_file(self, mode: str = "r") -> int:
-        """Open file and load data."""
+
+    def open_file(self, mode: str = "r") -> AppResult:
+        if mode != "r":
+            raise ValueError("Indexed files only support read mode in this simulation.")
+        self._data.clear()
         try:
-            if mode == "r":
-                with open(self.filename, "r", encoding='utf-8') as f:
-                    for line in f:
-                        line = line.rstrip('\n\r')
-                        if len(line) > 0:
-                            key = self._extract_key(line)
-                            if key:
-                                self._data[key] = line
+            with open(self.path, mode, encoding="utf-8") as handle:
+                for line in handle:
+                    record = line.rstrip("\n\r")
+                    key = self._extract_key(record)
+                    if key:
+                        self._data[key] = record
             self.file_status = "00"
-            return 0
+            return AppResult.OK
         except FileNotFoundError:
             self.file_status = "23"
-            return 12
-        except Exception as e:
+            return AppResult.ERROR
+        except Exception:
             self.file_status = "99"
-            return 12
-    
-    def read_record(self, key: str) -> tuple[Optional[str], int]:
-        """Read record by key."""
+            return AppResult.ERROR
+
+    def read_record(self, key: str) -> tuple[Optional[str], AppResult]:
         if key in self._data:
             self.file_status = "00"
-            return self._data[key], 0
-        else:
-            self.file_status = "23"
-            return None, 12
-    
-    def close_file(self) -> int:
-        """Close file."""
-        try:
-            self.file_status = "00"
-            return 0
-        except Exception as e:
-            self.file_status = "99"
-            return 12
-    
-    def display_io_status(self):
-        """Display I/O status."""
-        io_status = self.file_status
-        if len(io_status) != 2:
-            io_status = "00"
-        
-        if io_status[0].isdigit() and io_status[1].isdigit() and io_status[0] != '9':
-            status_04 = f"00{io_status}"
-            print(f'FILE STATUS IS: NNNN {status_04}')
-        else:
-            left = io_status[0] if len(io_status) > 0 else '0'
-            right = io_status[1] if len(io_status) > 1 else '0'
-            status_04 = f"{left}00{right}"
-            print(f'FILE STATUS IS: NNNN {status_04}')
-    
-    def _extract_key(self, line: str) -> str:
-        """Extract key from line (override in subclasses)."""
-        return line[:16].strip() if len(line) >= 16 else ""
+            return self._data[key], AppResult.OK
+        self.file_status = "23"
+        return None, AppResult.ERROR
 
+    def close_file(self) -> AppResult:
+        self.file_status = "00"
+        return AppResult.OK
 
-class XrefFileHandler(IndexedFileHandler):
-    """Handler for XREF file."""
-    
     def _extract_key(self, line: str) -> str:
-        """Extract card number key (16 chars)."""
-        if len(line) >= 16:
-            return line[:16]
         return ""
 
 
 class CustFileHandler(IndexedFileHandler):
-    """Handler for CUSTFILE."""
-    
     def _extract_key(self, line: str) -> str:
-        """Extract customer ID key (9 chars)."""
-        if len(line) >= 9:
-            return line[:9].strip()
-        return ""
+        return line[:9].strip() if len(line) >= 9 else ""
+
+
+class XrefFileHandler(IndexedFileHandler):
+    def _extract_key(self, line: str) -> str:
+        return line[:16] if len(line) >= 16 else ""
 
 
 class CardFileHandler(IndexedFileHandler):
-    """Handler for CARDFILE."""
-    
     def _extract_key(self, line: str) -> str:
-        """Extract card number key (16 chars)."""
-        if len(line) >= 16:
-            return line[:16]
-        return ""
+        return line[:16] if len(line) >= 16 else ""
 
 
 class AcctFileHandler(IndexedFileHandler):
-    """Handler for ACCTFILE."""
-    
     def _extract_key(self, line: str) -> str:
-        """Extract account ID key (11 chars)."""
-        if len(line) >= 11:
-            return line[:11].strip()
-        return ""
+        return line[:11].strip() if len(line) >= 11 else ""
 
 
 class TranFileHandler(IndexedFileHandler):
-    """Handler for TRANFILE."""
-    
     def _extract_key(self, line: str) -> str:
-        """Extract transaction ID key (16 chars)."""
-        if len(line) >= 16:
-            return line[:16]
-        return ""
+        return line[:16] if len(line) >= 16 else ""
 
 
 def parse_daily_tran_record(line: str) -> DailyTranRecord:
-    """Parse daily transaction record."""
-    if len(line) < 16:
-        return DailyTranRecord()
-    
-    return DailyTranRecord(
-        tran_id=line[:16],
-        tran_data=line[16:350] if len(line) > 16 else ""
-    )
+    tran_id = line[:16]
+    tran_data = line[16:350] if len(line) > 16 else ""
+    return DailyTranRecord(tran_id=tran_id, tran_data=tran_data)
 
 
 def parse_xref_record(line: str) -> CardXrefRecord:
-    """Parse XREF record."""
-    if len(line) < 36:
-        return CardXrefRecord()
-    
-    return CardXrefRecord(
-        card_num=line[:16],
-        cust_num=line[16:25] if len(line) > 16 else "",
-        acct_id=line[25:36] if len(line) > 25 else ""
-    )
+    card_num = line[:16]
+    cust_num = line[16:25] if len(line) > 16 else ""
+    acct_id = line[25:36] if len(line) > 25 else ""
+    return CardXrefRecord(card_num=card_num, cust_num=cust_num, acct_id=acct_id)
 
 
 def parse_account_record(line: str) -> AccountRecord:
-    """Parse account record."""
-    if len(line) < 11:
-        return AccountRecord()
-    
-    return AccountRecord(
-        acct_id=line[:11].strip(),
-        acct_data=line[11:300] if len(line) > 11 else ""
-    )
+    acct_id = line[:11]
+    acct_data = line[11:300] if len(line) > 11 else ""
+    return AccountRecord(acct_id=acct_id, acct_data=acct_data)
 
 
 def abend_program():
-    """Abend the program."""
     print('ABENDING PROGRAM')
     sys.exit(999)
 
 
-def main():
-    """Main procedure equivalent to COBOL PROCEDURE DIVISION."""
-    print('START OF EXECUTION OF PROGRAM CBTRN01C')
-    
-    # File handlers
-    dalytran_file = SequentialFileHandler("DALYTRAN")
-    custfile = CustFileHandler("CUSTFILE")
-    xreffile = XrefFileHandler("XREFFILE")
-    cardfile = CardFileHandler("CARDFILE")
-    acctfile = AcctFileHandler("ACCTFILE")
-    tranfile = TranFileHandler("TRANFILE")
-    
-    # Working variables
-    end_of_daily_trans_file = 'N'
-    ws_xref_read_status = 0
-    ws_acct_read_status = 0
-    
-    # Current records
-    dalytran_record: Optional[DailyTranRecord] = None
-    xref_record: Optional[CardXrefRecord] = None
-    account_record: Optional[AccountRecord] = None
-    
-    try:
-        # Open files
-        if dalytran_file.open_file("r") != 0:
-            print('ERROR OPENING DAILY TRANSACTION FILE')
-            dalytran_file.display_io_status()
-            abend_program()
-        
-        if custfile.open_file("r") != 0:
-            print('ERROR OPENING CUSTOMER FILE')
-            custfile.display_io_status()
-            abend_program()
-        
-        if xreffile.open_file("r") != 0:
-            print('ERROR OPENING CROSS REF FILE')
-            xreffile.display_io_status()
-            abend_program()
-        
-        if cardfile.open_file("r") != 0:
-            print('ERROR OPENING CARD FILE')
-            cardfile.display_io_status()
-            abend_program()
-        
-        if acctfile.open_file("r") != 0:
-            print('ERROR OPENING ACCOUNT FILE')
-            acctfile.display_io_status()
-            abend_program()
-        
-        if tranfile.open_file("r") != 0:
-            print('ERROR OPENING TRANSACTION FILE')
-            tranfile.display_io_status()
-            abend_program()
-        
-        # Main processing loop
-        while end_of_daily_trans_file != 'Y':
-            if end_of_daily_trans_file == 'N':
-                # Read next daily transaction record
-                line, appl_result = dalytran_file.read_next()
-                
-                if appl_result == 0 and line:
-                    dalytran_record = parse_daily_tran_record(line)
-                    print(f"{dalytran_record.dalytran_id}{dalytran_record.tran_data}")
-                    
-                    # Lookup XREF
-                    ws_xref_read_status = 0
-                    xref_key = dalytran_record.dalytran_card_num
-                    
-                    xref_line, appl_result = xreffile.read_record(xref_key)
-                    if appl_result == 0 and xref_line:
-                        xref_record = parse_xref_record(xref_line)
-                        print('SUCCESSFUL READ OF XREF')
-                        print(f'CARD NUMBER: {xref_record.xref_card_num}')
-                        print(f'ACCOUNT ID : {xref_record.xref_acct_id}')
-                        print(f'CUSTOMER ID: {xref_record.xref_cust_id}')
-                    else:
-                        print('INVALID CARD NUMBER FOR XREF')
-                        ws_xref_read_status = 4
-                    
-                    # If XREF found, read account
-                    if ws_xref_read_status == 0:
-                        ws_acct_read_status = 0
-                        acct_key = xref_record.xref_acct_id
-                        
-                        acct_line, appl_result = acctfile.read_record(acct_key)
-                        if appl_result == 0 and acct_line:
-                            account_record = parse_account_record(acct_line)
-                            print('SUCCESSFUL READ OF ACCOUNT FILE')
-                        else:
-                            print(f'INVALID ACCOUNT NUMBER FOUND')
-                            ws_acct_read_status = 4
-                    else:
-                        print(f'CARD NUMBER {dalytran_record.dalytran_card_num} COULD NOT BE VERIFIED. SKIPPING TRANSACTION ID-{dalytran_record.dalytran_id}')
-                
-                elif appl_result == 16:
-                    end_of_daily_trans_file = 'Y'
-                else:
-                    print('ERROR READING DAILY TRANSACTION FILE')
-                    dalytran_file.display_io_status()
-                    abend_program()
-        
-        # Close files
-        if dalytran_file.close_file() != 0:
-            print('ERROR CLOSING CUSTOMER FILE')
-            dalytran_file.display_io_status()
-            abend_program()
-        
-        if custfile.close_file() != 0:
-            print('ERROR CLOSING CUSTOMER FILE')
-            custfile.display_io_status()
-            abend_program()
-        
-        if xreffile.close_file() != 0:
-            print('ERROR CLOSING CROSS REF FILE')
-            xreffile.display_io_status()
-            abend_program()
-        
-        if cardfile.close_file() != 0:
-            print('ERROR CLOSING CARD FILE')
-            cardfile.display_io_status()
-            abend_program()
-        
-        if acctfile.close_file() != 0:
-            print('ERROR CLOSING ACCOUNT FILE')
-            acctfile.display_io_status()
-            abend_program()
-        
-        if tranfile.close_file() != 0:
-            print('ERROR CLOSING TRANSACTION FILE')
-            tranfile.display_io_status()
-            abend_program()
-        
+class CBTRN01CApp:
+    """Python rendition of the CBTRN01C COBOL batch program."""
+
+    def __init__(self, base_dir: Optional[Path] = None):
+        self.base_dir = Path(base_dir) if base_dir else None
+        self.dalytran_file = SequentialFileHandler("DALYTRAN", self._path("DALYTRAN"))
+        self.custfile = CustFileHandler("CUSTFILE", self._path("CUSTFILE"))
+        self.xreffile = XrefFileHandler("XREFFILE", self._path("XREFFILE"))
+        self.cardfile = CardFileHandler("CARDFILE", self._path("CARDFILE"))
+        self.acctfile = AcctFileHandler("ACCTFILE", self._path("ACCTFILE"))
+        self.tranfile = TranFileHandler("TRANFILE", self._path("TRANFILE"))
+        self.end_of_daily_trans_file = False
+        self.ws_xref_read_status = 0
+        self.ws_acct_read_status = 0
+        self.account_record: Optional[AccountRecord] = None
+
+    def _path(self, filename: str) -> Path:
+        return self.base_dir / filename if self.base_dir else Path(filename)
+
+    def run(self) -> int:
+        print('START OF EXECUTION OF PROGRAM CBTRN01C')
+        self.open_all_files()
+        try:
+            self._process_daily_transactions()
+        finally:
+            self.close_all_files()
         print('END OF EXECUTION OF PROGRAM CBTRN01C')
         return 0
-        
-    except Exception as e:
-        print(f'ERROR: {e}')
-        abend_program()
+
+    def open_all_files(self):
+        self._open_or_abend(self.dalytran_file, 'DAILY TRANSACTION FILE')
+        self._open_or_abend(self.custfile, 'CUSTOMER FILE')
+        self._open_or_abend(self.xreffile, 'CROSS REF FILE')
+        self._open_or_abend(self.cardfile, 'CARD FILE')
+        self._open_or_abend(self.acctfile, 'ACCOUNT FILE')
+        self._open_or_abend(self.tranfile, 'TRANSACTION FILE')
+
+    def close_all_files(self):
+        self._close_or_abend(self.dalytran_file, 'DAILY TRANSACTION FILE')
+        self._close_or_abend(self.custfile, 'CUSTOMER FILE')
+        self._close_or_abend(self.xreffile, 'CROSS REF FILE')
+        self._close_or_abend(self.cardfile, 'CARD FILE')
+        self._close_or_abend(self.acctfile, 'ACCOUNT FILE')
+        self._close_or_abend(self.tranfile, 'TRANSACTION FILE')
+
+    @staticmethod
+    def _open_or_abend(handler: FileHandler, description: str):
+        if handler.open_file("r") is not AppResult.OK:
+            print(f'ERROR OPENING {description}')
+            handler.display_io_status()
+            abend_program()
+
+    @staticmethod
+    def _close_or_abend(handler: FileHandler, description: str):
+        if handler.close_file() is not AppResult.OK:
+            print(f'ERROR CLOSING {description}')
+            handler.display_io_status()
+            abend_program()
+
+    def _process_daily_transactions(self):
+        while not self.end_of_daily_trans_file:
+            line, result = self.dalytran_file.read_next()
+            if result is AppResult.OK and line is not None:
+                record = parse_daily_tran_record(line)
+                print(record.raw)
+                self._handle_transaction_record(record)
+            elif result is AppResult.EOF:
+                self.end_of_daily_trans_file = True
+            else:
+                print('ERROR READING DAILY TRANSACTION FILE')
+                self.dalytran_file.display_io_status()
+                abend_program()
+
+    def _handle_transaction_record(self, record: DailyTranRecord):
+        self.ws_xref_read_status = 0
+        xref_line, xref_result = self.xreffile.read_record(record.card_number)
+        xref_record: Optional[CardXrefRecord] = None
+
+        if xref_result is AppResult.OK and xref_line:
+            xref_record = parse_xref_record(xref_line)
+            print('SUCCESSFUL READ OF XREF')
+            print(f'CARD NUMBER: {xref_record.xref_card_num}')
+            print(f'ACCOUNT ID : {xref_record.xref_acct_id}')
+            print(f'CUSTOMER ID: {xref_record.xref_cust_id}')
+        else:
+            print('INVALID CARD NUMBER FOR XREF')
+            self.ws_xref_read_status = 4
+
+        if self.ws_xref_read_status == 0 and xref_record:
+            self.ws_acct_read_status = 0
+            acct_key = xref_record.xref_acct_id
+            acct_line, acct_result = self.acctfile.read_record(acct_key)
+            if acct_result is AppResult.OK and acct_line:
+                self.account_record = parse_account_record(acct_line)
+                print('SUCCESSFUL READ OF ACCOUNT FILE')
+            else:
+                print('INVALID ACCOUNT NUMBER FOUND')
+                self.ws_acct_read_status = 4
+            if self.ws_acct_read_status != 0:
+                print(f'ACCOUNT {acct_key} NOT FOUND')
+        else:
+            print(
+                f'CARD NUMBER {record.card_number} COULD NOT BE VERIFIED. '
+                f'SKIPPING TRANSACTION ID-{record.tran_id}'
+            )
+
+
+def build_argument_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description='Python rendition of CBTRN01C.')
+    parser.add_argument(
+        '--data-dir',
+        type=Path,
+        default=None,
+        help='Optional base directory where dataset files are located.'
+    )
+    return parser
+
+
+def main(argv: Optional[list[str]] = None) -> int:
+    parser = build_argument_parser()
+    args = parser.parse_args(argv)
+    app = CBTRN01CApp(args.data_dir)
+    return app.run()
 
 
 if __name__ == '__main__':
     sys.exit(main())
-
