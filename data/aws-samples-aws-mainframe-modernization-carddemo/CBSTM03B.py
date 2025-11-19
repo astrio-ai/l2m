@@ -1,341 +1,288 @@
-"""
-Ground Truth Python Equivalent for CBSTM03B.cbl
+from __future__ import annotations
 
-Program: CBSTM03B
-Application: CardDemo
-Type: BATCH COBOL Subroutine
-Function: Does file processing related to Transact Report
-
-Copyright Amazon.com, Inc. or its affiliates.
-All Rights Reserved.
-Licensed under the Apache License, Version 2.0
-"""
-
-import sys
+import os
 from dataclasses import dataclass
-from typing import Optional, Dict, TextIO
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
+
+FileReadResult = Tuple[str, Optional[str]]
 
 
 @dataclass
 class M03BArea:
-    """M03B-AREA parameter area (LINKAGE SECTION equivalent)."""
-    dd_name: str = ""  # LK-M03B-DD: PIC X(08)
-    operation: str = ""  # LK-M03B-OPER: PIC X(01) - 'O', 'C', 'R', 'K', 'W', 'Z'
-    return_code: str = "00"  # LK-M03B-RC: PIC X(02)
-    key: str = ""  # LK-M03B-KEY: PIC X(25)
-    key_len: int = 0  # LK-M03B-KEY-LN: PIC S9(4)
-    field_data: str = ""  # LK-M03B-FLDT: PIC X(1000)
-    
+    """
+    Lightweight representation of the LK-M03B-AREA COBOL linkage structure.
+    """
+
+    dd_name: str = ""
+    operation: str = ""
+    return_code: str = "00"
+    key: str = ""
+    key_len: int = 0
+    field_data: str = ""
+
+    @property
+    def normalized_dd_name(self) -> str:
+        return (self.dd_name or "").strip().upper()
+
+    @property
+    def operation_code(self) -> str:
+        return (self.operation or "").strip().upper()[:1]
+
     @property
     def is_open(self) -> bool:
-        return self.operation == 'O'
-    
+        return self.operation_code == "O"
+
     @property
     def is_close(self) -> bool:
-        return self.operation == 'C'
-    
+        return self.operation_code == "C"
+
     @property
     def is_read(self) -> bool:
-        return self.operation == 'R'
-    
+        return self.operation_code == "R"
+
     @property
     def is_read_key(self) -> bool:
-        return self.operation == 'K'
-    
+        return self.operation_code == "K"
+
     @property
-    def is_write(self) -> bool:
-        return self.operation == 'W'
-    
-    @property
-    def is_rewrite(self) -> bool:
-        return self.operation == 'Z'
+    def requested_key_length(self) -> int:
+        return abs(self.key_len)
+
+    def effective_key(self) -> str:
+        key_value = self.key or ""
+        length = self.requested_key_length
+        if length:
+            return key_value[:length]
+        return key_value
 
 
-class FileHandler:
-    """Base file handler for indexed files."""
-    
-    def __init__(self, filename: str, is_sequential: bool = True):
-        self.filename = filename
-        self.file_handle: Optional[TextIO] = None
-        self.file_status = "00"
-        self.is_sequential = is_sequential
-        self._data: Dict[str, str] = {}  # For random access
-        self._sequential_position = 0
-        self._sequential_data: list = []
-    
-    def open_file(self) -> str:
-        """Open file for reading."""
+class BaseFileHandler:
+    """
+    Base class for file abstractions used by the modernized subroutine.
+    """
+
+    def __init__(self, dd_name: str):
+        self.dd_name = dd_name.upper()
+        self.is_open = False
+
+    def resolve_file_path(self) -> Path:
+        override = os.environ.get(f"{self.dd_name}_PATH")
+        if override:
+            return Path(override)
+        return Path(self.dd_name)
+
+    def open(self) -> str:
+        raise NotImplementedError
+
+    def read(self) -> FileReadResult:
+        return "12", None
+
+    def read_by_key(self, key: str) -> FileReadResult:
+        return "12", None
+
+    def close(self) -> str:
+        self.is_open = False
+        return "00"
+
+
+class SequentialFileHandler(BaseFileHandler):
+    """
+    Handles sequential files (TRNXFILE, XREFFILE).
+    """
+
+    def __init__(self, dd_name: str):
+        super().__init__(dd_name)
+        self.records: Optional[List[str]] = None
+        self.cursor: int = 0
+
+    def open(self) -> str:
+        path = self.resolve_file_path()
         try:
-            if self.is_sequential:
-                self.file_handle = open(self.filename, 'r', encoding='utf-8')
-                self._sequential_data = self.file_handle.readlines()
-                self._sequential_position = 0
-            else:
-                # For random access, load all data into dictionary
-                with open(self.filename, 'r', encoding='utf-8') as f:
-                    for line in f:
-                        line = line.rstrip('\n\r')
-                        if len(line) > 0:
-                            key = self._extract_key(line)
-                            if key:
-                                self._data[key] = line
-            self.file_status = "00"
-            return "00"
+            with path.open("r", encoding="utf-8") as file_handle:
+                self.records = [line.rstrip("\r\n") for line in file_handle]
         except FileNotFoundError:
-            self.file_status = "23"
-            return "23"
-        except Exception as e:
-            self.file_status = "99"
-            return "99"
-    
-    def close_file(self) -> str:
-        """Close the file."""
+            self.records = None
+            self.cursor = 0
+            self.is_open = False
+            return "35"
+
+        self.cursor = 0
+        self.is_open = True
+        return "00"
+
+    def read(self) -> FileReadResult:
+        if not self.is_open:
+            rc = self.open()
+            if rc != "00":
+                return rc, None
+
+        if self.records is None:
+            return "35", None
+
+        if self.cursor >= len(self.records):
+            return "10", None
+
+        record = self.records[self.cursor]
+        self.cursor += 1
+        return "00", record
+
+    def close(self) -> str:
+        self.records = None
+        self.cursor = 0
+        self.is_open = False
+        return "00"
+
+
+class RandomAccessFileHandler(BaseFileHandler):
+    """
+    Handles indexed/random access files (CUSTFILE, ACCTFILE).
+    """
+
+    def __init__(self, dd_name: str):
+        super().__init__(dd_name)
+        self.records: Optional[List[str]] = None
+
+    def open(self) -> str:
+        path = self.resolve_file_path()
         try:
-            if self.file_handle:
-                self.file_handle.close()
-                self.file_handle = None
-            self.file_status = "00"
-            return "00"
-        except Exception as e:
-            self.file_status = "99"
-            return "99"
-    
-    def read_sequential(self) -> tuple[str, str]:
-        """Read next record sequentially. Returns (status, data)."""
-        try:
-            if not self.file_handle and self._sequential_data:
-                # Use in-memory data
-                if self._sequential_position < len(self._sequential_data):
-                    line = self._sequential_data[self._sequential_position]
-                    self._sequential_position += 1
-                    self.file_status = "00"
-                    return ("00", line.rstrip('\n\r'))
-                else:
-                    self.file_status = "10"
-                    return ("10", "")
-            elif self.file_handle:
-                line = self.file_handle.readline()
-                if not line:
-                    self.file_status = "10"
-                    return ("10", "")
-                self.file_status = "00"
-                return ("00", line.rstrip('\n\r'))
-            else:
-                self.file_status = "23"
-                return ("23", "")
-        except Exception as e:
-            self.file_status = "99"
-            return ("99", "")
-    
-    def read_key(self, key: str, key_len: int) -> tuple[str, str]:
-        """Read record by key. Returns (status, data)."""
-        try:
-            if key_len > 0:
-                search_key = key[:key_len].strip()
-            else:
-                search_key = key.strip()
-            
-            if search_key in self._data:
-                self.file_status = "00"
-                return ("00", self._data[search_key])
-            else:
-                self.file_status = "23"
-                return ("23", "")
-        except Exception as e:
-            self.file_status = "99"
-            return ("99", "")
-    
-    def _extract_key(self, line: str) -> str:
-        """Extract key from line based on file type."""
-        # Default: first 25 characters (would be customized per file type)
-        if len(line) > 0:
-            return line[:25].strip()
-        return ""
+            with path.open("r", encoding="utf-8") as file_handle:
+                self.records = [line.rstrip("\r\n") for line in file_handle]
+        except FileNotFoundError:
+            self.records = None
+            self.is_open = False
+            return "35"
+
+        self.is_open = True
+        return "00"
+
+    def read_by_key(self, key: str) -> FileReadResult:
+        if not key:
+            return "23", None
+
+        if not self.is_open:
+            rc = self.open()
+            if rc != "00":
+                return rc, None
+
+        if self.records is None:
+            return "35", None
+
+        for record in self.records:
+            if record.startswith(key):
+                return "00", record
+
+        return "23", None
+
+    def close(self) -> str:
+        self.records = None
+        self.is_open = False
+        return "00"
 
 
-class TrnxFileHandler(FileHandler):
-    """Handler for TRNXFILE (indexed sequential)."""
-    
-    def __init__(self, filename: str = "TRNXFILE"):
-        super().__init__(filename, is_sequential=True)
-    
-    def _extract_key(self, line: str) -> str:
-        """Extract key from TRNXFILE record (16 chars card + 16 chars trans ID)."""
-        if len(line) >= 32:
-            return line[:32]
-        return line[:16] if len(line) >= 16 else ""
+class TrnxFileHandler(SequentialFileHandler):
+    def __init__(self):
+        super().__init__("TRNXFILE")
 
 
-class XrefFileHandler(FileHandler):
-    """Handler for XREFFILE (indexed sequential)."""
-    
-    def __init__(self, filename: str = "XREFFILE"):
-        super().__init__(filename, is_sequential=True)
-    
-    def _extract_key(self, line: str) -> str:
-        """Extract key from XREFFILE record (16 chars card number)."""
-        if len(line) >= 16:
-            return line[:16]
-        return ""
+class XrefFileHandler(SequentialFileHandler):
+    def __init__(self):
+        super().__init__("XREFFILE")
 
 
-class CustFileHandler(FileHandler):
-    """Handler for CUSTFILE (indexed random)."""
-    
-    def __init__(self, filename: str = "CUSTFILE"):
-        super().__init__(filename, is_sequential=False)
-    
-    def _extract_key(self, line: str) -> str:
-        """Extract key from CUSTFILE record (9 chars customer ID)."""
-        if len(line) >= 9:
-            return line[:9].strip()
-        return ""
+class CustFileHandler(RandomAccessFileHandler):
+    def __init__(self):
+        super().__init__("CUSTFILE")
 
 
-class AcctFileHandler(FileHandler):
-    """Handler for ACCTFILE (indexed random)."""
-    
-    def __init__(self, filename: str = "ACCTFILE"):
-        super().__init__(filename, is_sequential=False)
-    
-    def _extract_key(self, line: str) -> str:
-        """Extract key from ACCTFILE record (11 chars account ID)."""
-        if len(line) >= 11:
-            return line[:11].strip()
-        return ""
+class AcctFileHandler(RandomAccessFileHandler):
+    def __init__(self):
+        super().__init__("ACCTFILE")
 
 
 class CBSTM03BSubroutine:
-    """Main subroutine class - equivalent to CBSTM03B COBOL program."""
-    
-    def __init__(self):
-        self.trnx_file: Optional[TrnxFileHandler] = None
-        self.xref_file: Optional[XrefFileHandler] = None
-        self.cust_file: Optional[CustFileHandler] = None
-        self.acct_file: Optional[AcctFileHandler] = None
-    
-    def process(self, m03b_area: M03BArea) -> None:
-        """Process file operation based on M03B-AREA parameter.
-        
-        Equivalent to COBOL PROCEDURE DIVISION USING LK-M03B-AREA.
-        """
-        dd_name = m03b_area.dd_name
-        
-        if dd_name == 'TRNXFILE':
-            self._process_trnxfile(m03b_area)
-        elif dd_name == 'XREFFILE':
-            self._process_xreffile(m03b_area)
-        elif dd_name == 'CUSTFILE':
-            self._process_custfile(m03b_area)
-        elif dd_name == 'ACCTFILE':
-            self._process_acctfile(m03b_area)
-        else:
-            m03b_area.return_code = "12"
-    
-    def _process_trnxfile(self, m03b_area: M03BArea) -> None:
-        """Process TRNXFILE operations."""
-        if m03b_area.is_open:
-            if self.trnx_file is None:
-                self.trnx_file = TrnxFileHandler()
-            m03b_area.return_code = self.trnx_file.open_file()
-        elif m03b_area.is_read:
-            if self.trnx_file is None:
-                m03b_area.return_code = "12"
-                m03b_area.field_data = ""
-            else:
-                status, data = self.trnx_file.read_sequential()
-                m03b_area.return_code = status
-                m03b_area.field_data = data
-        elif m03b_area.is_close:
-            if self.trnx_file is None:
-                m03b_area.return_code = "00"  # Already closed
-            else:
-                m03b_area.return_code = self.trnx_file.close_file()
-                self.trnx_file = None
-    
-    def _process_xreffile(self, m03b_area: M03BArea) -> None:
-        """Process XREFFILE operations."""
-        if m03b_area.is_open:
-            if self.xref_file is None:
-                self.xref_file = XrefFileHandler()
-            m03b_area.return_code = self.xref_file.open_file()
-        elif m03b_area.is_read:
-            if self.xref_file is None:
-                m03b_area.return_code = "12"
-                m03b_area.field_data = ""
-            else:
-                status, data = self.xref_file.read_sequential()
-                m03b_area.return_code = status
-                m03b_area.field_data = data
-        elif m03b_area.is_close:
-            if self.xref_file is None:
-                m03b_area.return_code = "00"
-            else:
-                m03b_area.return_code = self.xref_file.close_file()
-                self.xref_file = None
-    
-    def _process_custfile(self, m03b_area: M03BArea) -> None:
-        """Process CUSTFILE operations."""
-        if m03b_area.is_open:
-            if self.cust_file is None:
-                self.cust_file = CustFileHandler()
-            m03b_area.return_code = self.cust_file.open_file()
-        elif m03b_area.is_read_key:
-            if self.cust_file is None:
-                m03b_area.return_code = "12"
-                m03b_area.field_data = ""
-            else:
-                key = m03b_area.key[:m03b_area.key_len] if m03b_area.key_len > 0 else m03b_area.key
-                status, data = self.cust_file.read_key(key, m03b_area.key_len)
-                m03b_area.return_code = status
-                m03b_area.field_data = data
-        elif m03b_area.is_close:
-            if self.cust_file is None:
-                m03b_area.return_code = "00"
-            else:
-                m03b_area.return_code = self.cust_file.close_file()
-                self.cust_file = None
-    
-    def _process_acctfile(self, m03b_area: M03BArea) -> None:
-        """Process ACCTFILE operations."""
-        if m03b_area.is_open:
-            if self.acct_file is None:
-                self.acct_file = AcctFileHandler()
-            m03b_area.return_code = self.acct_file.open_file()
-        elif m03b_area.is_read_key:
-            if self.acct_file is None:
-                m03b_area.return_code = "12"
-                m03b_area.field_data = ""
-            else:
-                key = m03b_area.key[:m03b_area.key_len] if m03b_area.key_len > 0 else m03b_area.key
-                status, data = self.acct_file.read_key(key, m03b_area.key_len)
-                m03b_area.return_code = status
-                m03b_area.field_data = data
-        elif m03b_area.is_close:
-            if self.acct_file is None:
-                m03b_area.return_code = "00"
-            else:
-                m03b_area.return_code = self.acct_file.close_file()
-                self.acct_file = None
-
-
-# Global subroutine instance (equivalent to being called as external subroutine)
-_subroutine_instance: Optional[CBSTM03BSubroutine] = None
-
-
-def cbstmt03b_subroutine(m03b_area: M03BArea) -> None:
-    """Entry point for CBSTM03B subroutine call.
-    
-    Equivalent to COBOL CALL 'CBSTM03B' USING WS-M03B-AREA.
     """
-    global _subroutine_instance
-    if _subroutine_instance is None:
-        _subroutine_instance = CBSTM03BSubroutine()
-    _subroutine_instance.process(m03b_area)
+    Python rendition of the CBSTM03B COBOL subroutine.
+    """
+
+    handler_factories: Dict[str, type[BaseFileHandler]] = {
+        "TRNXFILE": TrnxFileHandler,
+        "XREFFILE": XrefFileHandler,
+        "CUSTFILE": CustFileHandler,
+        "ACCTFILE": AcctFileHandler,
+    }
+
+    def __init__(self):
+        self.handlers: Dict[str, BaseFileHandler] = {}
+
+    def _get_handler(self, dd_name: str) -> Optional[BaseFileHandler]:
+        factory = self.handler_factories.get(dd_name)
+        if factory is None:
+            return None
+
+        if dd_name not in self.handlers:
+            self.handlers[dd_name] = factory()
+        return self.handlers[dd_name]
+
+    def process(self, area: M03BArea) -> None:
+        dd_name = area.normalized_dd_name
+        handler = self._get_handler(dd_name)
+
+        if handler is None:
+            area.return_code = "12"
+            return
+
+        if area.is_open:
+            rc = handler.open()
+        elif area.is_close:
+            rc = handler.close()
+        elif area.is_read:
+            rc, data = handler.read()
+            area.field_data = data or ""
+        elif area.is_read_key:
+            key = area.effective_key()
+            rc, data = handler.read_by_key(key)
+            area.field_data = data or ""
+        else:
+            rc = "12"
+
+        area.return_code = rc
 
 
-def reset_subroutine():
-    """Reset the subroutine instance (for testing)."""
-    global _subroutine_instance
-    _subroutine_instance = None
+_SUBROUTINE: Optional[CBSTM03BSubroutine] = None
 
+
+def _get_subroutine() -> CBSTM03BSubroutine:
+    global _SUBROUTINE
+    if _SUBROUTINE is None:
+        _SUBROUTINE = CBSTM03BSubroutine()
+    return _SUBROUTINE
+
+
+def cbstmt03b_subroutine(area: M03BArea) -> M03BArea:
+    """
+    Entry point compatible with the original COBOL subroutine linkage.
+    """
+    subroutine = _get_subroutine()
+    subroutine.process(area)
+    return area
+
+
+def reset_subroutine() -> None:
+    """
+    Helper for tests to reset the singleton state.
+    """
+    global _SUBROUTINE
+    _SUBROUTINE = None
+
+
+__all__ = [
+    "M03BArea",
+    "CBSTM03BSubroutine",
+    "TrnxFileHandler",
+    "XrefFileHandler",
+    "CustFileHandler",
+    "AcctFileHandler",
+    "cbstmt03b_subroutine",
+    "reset_subroutine",
+]
