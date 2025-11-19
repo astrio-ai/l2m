@@ -1,192 +1,207 @@
-"""
-Ground Truth Python Equivalent for CBCUS01C.cbl
+from __future__ import annotations
 
-Program: CBCUS01C
-Application: CardDemo
-Type: BATCH Program
-Function: Read and print customer data file.
-
-Copyright Amazon.com, Inc. or its affiliates.
-All Rights Reserved.
-Licensed under the Apache License, Version 2.0
-"""
-
-import sys
+import argparse
 from dataclasses import dataclass
-from typing import Optional
 from pathlib import Path
+from typing import Iterator, Optional, TextIO
+
+DEFAULT_DATASET_NAME = "CUSTFILE"
+CUSTOMER_ID_LENGTH = 9
+
+ERROR_MESSAGES = {
+    "OPEN": "ERROR OPENING CUSTFILE",
+    "READ": "ERROR READING CUSTOMER FILE",
+    "CLOSE": "ERROR CLOSING CUSTOMER FILE",
+}
 
 
-@dataclass
+@dataclass(slots=True)
 class CustomerRecord:
-    """Customer record structure matching COBOL FD-CUSTFILE-REC."""
-    cust_id: str  # PIC 9(09) - 9 characters
-    cust_data: str  # PIC X(491) - 491 characters
-    
-    # Parsed fields from cust_data (inferred from COPY CVCUS01Y)
-    # For a true ground truth, this would need to be accurately parsed from the copybook.
-    # Here, we'll define a simplified structure based on common COBOL patterns.
-    
-    def __str__(self):
-        """String representation of customer record for display."""
+    """In-memory representation of FD-CUSTFILE-REC."""
+    cust_id: str
+    cust_data: str
+
+    @classmethod
+    def from_line(cls, line: str) -> "CustomerRecord":
+        """Parse a fixed-format record line into a CustomerRecord."""
+        stripped_line = line.rstrip("\r\n")
+        if len(stripped_line) < CUSTOMER_ID_LENGTH:
+            raise ValueError(
+                "Record is shorter than the 9-character customer identifier field."
+            )
+
+        cust_id = stripped_line[:CUSTOMER_ID_LENGTH]
+        cust_data = stripped_line[CUSTOMER_ID_LENGTH:]
+        return cls(cust_id=cust_id, cust_data=cust_data)
+
+    def __str__(self) -> str:
         return f"{self.cust_id}{self.cust_data}"
 
 
-class CustomerFileHandler:
-    """Handler for customer file operations."""
-    
-    def __init__(self, filename: str = "CUSTFILE"):
-        """Initialize customer file handler."""
-        self.filename = filename
-        self.file_handle: Optional[object] = None
-        self.file_status = "00"
-        self.end_of_file = False
-    
-    def open_file(self) -> int:
-        """Open the customer file for reading.
-        
-        Equivalent to COBOL 0000-CUSTFILE-OPEN.
-        
-        Returns:
-            APPL-RESULT: 0 if successful, 12 if error
-        """
-        self.file_status = "00"
+class CustomerFileError(RuntimeError):
+    """Represents an error that occurred while handling the customer file."""
+
+    def __init__(self, operation: str, status: str, detail: Optional[str] = None):
+        super().__init__(detail or "")
+        self.operation = operation
+        self.status = status
+        self.detail = detail or ""
+
+
+class CustomerFileReader:
+    """High-level equivalent of the COBOL KSDS access routines."""
+
+    def __init__(self, dataset: Path):
+        self.dataset = dataset
+        self._handle: Optional[TextIO] = None
+        self.status = "00"
+
+    @property
+    def is_open(self) -> bool:
+        return self._handle is not None
+
+    def open(self) -> None:
+        """Open the dataset for sequential reading."""
         try:
-            # In Python, we'll use a simple text file
-            # For indexed sequential access, we'll read sequentially
-            self.file_handle = open(self.filename, 'r', encoding='utf-8')
-            self.end_of_file = False
-            return 0  # APPL-AOK
-        except FileNotFoundError:
-            self.file_status = "23"  # File not found
-            return 12
-        except Exception as e:
-            self.file_status = "99"  # General error
-            print(f"ERROR OPENING CUSTFILE: {e}")
-            return 12
-    
-    def read_next(self) -> tuple[Optional[CustomerRecord], int]:
-        """Read next record from file.
-        
-        Equivalent to COBOL 1000-CUSTFILE-GET-NEXT.
-        
-        Returns:
-            tuple: (CustomerRecord or None, APPL-RESULT)
-                   APPL-RESULT: 0 if successful, 16 if EOF, 12 if error
-        """
-        if self.end_of_file:
-            return None, 16  # APPL-EOF
-        
+            self._handle = self.dataset.open("r", encoding="utf-8")
+            self.status = "00"
+        except FileNotFoundError as exc:
+            self.status = "23"
+            raise CustomerFileError(
+                "OPEN", self.status, f"Customer file '{self.dataset}' was not found."
+            ) from exc
+        except OSError as exc:
+            self.status = "99"
+            raise CustomerFileError(
+                "OPEN", self.status, f"Unable to open '{self.dataset}': {exc}"
+            ) from exc
+
+    def close(self) -> None:
+        """Close the dataset."""
+        if self._handle is None:
+            return
+
         try:
-            line = self.file_handle.readline()
-            if not line:
-                self.end_of_file = True
-                self.file_status = "10"  # EOF
-                return None, 16  # APPL-EOF
-            
-            # Parse the record (assuming fixed format)
-            # COBOL: FD-CUST-ID PIC 9(09), FD-CUST-DATA PIC X(491)
-            line = line.rstrip('\n\r')
-            if len(line) >= 9:
-                cust_id = line[:9]
-                cust_data = line[9:500] if len(line) > 9 else ""
-                
-                record = CustomerRecord(
-                    cust_id=cust_id,
-                    cust_data=cust_data
-                )
-                
-                self.file_status = "00"
-                return record, 0  # APPL-AOK
-            else:
-                self.file_status = "04"  # Invalid record
-                return None, 12
-                
-        except Exception as e:
-            self.file_status = "99"
-            print(f"ERROR READING CUSTFILE: {e}")
-            return None, 12
-    
-    def close_file(self) -> int:
-        """Close the customer file.
-        
-        Equivalent to COBOL 9000-CUSTFILE-CLOSE.
-        
-        Returns:
-            APPL-RESULT: 0 if successful, 12 if error
-        """
+            self._handle.close()
+            self.status = "00"
+        except OSError as exc:
+            self.status = "99"
+            raise CustomerFileError(
+                "CLOSE", self.status, f"Unable to close '{self.dataset}': {exc}"
+            ) from exc
+        finally:
+            self._handle = None
+
+    def close_quietly(self) -> None:
+        """Attempt to close the dataset while suppressing close errors."""
         try:
-            if self.file_handle:
-                self.file_handle.close()
-                self.file_handle = None
-                self.file_status = "00"
-                return 0  # APPL-AOK
-            return 0
-        except Exception as e:
-            self.file_status = "99"
-            print(f"ERROR CLOSING CUSTFILE: {e}")
-            return 12
-    
-    def display_io_status(self):
-        """Display I/O status information.
-        
-        Equivalent to COBOL Z-DISPLAY-IO-STATUS.
-        """
-        io_status = self.file_status
-        if len(io_status) != 2:
-            io_status = "00"
-        
-        io_stat1 = io_status[0] if len(io_status) > 0 else '0'
-        io_stat2 = io_status[1] if len(io_status) > 1 else '0'
-        
-        # Create IO-STATUS-04 equivalent
-        if not io_stat1.isdigit() or io_stat1 == '9':
-            # Non-numeric or 9xx status
-            status_04 = f"{io_stat1}000"
-            print(f'FILE STATUS IS: NNNN {status_04}')
-        else:
-            status_04 = f"00{io_status}"
-            print(f'FILE STATUS IS: NNNN {status_04}')
+            self.close()
+        except CustomerFileError:
+            pass
+
+    def records(self) -> Iterator[CustomerRecord]:
+        """Yield records sequentially, mirroring READ ... NEXT."""
+        if self._handle is None:
+            raise CustomerFileError(
+                "READ", "91", "Customer file has not been opened."
+            )
+
+        line_number = 0
+        while True:
+            try:
+                raw_line = self._handle.readline()
+            except OSError as exc:
+                self.status = "99"
+                raise CustomerFileError(
+                    "READ",
+                    self.status,
+                    f"Unable to read from '{self.dataset}': {exc}",
+                ) from exc
+
+            if raw_line == "":
+                self.status = "10"
+                break
+
+            line_number += 1
+            try:
+                record = CustomerRecord.from_line(raw_line)
+            except ValueError as exc:
+                self.status = "04"
+                raise CustomerFileError(
+                    "READ",
+                    self.status,
+                    f"Invalid record at line {line_number}: {exc}",
+                ) from exc
+
+            self.status = "00"
+            yield record
 
 
-def abend_program():
-    """Abend the program (equivalent to COBOL Z-ABEND-PROGRAM)."""
-    print('ABENDING PROGRAM')
-    sys.exit(999)
+def display_io_status(status: str) -> None:
+    """Python rendition of Z-DISPLAY-IO-STATUS."""
+    io_status = (status or "00")[:2].ljust(2, "0")
+    io_stat1, io_stat2 = io_status[0], io_status[1]
+
+    if not io_stat1.isdigit() or io_stat1 == "9":
+        status_04 = f"{io_stat1}000"
+    else:
+        status_04 = f"00{io_stat1}{io_stat2}"
+
+    print(f"FILE STATUS IS: NNNN {status_04}")
 
 
-def main():
-    """Main procedure equivalent to COBOL PROCEDURE DIVISION."""
-    print('START OF EXECUTION OF PROGRAM CBCUS01C')
-    
-    # Initialize file handler
-    cust_file = CustomerFileHandler()
-    
-    # Open file
-    appl_result = cust_file.open_file()
-    if appl_result != 0:  # Not APPL-AOK
-        print('ERROR OPENING CUSTFILE')
-        cust_file.display_io_status()
-        abend_program()
-    
-    # Read and display records
-    while not cust_file.end_of_file:
-        record, appl_result = cust_file.read_next()
-        
-        if not cust_file.end_of_file and record:
-            print(record)  # DISPLAY CUSTOMER-RECORD
-    
-    # Close file
-    appl_result = cust_file.close_file()
-    if appl_result != 0:  # Not APPL-AOK
-        print('ERROR CLOSING CUSTOMER FILE')
-        cust_file.display_io_status()
-        abend_program()
-    
-    print('END OF EXECUTION OF PROGRAM CBCUS01C')
+def abend_program() -> int:
+    """Simulate COBOL's CEE3ABD call by returning a non-zero completion code."""
+    print("ABENDING PROGRAM")
+    return 999
+
+
+def handle_file_error(error: CustomerFileError) -> int:
+    """Emit COBOL-compatible diagnostics for a file-related failure."""
+    print(ERROR_MESSAGES.get(error.operation, "ERROR PROCESSING CUSTOMER FILE"))
+    if error.detail:
+        print(error.detail)
+    display_io_status(error.status)
+    return abend_program()
+
+
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Modernized Python implementation of CBCUS01C."
+    )
+    parser.add_argument(
+        "customer_file",
+        nargs="?",
+        default=DEFAULT_DATASET_NAME,
+        help="Path to the customer data set (default: %(default)s).",
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv)
+    dataset = Path(args.customer_file)
+
+    print("START OF EXECUTION OF PROGRAM CBCUS01C")
+
+    reader = CustomerFileReader(dataset)
+
+    try:
+        reader.open()
+        for record in reader.records():
+            print(record)
+    except CustomerFileError as exc:
+        reader.close_quietly()
+        return handle_file_error(exc)
+
+    try:
+        reader.close()
+    except CustomerFileError as exc:
+        return handle_file_error(exc)
+
+    print("END OF EXECUTION OF PROGRAM CBCUS01C")
     return 0
 
 
-if __name__ == '__main__':
-    sys.exit(main())
-
+if __name__ == "__main__":
+    raise SystemExit(main())
