@@ -10,13 +10,13 @@ This program:
 2. Receives GET request via PARM-BUFFER
 3. Calls z/OS Connect EE API via BAQCSTUB
 4. Returns status code as return code
+5. Provides a CLI for supplying employee numbers and overriding BAQ settings
 """
 
-import sys
+import argparse
 import os
 from dataclasses import dataclass
-from typing import Optional, Tuple
-from datetime import datetime
+from typing import Callable, Optional, Tuple
 
 # Import common structures from CSCVDLTI
 from CSCVDLTI import (
@@ -57,6 +57,16 @@ class FeedbackCode:
     facility_id: str = ""  # FACILITY-ID
     i_s_info: int = 0  # I-S-INFO
 
+    def __str__(self) -> str:
+        return (
+            "FeedbackCode("
+            f"severity={self.severity}, "
+            f"msg_no={self.msg_no}, "
+            f"case_sev_ctl='{self.case_sev_ctl}', "
+            f"facility_id='{self.facility_id}', "
+            f"i_s_info={self.i_s_info})"
+        )
+
 
 # ============================================================================
 # PARM Buffer Structure
@@ -69,6 +79,18 @@ class ParmBuffer:
     employee: str = ""  # employee in PARM-DATA
     filler: str = ""  # Remaining 250 bytes
 
+    @classmethod
+    def from_employee(cls, employee: str) -> "ParmBuffer":
+        """Factory helper that mirrors the COBOL PARM structure."""
+        normalized = (employee or "").strip()[:6]
+        filler_len = max(0, 250 - len(normalized))
+        filler_value = " " * filler_len
+        return cls(
+            parm_length=len(normalized),
+            employee=normalized,
+            filler=filler_value,
+        )
+
 
 # ============================================================================
 # GET Request Structure (CSC00Q01)
@@ -79,11 +101,12 @@ class GetRequest:
     """GET request structure (CSC00Q01)."""
     employee: str = ""
     employee_length: int = 0
-    
+
     def set_employee(self, value: str):
         """Set employee number and update length."""
-        self.employee = value
-        self.employee_length = len(value) if value else 0
+        sanitized = (value or "").strip()[:6]
+        self.employee = sanitized
+        self.employee_length = len(sanitized)
 
 
 # ============================================================================
@@ -151,6 +174,23 @@ def ceeenv_set(
     feedback.severity = 0  # Success
     feedback.facility_id = "CEE"
     return feedback, True
+
+
+def set_baq_environment(
+    baquri_value: str,
+    baqport_value: str,
+    mock_env: Optional[dict] = None
+) -> None:
+    """Configure the environment variables required by BAQCSTUB."""
+    env_settings = (
+        ("BAQURI", baquri_value),
+        ("BAQPORT", baqport_value),
+    )
+    for name, value in env_settings:
+        feedback, success = ceeenv_set(name, value, mock_env)
+        print(f"feedbackCode {feedback}")
+        if not success:
+            print(f"Unable to set environment variable {name} to '{value}'.")
 
 
 # ============================================================================
@@ -222,7 +262,7 @@ def baqcstub(
 
 def main(
     parm_buffer: Optional[ParmBuffer] = None,
-    mock_baqcstub: Optional[callable] = None,
+    mock_baqcstub: Optional[Callable[..., BAQResponseInfo]] = None,
     mock_env: Optional[dict] = None,
     baquri: Optional[str] = None,
     baqport: Optional[str] = None
@@ -241,7 +281,7 @@ def main(
     """
     # Initialize structures
     if parm_buffer is None:
-        parm_buffer = ParmBuffer()
+        parm_buffer = ParmBuffer.from_employee("000001")
     
     # Initialize error message
     error_msg = ErrorMsg()
@@ -262,14 +302,7 @@ def main(
     # Set environment variables using CEEENV
     baquri_value = baquri or DEFAULT_BAQURI
     baqport_value = baqport or DEFAULT_BAQPORT
-    
-    feedback, success = ceeenv_set("BAQURI", baquri_value, mock_env)
-    if not success:
-        print(f"feedbackCode {feedback}")
-    
-    feedback, success = ceeenv_set("BAQPORT", baqport_value, mock_env)
-    if not success:
-        print(f"feedbackCode {feedback}")
+    set_baq_environment(baquri_value, baqport_value, mock_env)
     
     # Set up GET request from PARM buffer
     get_request.set_employee(parm_buffer.employee)
@@ -345,12 +378,44 @@ def main(
     return return_code, error_msg
 
 
-if __name__ == "__main__":
-    # For testing/standalone execution
-    parm_buffer = ParmBuffer(
-        parm_length=6,
-        employee="000001"
-    )
-    return_code, error_msg = main(parm_buffer=parm_buffer)
-    print(f"Return Code: {return_code}")
+# ============================================================================
+# CLI Helpers
+# ============================================================================
 
+def parse_args(argv=None):
+    """Parse CLI arguments for standalone execution."""
+    parser = argparse.ArgumentParser(
+        description="Modernized Python driver for the GETAPIEN CICS program."
+    )
+    parser.add_argument(
+        "employee",
+        nargs="?",
+        default="000001",
+        help="Employee number (max 6 characters). Defaults to 000001.",
+    )
+    parser.add_argument(
+        "--baquri",
+        default=DEFAULT_BAQURI,
+        help=f"Override the BAQURI environment variable (default: {DEFAULT_BAQURI}).",
+    )
+    parser.add_argument(
+        "--baqport",
+        default=DEFAULT_BAQPORT,
+        help=f"Override the BAQPORT environment variable (default: {DEFAULT_BAQPORT}).",
+    )
+    return parser.parse_args(argv)
+
+
+if __name__ == "__main__":
+    cli_args = parse_args()
+    parm_buffer = ParmBuffer.from_employee(cli_args.employee)
+    return_code, error_msg = main(
+        parm_buffer=parm_buffer,
+        baquri=cli_args.baquri,
+        baqport=cli_args.baqport
+    )
+    print(f"Return Code: {return_code}")
+    if error_msg.detail:
+        origin = error_msg.origin or "UNKNOWN"
+        print(f"Error origin: {origin}")
+        print(f"Error detail: {error_msg.detail}")
