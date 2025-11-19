@@ -78,8 +78,11 @@ oslex>=0.1.3
 
 # Code evaluation metrics
 codebleu>=0.7.1
-# Note: tree-sitter-python may already be provided by grep-ast dependency.
-# If codebleu fails, install with: pip install tree-sitter-python
+# Note: Despite codebleu 0.7.0 requiring tree-sitter<0.23.0, we need tree-sitter>=0.24.0
+# to fix "an integer is required" compatibility issue with tree-sitter-python.
+# The newer tree-sitter works fine despite the version constraint warning.
+tree-sitter>=0.24.0
+# tree-sitter-python may already be provided by grep-ast dependency.
 
 # Harbor benchmarking (optional - only needed for evals/harbor/)
 harbor>=0.1.18
