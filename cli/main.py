@@ -5,7 +5,6 @@ import shutil
 import sys
 import threading
 import traceback
-import webbrowser
 from dataclasses import fields
 from pathlib import Path
 
@@ -1182,18 +1181,6 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
     if args.apply_clipboard_edits:
         args.edit_format = main_model.editor_edit_format
         args.message = "/paste"
-
-    if args.show_release_notes is True:
-        io.tool_output(f"Opening release notes: {urls.release_notes}")
-        io.tool_output()
-        webbrowser.open(urls.release_notes)
-    elif args.show_release_notes is None and is_first_run:
-        io.tool_output()
-        io.offer_url(
-            urls.release_notes,
-            "Would you like to see what's new in this version?",
-            allow_never=False,
-        )
 
     if git_root and Path.cwd().resolve() != Path(git_root).resolve():
         io.tool_warning(
