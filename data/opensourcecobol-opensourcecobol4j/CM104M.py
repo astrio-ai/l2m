@@ -1,540 +1,439 @@
-"""
-CM104M - Dual Queue Communication Test Program
-Translated from COBOL to Python
+from __future__ import annotations
 
-Original COBOL Program:
-FEDERAL COMPILER TESTING CENTER
-GENERAL SERVICES ADMINISTRATION
-AUTOMATED DATA AND TELECOMMUNICATION SERVICE.
-SOFTWARE DEVELOPMENT OFFICE.
-"""
-
-import sys
-import time
+import argparse
+import itertools
+import json
+from collections import deque
+from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional
+from pathlib import Path
+from typing import (
+    Deque,
+    Iterable,
+    List,
+    Mapping,
+    Optional,
+    Protocol,
+    Sequence,
+    Union,
+)
+
+MAX_PAYLOAD_LENGTH = 72
 
 
-class CommunicationQueue:
-    """Simulates COBOL communication queue for input"""
-    
-    def __init__(self, queue_name: str = ""):
-        self.queue_name = queue_name
-        self.time_received = None
-        self.source = ""
-        self.in_length = 0
-        self.end_key = ""
-        self.in_status = "00"
-        self.msg_count = 0
-        self.enabled = False
-    
-    def enable_input(self, key: str):
-        """Enable input queue"""
-        self.queue_name = key
-        self.enabled = True
-    
-    def receive_message(self) -> Optional[str]:
-        """Receive message from queue (simulated via stdin)"""
-        if not self.enabled:
-            raise RuntimeError("Queue not enabled")
-        
+class KillSignal(RuntimeError):
+    """Raised when a KILL message is encountered in the queue."""
+
+
+@dataclass
+class Timestamp:
+    """Represents the COBOL TIME format (HH:MM:SS.ss)."""
+
+    hour: int
+    minute: int
+    second: float
+
+    def __post_init__(self) -> None:
+        self.hour = int(self.hour)
+        self.minute = int(self.minute)
+        self.second = float(self.second)
+        self._normalize()
+
+    def _normalize(self) -> None:
+        extra_minutes, seconds = divmod(self.second, 60)
+        self.second = float(seconds)
+        self.minute += int(extra_minutes)
+        extra_hours, minutes = divmod(self.minute, 60)
+        self.minute = int(minutes)
+        self.hour += int(extra_hours)
+
+    @classmethod
+    def now(cls) -> Timestamp:
+        current = datetime.now()
+        secs = current.second + current.microsecond / 1_000_000
+        return cls(current.hour, current.minute, secs)
+
+    @classmethod
+    def from_string(cls, value: str) -> Timestamp:
+        parts = value.strip().split(":")
+        if len(parts) != 3:
+            raise ValueError(f"Invalid timestamp string: {value!r}")
+        hour_part, minute_part, second_part = parts
+        return cls(int(hour_part), int(minute_part), float(second_part))
+
+    @classmethod
+    def from_value(
+        cls,
+        value: Optional[
+            Union[
+                Timestamp,
+                str,
+                Sequence[Union[int, float]],
+                Mapping[str, Union[int, float]],
+                int,
+                float,
+            ]
+        ],
+    ) -> Timestamp:
+        if value is None:
+            return cls.now()
+        if isinstance(value, Timestamp):
+            return cls(value.hour, value.minute, value.second)
+        if isinstance(value, str):
+            return cls.from_string(value)
+        if isinstance(value, Mapping):
+            hour = value.get("hour", value.get("hrs", 0))
+            minute = value.get("minute", value.get("mins", 0))
+            second = value.get("second", value.get("secs", 0.0))
+            return cls(int(hour), int(minute), float(second))
+        if isinstance(value, Sequence):
+            if len(value) < 3:
+                raise ValueError("Timestamp sequence must contain 3 values.")
+            hour, minute, second = value[:3]
+            return cls(int(hour), int(minute), float(second))
+        if isinstance(value, (int, float)):
+            total_seconds = float(value)
+            hours, remainder = divmod(total_seconds, 3600)
+            minutes, seconds = divmod(remainder, 60)
+            return cls(int(hours), int(minutes), seconds)
+        raise TypeError(f"Unsupported timestamp value: {value!r}")
+
+    def to_seconds(self) -> float:
+        return self.hour * 3600 + self.minute * 60 + self.second
+
+    def __str__(self) -> str:  # pragma: no cover - formatting helper
+        return f"{self.hour:02}:{self.minute:02}:{self.second:05.2f}"
+
+
+def elapsed_seconds(start: Timestamp, end: Timestamp) -> float:
+    """Compute elapsed seconds (wraps across midnight if necessary)."""
+    diff = end.to_seconds() - start.to_seconds()
+    if diff < 0:
+        diff += 24 * 3600
+    return diff
+
+
+@dataclass
+class Message:
+    """Represents a message passed through the CM104M queues."""
+
+    source: str
+    payload: str
+    received_time: Timestamp = field(default_factory=Timestamp.now)
+    in_status: str = "OK"
+    msg_count: int = 0
+    length: int = field(init=False)
+
+    def __post_init__(self) -> None:
+        self.source = (self.source or "")[:12]
+        status = (self.in_status or "").strip() or "OK"
+        self.in_status = status[:2].ljust(2)
         try:
-            # Check if there's input available (non-blocking check)
-            # Use try/except instead of select for cross-platform compatibility
-            try:
-                # Try to read without blocking
-                import select
-                if sys.platform != "win32":
-                    if not select.select([sys.stdin], [], [], 0)[0]:
-                        return None  # No data available
-                # On Windows, select doesn't work with stdin, so we'll try input() directly
-                message = input().strip()
-            except (EOFError, ValueError, OSError):
-                # No data available or input not ready
-                return None
-            
-            self.time_received = datetime.now()
-            self.in_length = len(message)
-            self.source = f"SOURCE-{self.queue_name[:8]}"  # Simulate source
-            self.in_status = "00"
-            self.msg_count += 1
-            return message
-        except Exception:
-            self.in_status = "99"
+            self.msg_count = max(0, int(self.msg_count))
+        except (TypeError, ValueError):
+            self.msg_count = 0
+        self.length = len(self.payload)
+
+    def truncated_payload(self, limit: int = MAX_PAYLOAD_LENGTH) -> str:
+        return self.payload[:limit]
+
+    def kill_requested(self) -> bool:
+        return self.payload.upper().startswith("KILL")
+
+
+@dataclass
+class SendResult:
+    """Information returned by an output queue SEND operation."""
+
+    out_status: str = "OK"
+    err_key: str = " "
+
+
+@dataclass
+class LogEntry:
+    """Represents the printable LOG-LINE in the original COBOL program."""
+
+    source: str
+    received_time: Timestamp
+    queue_depth: int
+    out_time: float
+    message_length: int
+    in_status: str
+    out_status: str
+    err_key: str
+    payload: str
+
+    def format_line(self) -> str:
+        queue_depth_str = f"{self.queue_depth:>2}" if self.queue_depth else "  "
+        out_time_str = f"{self.out_time:6.2f}"
+        message_length_str = f"{self.message_length:>3}"
+        payload_block = self.payload[:MAX_PAYLOAD_LENGTH].ljust(MAX_PAYLOAD_LENGTH)
+        return (
+            f" {self.source:<12} "
+            f"{self.received_time} "
+            f"{queue_depth_str} "
+            f"{out_time_str} "
+            f"{message_length_str} "
+            f"{self.in_status[:2]:<2} "
+            f"{self.out_status[:2]:<2}"
+            f"/{self.err_key[:1]:<1} "
+            f"{payload_block}"
+        )
+
+
+HYPHEN_LINE = " ***********************************************************************************************************************"
+CCVS_HEAD_LINES = [
+    "                           FEDERAL COMPILER TESTING CENTER COBOL COMPILER VALIDATION SYSTEM",
+    "                                                    CCVS74 NCC  COPY, NOT FOR DISTRIBUTION. TEST RESULTS SET-  CM104M",
+    " FOR OFFICIAL USE ONLY                                 COBOL 85 VERSION 4.2, Apr  1993 SSVG                          COPYRIGHT   1974 ",
+]
+LOG_HEADER_LINES = [
+    "                                                      MESSAGE LOG",
+    "   SYMBOLIC        TIME MCS        SEND MSG IN OUT",
+    "    SOURCE      RECEIVED  QD COMPLT  LTH  ST  STAT                   MESSAGE CONTENTS",
+    " ------------ ------------ -- ------ ---- -- --/ - ------------------------------------------------------------------------",
+    "",
+]
+END_LINES = [
+    "                                                  END OF TEST-  CM104M     NTIS DISTRIBUTION COBOL 74",
+    "                              ERRORS ENCOUNTERED",
+    " FOR OFFICIAL USE ONLY    ON-SITE VALIDATION, NATIONAL INSTITUTE OF STD & TECH.      COPYRIGHT 1974",
+]
+
+
+class ReportWriter:
+    """Accumulates log lines and writes the final report.log output."""
+
+    def __init__(self, path: Optional[Union[str, Path]] = "report.log") -> None:
+        self.path = Path(path) if path else None
+        self.lines: List[str] = []
+        self._closed = False
+        self.lines.extend(CCVS_HEAD_LINES)
+        self.lines.append(HYPHEN_LINE)
+        self.lines.extend(LOG_HEADER_LINES)
+
+    def write_log_entry(self, entry: str) -> None:
+        self.lines.append(entry)
+
+    def close(self) -> None:
+        if self._closed:
+            return
+        self.lines.append(HYPHEN_LINE)
+        self.lines.extend([""] * 4)
+        self.lines.extend(END_LINES)
+        text = "\n".join(self.lines) + "\n"
+        if self.path is not None:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            self.path.write_text(text, encoding="utf-8")
+        self._closed = True
+
+    def as_text(self) -> str:
+        return "\n".join(self.lines)
+
+
+class InputQueue(Protocol):
+    def receive(self) -> Optional[Message]:
+        ...
+
+
+class OutputQueue(Protocol):
+    def send(self, payload: str) -> SendResult:
+        ...
+
+
+class IterableInputQueue:
+    """Simple deque-backed queue used for testing and CLI ingestion."""
+
+    def __init__(self, messages: Optional[Iterable[Message]] = None) -> None:
+        self._messages: Deque[Message] = deque(messages or [])
+
+    def receive(self) -> Optional[Message]:
+        if not self._messages:
             return None
-    
-    def get_count(self) -> int:
-        """Get message count from queue"""
-        return self.msg_count
+        return self._messages.popleft()
+
+    def push(self, message: Message) -> None:
+        self._messages.append(message)
+
+    def __len__(self) -> int:
+        return len(self._messages)
 
 
-class OutputQueue:
-    """Simulates COBOL communication queue for output"""
-    
-    def __init__(self, queue_name: str = ""):
-        self.queue_name = queue_name
-        self.dest_count = 1
-        self.out_length = 0
-        self.out_status = "00"
-        self.err_key = ""
-        self.sym_dest = "**** X-CARD UNDEFINED ****"
-        self.enabled = False
-    
-    def enable_output(self, key: str):
-        """Enable output queue"""
-        self.sym_dest = key
-        self.enabled = True
-    
-    def send_message(self, message: str, emi: bool = False) -> bool:
-        """Send message to queue (simulated via stdout)"""
-        if not self.enabled:
-            raise RuntimeError("Queue not enabled")
-        
+class RecordingOutputQueue:
+    """Collects sent payloads and returns configurable SendResult objects."""
+
+    def __init__(
+        self,
+        default_status: str = "OK",
+        default_error_key: str = " ",
+        status_script: Optional[Sequence[SendResult]] = None,
+    ) -> None:
+        self.default_status = (default_status or "OK")[:2]
+        self.default_error_key = (default_error_key or " ")[:1]
+        self.sent_payloads: List[str] = []
+        self._status_iter = (
+            itertools.cycle(tuple(status_script)) if status_script else None
+        )
+
+    def send(self, payload: str) -> SendResult:
+        self.sent_payloads.append(payload)
+        if self._status_iter:
+            scripted = next(self._status_iter)
+            return SendResult(scripted.out_status, scripted.err_key)
+        return SendResult(self.default_status, self.default_error_key)
+
+
+class MessageBridge:
+    """Python translation of CM104M's queue-bridging behavior."""
+
+    def __init__(
+        self,
+        input_queue_1: InputQueue,
+        input_queue_2: InputQueue,
+        output_queue_1: OutputQueue,
+        output_queue_2: OutputQueue,
+        *,
+        report_writer: Optional[ReportWriter] = None,
+        max_payload_length: int = MAX_PAYLOAD_LENGTH,
+    ) -> None:
+        self.input_queue_1 = input_queue_1
+        self.input_queue_2 = input_queue_2
+        self.output_queue_1 = output_queue_1
+        self.output_queue_2 = output_queue_2
+        self.report_writer = report_writer or ReportWriter()
+        self.max_payload_length = max_payload_length
+
+    def run(self) -> bool:
+        """Run the polling loop until both queues are empty or a KILL message arrives."""
+        kill_received = False
         try:
-            print(message[:self.out_length], end='', flush=True)
-            if emi:
-                print()  # End message indicator
-            self.out_status = "00"
-            return True
-        except Exception:
-            self.out_status = "99"
-            self.err_key = "E"
+            while True:
+                processed_any = False
+                processed_any |= self._handle_queue(self.input_queue_1, self.output_queue_2)
+                processed_any |= self._handle_queue(self.input_queue_2, self.output_queue_1)
+                if not processed_any:
+                    break
+        except KillSignal:
+            kill_received = True
+        finally:
+            self.report_writer.close()
+        return kill_received
+
+    def _handle_queue(self, input_queue: InputQueue, output_queue: OutputQueue) -> bool:
+        message = input_queue.receive()
+        if message is None:
             return False
 
+        payload = message.truncated_payload(self.max_payload_length)
+        send_result = output_queue.send(payload)
+        send_timestamp = Timestamp.now()
+        out_time = elapsed_seconds(message.received_time, send_timestamp)
 
-class CM104M:
-    """Main program class"""
-    
-    def __init__(self):
-        # Counters
-        self.rec_skl_sub = 0
-        self.rec_ct = 0
-        self.delete_cnt = 0
-        self.error_counter = 0
-        self.inspect_counter = 0
-        self.pass_counter = 0
-        self.total_error = 0
-        self.error_hold = 0
-        self.dummy_hold = " " * 120
-        self.record_count = 0
-        
-        # Headers
-        self.ccvs_h_1 = (" " * 27 + 
-                        " FEDERAL COMPILER TESTING CENTER COBOL COMPILER VALIDATION SYSTEM" + 
-                        " " * 26)
-        self.ccvs_h_2 = ("CCVS74 NCC  COPY, NOT FOR DISTRIBUTION." + 
-                        "TEST RESULTS SET-  " + 
-                        " " * 9 + 
-                        " " * 40)
-        self.ccvs_h_3 = (" FOR OFFICIAL USE ONLY    " + 
-                        "COBOL 85 VERSION 4.2, Apr  1993 SSVG                      " + 
-                        "  COPYRIGHT   1974 ")
-        self.ccvs_e_1 = (" " * 52 + 
-                        "END OF TEST-  " + 
-                        " " * 9 + 
-                        " NTIS DISTRIBUTION COBOL 74")
-        self.ccvs_e_2 = (" " * 31 + 
-                        " " * 21 + 
-                        "   " + 
-                        " " + 
-                        "ERRORS ENCOUNTERED")
-        self.ccvs_e_3 = (" FOR OFFICIAL USE ONLY" + 
-                        " " * 12 + 
-                        "ON-SITE VALIDATION, NATIONAL INSTITUTE OF STD & TECH.     " + 
-                        " " * 13 + 
-                        " COPYRIGHT 1974")
-        self.ccvs_e_4 = ("   " + 
-                        " OF " + 
-                        "   " + 
-                        "  TESTS WERE EXECUTED SUCCESSFULLY")
-        
-        self.hyphen_line = (" " + 
-                           "*" * 65 + 
-                           "*" * 54)
-        
-        self.ccvs_pgm_id = "CM104M"
-        self.test_id = ""
-        self.id_again = ""
-        
-        # Log headers
-        self.log_hdr_1 = " " * 54 + "MESSAGE LOG"
-        self.log_hdr_2 = ("   " + 
-                         "SYMBOLIC" + 
-                         "TIME MCS" + 
-                         "SEND" + 
-                         "MSG" + 
-                         "IN" + 
-                         "OUT")
-        self.log_hdr_3 = ("    " + 
-                         "SOURCE" + 
-                         "RECEIVED" + 
-                         "QD" + 
-                         "COMPLT" + 
-                         "LTH" + 
-                         "ST" + 
-                         " " * 33 + 
-                         "STAT" + 
-                         "MESSAGE CONTENTS")
-        self.log_hdr_4 = (" " + 
-                         "-" * 12 + 
-                         " " + 
-                         "-" * 11 + 
-                         " --" + 
-                         "-" * 6 + 
-                         " " + 
-                         "---" + 
-                         "--" + 
-                         "----" + 
-                         "-" * 72)
-        
-        # Message structures
-        self.msg = " " * 72
-        self.kill_field = ""
-        
-        # Log line components
-        self.sym_source = " " * 12
-        self.log_time = {"hrs": 0, "mins": 0, "secs": 0.0}
-        self.queue_depth = 0
-        self.out_time = 0.0
-        self.msg_length = 0
-        self.in_status = "00"
-        self.out_status = "00"
-        self.out_err_key = ""
-        
-        # Time structures
-        self.send_time = {"hrs": 0, "mins": 0, "secs": 0.0}
-        
-        # File handle
-        self.print_file = None
-        
-        # Communication queues - two input and two output
-        self.cm_inque_1 = CommunicationQueue("CM-INQUE-1")
-        self.cm_inque_2 = CommunicationQueue("CM-INQUE-2")
-        self.cm_outque_1 = OutputQueue("CM-OUTQUE-1")
-        self.cm_outque_2 = OutputQueue("CM-OUTQUE-2")
-        
-        # Queue 1 specifications
-        self.queue_1 = "**** X-CARD UNDEFINED ****"
-        self.time_received_1 = {"hrs": 0, "mins": 0, "secs": 0.0}
-        self.source_1 = ""
-        self.in_length_1 = 0
-        self.end_key_1 = ""
-        self.in_status_1 = "00"
-        self.msg_count_1 = 0
-        
-        # Queue 2 specifications
-        self.time_received_2 = {"hrs": 0, "mins": 0, "secs": 0.0}
-        self.source_2 = ""
-        self.in_length_2 = 0
-        self.end_key_2 = ""
-        self.in_status_2 = "00"
-        self.msg_count_2 = 0
-        
-        # Output queue specifications
-        self.out_length_1 = 0
-        self.out_status_1 = "00"
-        self.err_key_1 = ""
-        self.out_length_2 = 0
-        self.out_status_2 = "00"
-        self.err_key_2 = ""
-    
-    def get_time(self) -> dict:
-        """Get current time as hours, minutes, seconds"""
-        now = datetime.now()
-        hrs = now.hour
-        mins = now.minute
-        secs = now.second + now.microsecond / 1000000.0
-        return {"hrs": hrs, "mins": mins, "secs": secs}
-    
-    def format_time(self, time_dict: dict) -> str:
-        """Format time as HH:MM:SS.SS"""
-        return f"{time_dict['hrs']:02d}:{time_dict['mins']:02d}:{time_dict['secs']:05.2f}"
-    
-    def cm104m_init(self):
-        """Initialize the program"""
-        # Open output file
-        self.print_file = open("report.log", "w", encoding="utf-8")
-        
-        # Set test ID
-        self.test_id = "CM104M     "
-        self.id_again = self.test_id
-        
-        # Write headers
-        self.head_routine()
-        self.log_header()
-        
-        # Enable queues (simulated)
-        key = "**** X-CARD UNDEFINED ****"
-        self.cm_inque_1.enable_input(key)
-        self.cm_inque_2.enable_input(key)
-        self.cm_outque_1.enable_output(key)
-        self.cm_outque_2.enable_output(key)
-    
-    def head_routine(self):
-        """Write header routine"""
-        self.print_file.write("\f" + self.ccvs_h_1 + "\n\n\n")
-        self.print_file.write(self.ccvs_h_2 + "\n\n")
-        self.print_file.write(self.ccvs_h_3 + "\n\n\n\n\n")
-        self.print_file.write(self.hyphen_line + "\n")
-    
-    def log_header(self):
-        """Write log header"""
-        self.print_file.write("\n\n\n" + self.log_hdr_1 + "\n\n\n")
-        self.print_file.write(self.log_hdr_2 + "\n\n\n")
-        self.print_file.write(self.log_hdr_3 + "\n")
-        self.print_file.write(self.log_hdr_4 + "\n")
-        self.print_file.write(" " * 120 + "\n")
-        self.print_file.write(" " * 120 + "\n")
-    
-    def cm104m_poll_1(self):
-        """Poll queue 1 - receive from INQUE-1, send to OUTQUE-2"""
-        # Clear message
-        self.msg = " " * 72
-        
-        # Receive from queue 1
-        received_msg = self.cm_inque_1.receive_message()
-        if received_msg is None:
-            return False  # No data, go to poll 2
-        
-        self.msg = (received_msg + " " * 72)[:72]
-        
-        # Accept count from queue 1
-        self.msg_count_1 = self.cm_inque_1.get_count()
-        
-        # Update queue 1 specifications
-        if self.cm_inque_1.time_received:
-            self.time_received_1 = {
-                "hrs": self.cm_inque_1.time_received.hour,
-                "mins": self.cm_inque_1.time_received.minute,
-                "secs": self.cm_inque_1.time_received.second + 
-                       self.cm_inque_1.time_received.microsecond / 1000000.0
-            }
-        self.source_1 = self.cm_inque_1.source
-        self.in_length_1 = self.cm_inque_1.in_length
-        self.in_status_1 = self.cm_inque_1.in_status
-        
-        # Set output length (max 72)
-        if self.in_length_1 > 72:
-            self.out_length_2 = 72
-        else:
-            self.out_length_2 = self.in_length_1
-        
-        # Send to output queue 2
-        self.cm_outque_2.out_length = self.out_length_2
-        self.cm_outque_2.send_message(self.msg, emi=True)
-        
-        # Get send time
-        self.send_time = self.get_time()
-        
-        # Build log line
-        self.sym_source = self.source_1[:12].ljust(12)
-        self.log_time = self.time_received_1
-        
-        # Compute out time
-        send_total_secs = (self.send_time["hrs"] * 3600 + 
-                          self.send_time["mins"] * 60 + 
-                          self.send_time["secs"])
-        received_total_secs = (self.time_received_1["hrs"] * 3600 + 
-                              self.time_received_1["mins"] * 60 + 
-                              self.time_received_1["secs"])
-        self.out_time = send_total_secs - received_total_secs
-        
-        self.queue_depth = self.msg_count_1
-        self.msg_length = self.in_length_1
-        self.in_status = self.in_status_1
-        self.out_status = self.cm_outque_2.out_status
-        self.out_err_key = self.cm_outque_2.err_key
-        
-        # Format log line
-        log_line = (
-            " " +
-            self.sym_source +
-            " " +
-            self.format_time(self.log_time) +
-            " " +
-            f"{self.queue_depth:2d}" +
-            f"{self.out_time:6.2f}" +
-            " " +
-            f"{self.msg_length:3d}" +
-            " " +
-            self.in_status +
-            " " +
-            self.out_status +
-            "/" +
-            self.out_err_key +
-            " " +
-            self.msg[:68]
+        entry = LogEntry(
+            source=message.source,
+            received_time=message.received_time,
+            queue_depth=message.msg_count,
+            out_time=out_time,
+            message_length=message.length,
+            in_status=message.in_status,
+            out_status=send_result.out_status,
+            err_key=send_result.err_key,
+            payload=payload,
         )
-        
-        # Write log line
-        self.print_file.write(log_line + "\n")
-        self.print_file.flush()
-        
-        # Check for kill message
-        self.kill_field = self.msg[:4]
-        if self.kill_field.upper() == "KILL":
-            return True  # Finish
-        
-        return False  # Continue polling
-    
-    def cm104m_poll_2(self):
-        """Poll queue 2 - receive from INQUE-2, send to OUTQUE-1"""
-        # Clear message
-        self.msg = " " * 72
-        
-        # Receive from queue 2
-        received_msg = self.cm_inque_2.receive_message()
-        if received_msg is None:
-            return False  # No data, go back to poll 1
-        
-        self.msg = (received_msg + " " * 72)[:72]
-        
-        # Accept count from queue 2
-        self.msg_count_2 = self.cm_inque_2.get_count()
-        
-        # Update queue 2 specifications
-        if self.cm_inque_2.time_received:
-            self.time_received_2 = {
-                "hrs": self.cm_inque_2.time_received.hour,
-                "mins": self.cm_inque_2.time_received.minute,
-                "secs": self.cm_inque_2.time_received.second + 
-                       self.cm_inque_2.time_received.microsecond / 1000000.0
-            }
-        self.source_2 = self.cm_inque_2.source
-        self.in_length_2 = self.cm_inque_2.in_length
-        self.in_status_2 = self.cm_inque_2.in_status
-        
-        # Set output length (max 72)
-        if self.in_length_2 > 72:
-            self.out_length_1 = 72
+        self.report_writer.write_log_entry(entry.format_line())
+
+        if message.kill_requested():
+            raise KillSignal("KILL message received")
+
+        return True
+
+
+def _safe_int(value: object, default: int = 0) -> int:
+    try:
+        return int(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return default
+
+
+def load_messages_from_json(path: Union[str, Path]) -> List[Message]:
+    """Load a queue description from JSON."""
+    raw_text = Path(path).read_text(encoding="utf-8")
+    data = json.loads(raw_text)
+
+    if isinstance(data, dict):
+        if "messages" in data:
+            data = data["messages"]
+        elif "queue" in data:
+            data = data["queue"]
         else:
-            self.out_length_1 = self.in_length_2
-        
-        # Send to output queue 1
-        self.cm_outque_1.out_length = self.out_length_1
-        self.cm_outque_1.send_message(self.msg, emi=True)
-        
-        # Get send time
-        self.send_time = self.get_time()
-        
-        # Build log line
-        self.sym_source = self.source_2[:12].ljust(12)
-        self.log_time = self.time_received_2
-        
-        # Compute out time
-        send_total_secs = (self.send_time["hrs"] * 3600 + 
-                          self.send_time["mins"] * 60 + 
-                          self.send_time["secs"])
-        received_total_secs = (self.time_received_2["hrs"] * 3600 + 
-                              self.time_received_2["mins"] * 60 + 
-                              self.time_received_2["secs"])
-        self.out_time = send_total_secs - received_total_secs
-        
-        self.queue_depth = self.msg_count_2
-        self.msg_length = self.in_length_2
-        self.in_status = self.in_status_2
-        self.out_status = self.cm_outque_1.out_status
-        self.out_err_key = self.cm_outque_1.err_key
-        
-        # Format log line
-        log_line = (
-            " " +
-            self.sym_source +
-            " " +
-            self.format_time(self.log_time) +
-            " " +
-            f"{self.queue_depth:2d}" +
-            f"{self.out_time:6.2f}" +
-            " " +
-            f"{self.msg_length:3d}" +
-            " " +
-            self.in_status +
-            " " +
-            self.out_status +
-            "/" +
-            self.out_err_key +
-            " " +
-            self.msg[:68]
+            raise ValueError("JSON queue files must include 'messages' or 'queue' keys.")
+
+    if not isinstance(data, list):
+        raise TypeError("Queue description must be a list of message objects.")
+
+    messages: List[Message] = []
+    for entry in data:
+        if not isinstance(entry, Mapping):
+            raise TypeError("Each message definition must be a JSON object.")
+        received = entry.get("received_time", entry.get("time"))
+        messages.append(
+            Message(
+                source=str(entry.get("source", "UNSPEC")).strip(),
+                payload=str(entry.get("payload", "")),
+                received_time=Timestamp.from_value(received),
+                in_status=str(entry.get("in_status", entry.get("status", "OK"))),
+                msg_count=_safe_int(entry.get("msg_count", entry.get("queue_depth", entry.get("depth", 0)))),
+            )
         )
-        
-        # Write log line
-        self.print_file.write(log_line + "\n")
-        self.print_file.flush()
-        
-        # Check for kill message
-        self.kill_field = self.msg[:4]
-        if self.kill_field.upper() == "KILL":
-            return True  # Finish
-        
-        return False  # Continue polling
-    
-    def cm104m_fini(self):
-        """Finalize the program"""
-        self.end_routine()
-        if self.print_file:
-            self.print_file.close()
-    
-    def end_routine(self):
-        """End routine"""
-        self.print_file.write(self.hyphen_line + "\n")
-        self.write_line()
-        self.para_z()
-    
-    def para_z(self):
-        """Para-Z routine"""
-        for _ in range(4):
-            self.blank_line_print()
-        
-        dummy_record = self.ccvs_e_1 + (" " * (120 - len(self.ccvs_e_1)))
-        self.print_file.write(dummy_record + "\n")
-        self.write_line()
-    
-    def end_routine_3(self):
-        """End routine 3"""
-        dummy_record = self.ccvs_e_2 + (" " * (120 - len(self.ccvs_e_2)))
-        self.print_file.write(dummy_record + "\n")
-        dummy_record = self.ccvs_e_3 + (" " * (120 - len(self.ccvs_e_3)))
-        self.print_file.write(dummy_record + "\n")
-    
-    def blank_line_print(self):
-        """Print blank line"""
-        self.print_file.write(" " * 120 + "\n")
-    
-    def write_line(self):
-        """Write line"""
-        self.print_file.write(" " * 120 + "\n")
-    
-    def run(self):
-        """Main program execution - polling loop"""
-        try:
-            self.cm104m_init()
-            
-            # Main polling loop - alternate between queue 1 and queue 2
-            while True:
-                # Poll queue 1
-                if self.cm104m_poll_1():
-                    break  # KILL message received
-                
-                # Poll queue 2
-                if self.cm104m_poll_2():
-                    break  # KILL message received
-                
-                # Small delay to prevent busy loop
-                time.sleep(0.1)
-            
-            self.end_routine_3()
-            self.cm104m_fini()
-            
-        except KeyboardInterrupt:
-            self.end_routine_3()
-            self.cm104m_fini()
-        except Exception as e:
-            if self.print_file:
-                self.print_file.write(f"\nERROR: {e}\n")
-                self.print_file.close()
+    return messages
 
 
-if __name__ == "__main__":
-    program = CM104M()
-    program.run()
+def build_arg_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Python translation of CM104M – bridges two message queues and writes report.log."
+    )
+    parser.add_argument(
+        "--queue1",
+        type=Path,
+        help="Path to a JSON file describing the first input queue.",
+    )
+    parser.add_argument(
+        "--queue2",
+        type=Path,
+        help="Path to a JSON file describing the second input queue.",
+    )
+    parser.add_argument(
+        "--report",
+        type=Path,
+        default=Path("report.log"),
+        help="Location of the generated report.log file.",
+    )
+    return parser
 
+
+def main(argv: Optional[Sequence[str]] = None) -> int:
+    parser = build_arg_parser()
+    args = parser.parse_args(argv)
+
+    queue1_messages = load_messages_from_json(args.queue1) if args.queue1 else []
+    queue2_messages = load_messages_from_json(args.queue2) if args.queue2 else []
+
+    input_queue_1 = IterableInputQueue(queue1_messages)
+    input_queue_2 = IterableInputQueue(queue2_messages)
+    output_queue_1 = RecordingOutputQueue()
+    output_queue_2 = RecordingOutputQueue()
+
+    writer = ReportWriter(args.report)
+    bridge = MessageBridge(
+        input_queue_1,
+        input_queue_2,
+        output_queue_1,
+        output_queue_2,
+        report_writer=writer,
+    )
+    bridge.run()
+    return 0
+
+
+if __name__ == "__main__":  # pragma: no cover
+    raise SystemExit(main())
