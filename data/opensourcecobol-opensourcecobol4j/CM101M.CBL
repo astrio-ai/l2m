@@ -105,7 +105,7 @@ class MessageQueueController:
         self.enabled = False
         self._messages: Deque[Message] = deque()
 
-    def load_messages(self, messages: Iterable<Message]) -> None:
+    def load_messages(self, messages: Iterable[Message]) -> None:
         self._messages = deque(messages)
 
     def dequeue_messages(self) -> Iterable[Message]:
