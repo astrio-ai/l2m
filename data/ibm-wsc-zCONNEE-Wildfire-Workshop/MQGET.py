@@ -12,10 +12,8 @@ This program:
 4. Returns status code as return code
 """
 
-import sys
-import os
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import Callable, Optional, Tuple
 
 # Import common structures from CSCVDLTI
 from CSCVDLTI import (
@@ -34,6 +32,22 @@ from CSCVDLTI import (
 # ============================================================================
 
 COMM_STUB_PGM_NAME = "BAQCSTUB"
+
+StubCallable = Callable[
+    [
+        "GetInfoOper1",
+        BAQRequestInfo,
+        bytes,
+        int,
+        BAQResponseInfo,
+        bytes,
+        int,
+        "GetRequest",
+        "GetResponse",
+    ],
+    BAQResponseInfo,
+]
+OutputFunc = Callable[[str], None]
 
 
 # ============================================================================
@@ -70,6 +84,18 @@ class GetInfoOper1:
     """GET info structure (MQ000I01)."""
     operation_name: str = "GET"
     # Other info fields would be here
+
+
+# ============================================================================
+# Result container
+# ============================================================================
+
+@dataclass
+class MQGetResult:
+    """Container for the outcome of an MQ GET request."""
+    response: GetResponse
+    baq_response_info: BAQResponseInfo
+    error_msg: ErrorMsg
 
 
 # ============================================================================
@@ -128,103 +154,96 @@ def baqcstub(
 
 
 # ============================================================================
-# Main Program
+# Helper functions
 # ============================================================================
 
-def main(
-    mock_baqcstub: Optional[callable] = None
-) -> Tuple[int, ErrorMsg]:
-    """Main program entry point (MAINLINE).
-    
-    Args:
-        mock_baqcstub: Optional mock function for BAQCSTUB (for testing)
-    
-    Returns:
-        Tuple of (return_code, error_msg)
-    """
-    # Initialize structures
+def perform_mq_get(
+    mock_baqcstub: Optional[StubCallable] = None,
+) -> MQGetResult:
+    """Execute the MQ GET call and return the raw structures."""
     error_msg = ErrorMsg()
-    
-    # Initialize GET request/response
     get_request = GetRequest()
     get_response = GetResponse()
     get_info = GetInfoOper1()
-    
-    # Initialize BAQ structures
     baq_request_info = BAQRequestInfo()
     baq_response_info = BAQResponseInfo()
     
-    # Initialize working storage variables
-    # GET-REQUEST is essentially empty (just filler)
-    get_request.filler = ""
-    
-    # Set up pointers and lengths (simulated)
-    baq_request_ptr = b""  # Not used in Python
-    baq_request_len = 1  # Length of GET-REQUEST (1 byte filler)
-    baq_response_ptr = b""  # Not used in Python
+    baq_request_ptr = b""
+    baq_request_len = max(len(get_request.filler), 1)
+    baq_response_ptr = b""
     baq_response_len = len(str(get_response))
     
-    # Call BAQCSTUB (or mock)
-    if mock_baqcstub:
-        baq_response_info = mock_baqcstub(
-            get_info,
-            baq_request_info,
-            baq_request_ptr,
-            baq_request_len,
-            baq_response_info,
-            baq_response_ptr,
-            baq_response_len,
-            get_request,
-            get_response
-        )
-    else:
-        baq_response_info = baqcstub(
-            get_info,
-            baq_request_info,
-            baq_request_ptr,
-            baq_request_len,
-            baq_response_info,
-            baq_response_ptr,
-            baq_response_len,
-            get_request,
-            get_response
-        )
+    stub = mock_baqcstub or baqcstub
+    baq_response_info = stub(
+        get_info,
+        baq_request_info,
+        baq_request_ptr,
+        baq_request_len,
+        baq_response_info,
+        baq_response_ptr,
+        baq_response_len,
+        get_request,
+        get_response,
+    )
     
-    # Process response
-    if baq_response_info.is_success():
-        # Success - display all fields
-        print(f"NUMB:   {get_response.numb}")
-        print(f"NAME:   {get_response.name}")
-        print(f"ADDRX:  {get_response.addrx}")
-        print(f"PHONE:  {get_response.phone}")
-        print(f"DATEX:  {get_response.datex}")
-        print(f"AMOUNT: {get_response.amount}")
-        print(f"HTTP CODE: {baq_response_info.status_code}")
-    else:
-        # Error - populate error messages
+    if not baq_response_info.is_success():
         error_msg.code = baq_response_info.status_code
         error_msg.detail = baq_response_info.status_message
-        
-        # Determine error origin
         if baq_response_info.is_error_in_api():
             error_msg.origin = "API"
         elif baq_response_info.is_error_in_zcee():
             error_msg.origin = "ZCEE"
         elif baq_response_info.is_error_in_stub():
             error_msg.origin = "STUB"
-        
-        print(f"Error code: {baq_response_info.status_code}")
-        print(f"Error msg: {baq_response_info.status_message}")
-        print(f"Error origin: {error_msg.origin}")
     
-    # Return BAQ-STATUS-CODE as return code
-    return_code = baq_response_info.status_code
+    return MQGetResult(
+        response=get_response,
+        baq_response_info=baq_response_info,
+        error_msg=error_msg,
+    )
+
+
+def _print_success(response: GetResponse, status_code: int, output_func: OutputFunc) -> None:
+    """Pretty-print the successful response fields."""
+    output_func(f"NUMB:   {response.numb}")
+    output_func(f"NAME:   {response.name}")
+    output_func(f"ADDRX:  {response.addrx}")
+    output_func(f"PHONE:  {response.phone}")
+    output_func(f"DATEX:  {response.datex}")
+    output_func(f"AMOUNT: {response.amount}")
+    output_func(f"HTTP CODE: {status_code}")
+
+
+def _print_error(
+    baq_response_info: BAQResponseInfo,
+    error_msg: ErrorMsg,
+    output_func: OutputFunc,
+) -> None:
+    """Pretty-print error information."""
+    output_func(f"Error code: {baq_response_info.status_code}")
+    output_func(f"Error msg: {baq_response_info.status_message}")
+    output_func(f"Error origin: {error_msg.origin}")
+
+
+# ============================================================================
+# Main Program
+# ============================================================================
+
+def main(
+    mock_baqcstub: Optional[StubCallable] = None,
+    output_func: OutputFunc = print,
+) -> Tuple[int, ErrorMsg]:
+    """Main program entry point (MAINLINE)."""
+    result = perform_mq_get(mock_baqcstub=mock_baqcstub)
     
-    return return_code, error_msg
+    if result.baq_response_info.is_success():
+        _print_success(result.response, result.baq_response_info.status_code, output_func)
+    else:
+        _print_error(result.baq_response_info, result.error_msg, output_func)
+    
+    return result.baq_response_info.status_code, result.error_msg
 
 
 if __name__ == "__main__":
-    # For testing/standalone execution
-    return_code, error_msg = main()
-    print(f"Return Code: {return_code}")
-
+    RETURN_CODE, ERROR_MSG = main()
+    print(f"Return Code: {RETURN_CODE}")
