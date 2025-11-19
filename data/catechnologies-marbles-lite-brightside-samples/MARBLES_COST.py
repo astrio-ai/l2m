@@ -1,229 +1,225 @@
+"""Python modernization of the MARBLES_COST (MRBC) COBOL transaction.
+
+The original COBOL program ran as a CICS transaction, allowing users to
+create, update, or delete marble inventory rows in the EVENT.MARBLE table.
+This Python version offers comparable functionality via the command line
+while persisting data in a local SQLite database.
+
+Usage examples (matching the COBOL verbs):
+
+    python MARBLES_COST.py MRBC CRE BLUE 10 4
+    python MARBLES_COST.py MRBC UPD BLUE 5 3
+    python MARBLES_COST.py MRBC DEL BLUE
+
+You can also omit the MRBC transaction identifier:
+
+    python MARBLES_COST.py CRE BLUE 10 4
+
+The script prints either "SUCCESS" or one of the MRBC00xE error messages
+defined by the legacy program.
+"""
+from __future__ import annotations
+
+import os
 import sqlite3
 import sys
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Sequence
 
-# Constants
-BOOLEAN_FALSE = 0
-BOOLEAN_TRUE = 1
-VERB_CREATE = 'CRE'
-VERB_UPDATE = 'UPD'
-VERB_DELETE = 'DEL'
-ERROR_MARBLE_DNE = 'MRBC001E'
-ERROR_MARBLE_EXISTS = 'MRBC002E'
-CONST_SUCCESS = 'SUCCESS'
+SUCCESS_MESSAGE = "SUCCESS"
+ERROR_INVALID_VERB = "USE CRE|UPD|DEL"
+ERROR_MARBLE_DNE = "MRBC001E UNKNOWN COLOR, CREate IT"
+ERROR_MARBLE_EXISTS = "MRBC002E MARBLE ALREADY EXISTS, UPDate or DELete IT"
+VERBS = {"CRE", "UPD", "DEL"}
+MAX_COLOR_LENGTH = 10
 
-class WorkAreas:
-    """Working storage areas."""
-    def __init__(self):
-        self.work_inv = 0
-        self.work_cost = 0
-        self.work_color = ""
-        self.work_row_count = 0
-        self.result_color_found = BOOLEAN_FALSE
-        self.result_operation_success = BOOLEAN_FALSE
-        self.result_verb_create = BOOLEAN_FALSE
-        self.result_verb_update = BOOLEAN_FALSE
-        self.result_verb_delete = BOOLEAN_FALSE
-        self.msg_length = 74
 
-class InputData:
-    """Input data structure."""
-    def __init__(self):
-        self.tran_id = ""
-        self.verb = ""
-        self.color = ""
-        self.inv = 0
-        self.cost = 0
+class UserInputError(Exception):
+    """Raised when the provided CLI arguments are invalid."""
 
-class MarbleDatabase:
-    """Database handler for EVENT.MARBLE table."""
-    
-    def __init__(self, db_path='marble_inventory.db'):
-        self.db_path = db_path
-        self.conn = sqlite3.connect(self.db_path)
-        self.init_db()
 
-    def init_db(self):
-        with self.conn:
-            self.conn.execute("""
-                CREATE TABLE IF NOT EXISTS event_marble (
-                    color TEXT PRIMARY KEY,
-                    inventory INTEGER NOT NULL,
-                    cost INTEGER NOT NULL
-                )
-            """)
+@dataclass(frozen=True)
+class Command:
+    transaction_id: str
+    verb: str
+    color: str
+    inventory: int | None = None
+    cost: int | None = None
 
-    def insert_color(self, color, inventory, cost):
-        try:
-            with self.conn:
-                self.conn.execute("INSERT INTO event_marble (color, inventory, cost) VALUES (?, ?, ?)", (color, inventory, cost))
-            return BOOLEAN_TRUE
-        except sqlite3.IntegrityError:
-            return BOOLEAN_FALSE
 
-    def update_color(self, color, inventory, cost):
-        with self.conn:
-            cursor = self.conn.execute("UPDATE event_marble SET inventory = ?, cost = ? WHERE color = ?", (inventory, cost, color))
-            return cursor.rowcount > 0
+@dataclass(frozen=True)
+class Result:
+    success: bool
+    message: str
 
-    def delete_color(self, color):
-        with self.conn:
-            cursor = self.conn.execute("DELETE FROM event_marble WHERE color = ?", (color,))
-            return cursor.rowcount > 0
 
-    def check_color_exists(self, color):
-        cursor = self.conn.execute("SELECT COUNT(*) FROM event_marble WHERE color = ?", (color,))
-        return cursor.fetchone()[0] > 0
+def _default_db_path() -> Path:
+    override = os.getenv("MARBLES_DB_PATH")
+    if override:
+        return Path(override).expanduser()
+    return Path(__file__).with_suffix(".db")
 
-    def close(self):
-        self.conn.close()
 
-class MarblesCostProgram:
-    """Main program class for MARBLESC."""
-    
-    def __init__(self):
-        self.db = MarbleDatabase()
-        self.work = WorkAreas()
-        self.input_data = InputData()
-        self.output = ""
+class MarbleRepository:
+    """SQLite-backed storage that mirrors the EVENT.MARBLE table."""
 
-    def init_work_areas(self):
-        """Initialize working areas to known values."""
-        self.work = WorkAreas()
-        self.input_data = InputData()
-        self.output = ""
-
-    def get_trans_input(self, command_line_args):
-        """Get transaction input from command line."""
-        return ' '.join(command_line_args[1:]) if len(command_line_args) > 1 else ""
-
-    def parse_cics_input(self, input_string):
-        """Parse the transaction input."""
-        parts = input_string.strip().split()
-        
-        if len(parts) >= 1:
-            self.input_data.tran_id = parts[0]
-        if len(parts) >= 2:
-            self.input_data.verb = parts[1]
-        if len(parts) >= 3:
-            self.input_data.color = parts[2]
-        if len(parts) >= 4:
-            try:
-                self.input_data.inv = int(parts[3])
-            except ValueError:
-                self.input_data.inv = 0
-        if len(parts) >= 5:
-            try:
-                self.input_data.cost = int(parts[4])
-            except ValueError:
-                self.input_data.cost = 0
-
-    def verify_verb(self):
-        """Verify that the verb is valid."""
-        verb = self.input_data.verb.upper()
-        
-        if verb == VERB_CREATE:
-            self.work.result_verb_create = BOOLEAN_TRUE
-        elif verb == VERB_UPDATE:
-            self.work.result_verb_update = BOOLEAN_TRUE
-        elif verb == VERB_DELETE:
-            self.work.result_verb_delete = BOOLEAN_TRUE
-        else:
-            self.work.msg_length = 41
-            self.output = 'USE CRE|UPD|DEL'
-
-    def check_if_color_found(self):
-        """Check if the input color is found in the database."""
-        if self.db.check_color_exists(self.input_data.color):
-            self.work.result_color_found = BOOLEAN_TRUE
-        else:
-            self.work.result_color_found = BOOLEAN_FALSE
-
-    def insert_color(self):
-        """Insert a new color."""
-        success = self.db.insert_color(
-            self.input_data.color,
-            self.input_data.inv,
-            self.input_data.cost
+    def __init__(self, db_path: Path | str | None = None) -> None:
+        self._db_path = Path(db_path) if db_path else _default_db_path()
+        self._conn = sqlite3.connect(self._db_path)
+        self._conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS event_marble (
+                color TEXT PRIMARY KEY,
+                inventory INTEGER NOT NULL,
+                cost INTEGER NOT NULL
+            )
+            """
         )
-        if success:
-            self.work.result_operation_success = BOOLEAN_TRUE
+        self._conn.commit()
 
-    def update_color(self):
-        """Update an existing color."""
-        success = self.db.update_color(
-            self.input_data.color,
-            self.input_data.inv,
-            self.input_data.cost
+    def __enter__(self) -> "MarbleRepository":
+        return self
+
+    def __exit__(self, exc_type, exc, exc_tb) -> None:
+        self.close()
+
+    def close(self) -> None:
+        if self._conn:
+            self._conn.close()
+            self._conn = None  # type: ignore[assignment]
+
+    def color_exists(self, color: str) -> bool:
+        cursor = self._conn.execute(
+            "SELECT 1 FROM event_marble WHERE color = ?", (color,)
         )
-        if success:
-            self.work.result_operation_success = BOOLEAN_TRUE
+        return cursor.fetchone() is not None
 
-    def delete_color(self):
-        """Delete a color."""
-        success = self.db.delete_color(self.input_data.color)
-        if success:
-            self.work.result_operation_success = BOOLEAN_TRUE
+    def insert_color(self, color: str, inventory: int, cost: int) -> None:
+        self._conn.execute(
+            "INSERT INTO event_marble (color, inventory, cost) VALUES (?, ?, ?)",
+            (color, inventory, cost),
+        )
+        self._conn.commit()
 
-    def output_success(self):
-        """Output success message."""
-        self.work.msg_length = 7
-        self.output = CONST_SUCCESS
+    def update_color(self, color: str, inventory: int, cost: int) -> None:
+        self._conn.execute(
+            "UPDATE event_marble SET inventory = ?, cost = ? WHERE color = ?",
+            (inventory, cost, color),
+        )
+        self._conn.commit()
 
-    def output_marble_does_not_exist(self):
-        """Output error message for marble not found."""
-        self.work.msg_length = 33
-        self.output = f"{ERROR_MARBLE_DNE} UNKNOWN COLOR, CREate IT"
+    def delete_color(self, color: str) -> None:
+        self._conn.execute("DELETE FROM event_marble WHERE color = ?", (color,))
+        self._conn.commit()
 
-    def output_marble_already_exists(self):
-        """Output error message for marble already exists."""
-        self.work.msg_length = 51
-        self.output = f"{ERROR_MARBLE_EXISTS} MARBLE ALREADY EXISTS, UPDate or DELete IT"
 
-    def write_output(self):
-        """Write output to stdout."""
-        print(self.output[:self.work.msg_length])
+def parse_command_line(argv: Sequence[str]) -> Command:
+    tokens = list(argv)
+    if not tokens:
+        raise UserInputError(ERROR_INVALID_VERB)
 
-    def run(self, command_line_args):
-        """Run the main program logic."""
-        self.init_work_areas()
-        input_string = self.get_trans_input(command_line_args)
-        self.parse_cics_input(input_string)
-        self.verify_verb()
+    first_token = tokens[0].upper()
+    if first_token in VERBS:
+        transaction_id = "MRBC"
+        verb = first_token
+        payload = tokens[1:]
+    else:
+        transaction_id = tokens[0]
+        if len(tokens) == 1:
+            raise UserInputError(ERROR_INVALID_VERB)
+        verb = tokens[1].upper()
+        payload = tokens[2:]
 
-        if self.work.result_verb_create == BOOLEAN_TRUE:
-            self.check_if_color_found()
-            if self.work.result_color_found == BOOLEAN_FALSE:
-                self.insert_color()
-                if self.work.result_operation_success == BOOLEAN_TRUE:
-                    self.output_success()
-            else:
-                self.output_marble_already_exists()
+    if verb not in VERBS:
+        raise UserInputError(ERROR_INVALID_VERB)
 
-        elif self.work.result_verb_update == BOOLEAN_TRUE:
-            self.check_if_color_found()
-            if self.work.result_color_found == BOOLEAN_TRUE:
-                self.update_color()
-                if self.work.result_operation_success == BOOLEAN_TRUE:
-                    self.output_success()
-            else:
-                self.output_marble_does_not_exist()
+    if verb == "DEL":
+        if len(payload) != 1:
+            raise UserInputError("DEL requires a COLOR argument")
+        color = _normalize_color(payload[0])
+        return Command(transaction_id=transaction_id, verb=verb, color=color)
 
-        elif self.work.result_verb_delete == BOOLEAN_TRUE:
-            self.check_if_color_found()
-            if self.work.result_color_found == BOOLEAN_TRUE:
-                self.delete_color()
-                if self.work.result_operation_success == BOOLEAN_TRUE:
-                    self.output_success()
-            else:
-                self.output_marble_does_not_exist()
+    if len(payload) != 3:
+        raise UserInputError(f"{verb} requires COLOR, INVENTORY, and COST arguments")
 
-        self.write_output()
+    color = _normalize_color(payload[0])
+    inventory = _parse_quantity(payload[1], "INVENTORY")
+    cost = _parse_quantity(payload[2], "COST")
+    return Command(
+        transaction_id=transaction_id,
+        verb=verb,
+        color=color,
+        inventory=inventory,
+        cost=cost,
+    )
 
-def main():
-    """Main entry point."""
-    program = MarblesCostProgram()
-    program.run(sys.argv)
-    program.db.close()
 
-if __name__ == '__main__':
-    main()
+def _normalize_color(raw_color: str) -> str:
+    color = raw_color.strip().upper()
+    if not color:
+        raise UserInputError("COLOR cannot be blank")
+    if len(color) > MAX_COLOR_LENGTH:
+        raise UserInputError(
+            f"COLOR cannot exceed {MAX_COLOR_LENGTH} characters (got '{raw_color}')"
+        )
+    return color
+
+
+def _parse_quantity(raw_value: str, field: str) -> int:
+    try:
+        value = int(raw_value)
+    except ValueError as exc:
+        raise UserInputError(f"{field} must be an integer (got '{raw_value}')") from exc
+
+    if not 0 <= value <= 9999:
+        raise UserInputError(f"{field} must be between 0 and 9999 (got {value})")
+    return value
+
+
+def execute_command(repo: MarbleRepository, command: Command) -> Result:
+    verb = command.verb
+    color = command.color
+
+    if verb == "CRE":
+        if repo.color_exists(color):
+            return Result(False, ERROR_MARBLE_EXISTS)
+        repo.insert_color(color, command.inventory, command.cost)  # type: ignore[arg-type]
+        return Result(True, SUCCESS_MESSAGE)
+
+    if verb == "UPD":
+        if not repo.color_exists(color):
+            return Result(False, ERROR_MARBLE_DNE)
+        repo.update_color(color, command.inventory, command.cost)  # type: ignore[arg-type]
+        return Result(True, SUCCESS_MESSAGE)
+
+    if verb == "DEL":
+        if not repo.color_exists(color):
+            return Result(False, ERROR_MARBLE_DNE)
+        repo.delete_color(color)
+        return Result(True, SUCCESS_MESSAGE)
+
+    return Result(False, ERROR_INVALID_VERB)
+
+
+def run_cli(argv: Sequence[str] | None = None) -> int:
+    argv = list(argv if argv is not None else sys.argv[1:])
+    try:
+        command = parse_command_line(argv)
+    except UserInputError as exc:
+        print(str(exc))
+        return 1
+
+    try:
+        with MarbleRepository() as repo:
+            result = execute_command(repo, command)
+    except sqlite3.Error as exc:
+        print(f"Database error: {exc}")
+        return 2
+
+    print(result.message)
+    return 0 if result.success else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(run_cli())
