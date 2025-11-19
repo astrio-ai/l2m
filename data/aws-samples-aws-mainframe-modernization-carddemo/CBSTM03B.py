@@ -1,288 +1,247 @@
+"""
+Python adaptation of the CBSTM03B COBOL subroutine.
+
+The original subroutine performs basic OPEN/READ/CLOSE operations for four
+files (TRNXFILE, XREFFILE, CUSTFILE, ACCTFILE).  This module mirrors that
+behavior closely so it can be exercised from Python tests.
+"""
+
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-FileReadResult = Tuple[str, Optional[str]]
+SUCCESS = "00"
+END_OF_FILE = "10"
+FILE_NOT_FOUND = "35"
+RECORD_NOT_FOUND = "23"
+NOT_OPEN = "91"
+INVALID_OPERATION = "92"
+IO_ERROR = "90"
 
 
 @dataclass
 class M03BArea:
-    """
-    Lightweight representation of the LK-M03B-AREA COBOL linkage structure.
-    """
+    """Represents the linkage area passed to the subroutine."""
 
     dd_name: str = ""
     operation: str = ""
-    return_code: str = "00"
+    return_code: str = SUCCESS
     key: str = ""
     key_len: int = 0
     field_data: str = ""
+
+    def __post_init__(self) -> None:
+        self.dd_name = (self.dd_name or "").strip().upper()
+        self.operation = (self.operation or "").strip().upper()
 
     @property
     def normalized_dd_name(self) -> str:
         return (self.dd_name or "").strip().upper()
 
-    @property
-    def operation_code(self) -> str:
-        return (self.operation or "").strip().upper()[:1]
+    def _op(self) -> str:
+        return (self.operation or "").upper()
 
     @property
     def is_open(self) -> bool:
-        return self.operation_code == "O"
+        return self._op() == "O"
 
     @property
     def is_close(self) -> bool:
-        return self.operation_code == "C"
+        return self._op() == "C"
 
     @property
     def is_read(self) -> bool:
-        return self.operation_code == "R"
+        return self._op() == "R"
 
     @property
     def is_read_key(self) -> bool:
-        return self.operation_code == "K"
+        return self._op() == "K"
 
     @property
-    def requested_key_length(self) -> int:
-        return abs(self.key_len)
+    def is_write(self) -> bool:
+        return self._op() == "W"
 
+    @property
+    def is_rewrite(self) -> bool:
+        return self._op() == "Z"
+
+    @property
     def effective_key(self) -> str:
-        key_value = self.key or ""
-        length = self.requested_key_length
+        """Return the key trimmed to the absolute key length, if supplied."""
+        length = abs(self.key_len)
         if length:
-            return key_value[:length]
-        return key_value
+            return (self.key or "")[:length]
+        return self.key or ""
 
 
 class BaseFileHandler:
-    """
-    Base class for file abstractions used by the modernized subroutine.
-    """
+    """Common helper for all data-set handlers."""
 
-    def __init__(self, dd_name: str):
-        self.dd_name = dd_name.upper()
-        self.is_open = False
+    def __init__(self, dd_name: str) -> None:
+        self.dd_name = dd_name
+        self._records: Optional[List[str]] = None
+        self._open: bool = False
 
-    def resolve_file_path(self) -> Path:
-        override = os.environ.get(f"{self.dd_name}_PATH")
-        if override:
-            return Path(override)
-        return Path(self.dd_name)
-
-    def open(self) -> str:
-        raise NotImplementedError
-
-    def read(self) -> FileReadResult:
-        return "12", None
-
-    def read_by_key(self, key: str) -> FileReadResult:
-        return "12", None
+    def open_input(self) -> str:
+        status, records = self._read_records_from_disk()
+        if status == SUCCESS:
+            self._records = records
+            self._open = True
+            self._on_open()
+        return status
 
     def close(self) -> str:
-        self.is_open = False
-        return "00"
+        self._records = None
+        self._open = False
+        self._on_close()
+        return SUCCESS
+
+    def read_next(self) -> Tuple[str, str]:
+        return INVALID_OPERATION, ""
+
+    def read_by_key(self, key: str) -> Tuple[str, str]:
+        return INVALID_OPERATION, ""
+
+    def _ensure_open(self) -> str:
+        return SUCCESS if self._open else NOT_OPEN
+
+    def _read_records_from_disk(self) -> Tuple[str, List[str]]:
+        path = Path(self.dd_name)
+        try:
+            with path.open("r", encoding="utf-8") as handle:
+                lines = [line.rstrip("\r\n") for line in handle]
+            return SUCCESS, lines
+        except FileNotFoundError:
+            return FILE_NOT_FOUND, []
+        except OSError:
+            return IO_ERROR, []
+
+    def _on_open(self) -> None:  # pragma: no cover - hook
+        pass
+
+    def _on_close(self) -> None:  # pragma: no cover - hook
+        pass
 
 
 class SequentialFileHandler(BaseFileHandler):
-    """
-    Handles sequential files (TRNXFILE, XREFFILE).
-    """
+    """Implements sequential READ logic."""
 
-    def __init__(self, dd_name: str):
+    def __init__(self, dd_name: str) -> None:
         super().__init__(dd_name)
-        self.records: Optional[List[str]] = None
-        self.cursor: int = 0
+        self._position: int = 0
 
-    def open(self) -> str:
-        path = self.resolve_file_path()
-        try:
-            with path.open("r", encoding="utf-8") as file_handle:
-                self.records = [line.rstrip("\r\n") for line in file_handle]
-        except FileNotFoundError:
-            self.records = None
-            self.cursor = 0
-            self.is_open = False
-            return "35"
+    def _on_open(self) -> None:
+        self._position = 0
 
-        self.cursor = 0
-        self.is_open = True
-        return "00"
+    def _on_close(self) -> None:
+        self._position = 0
 
-    def read(self) -> FileReadResult:
-        if not self.is_open:
-            rc = self.open()
-            if rc != "00":
-                return rc, None
-
-        if self.records is None:
-            return "35", None
-
-        if self.cursor >= len(self.records):
-            return "10", None
-
-        record = self.records[self.cursor]
-        self.cursor += 1
-        return "00", record
-
-    def close(self) -> str:
-        self.records = None
-        self.cursor = 0
-        self.is_open = False
-        return "00"
+    def read_next(self) -> Tuple[str, str]:
+        status = self._ensure_open()
+        if status != SUCCESS:
+            return status, ""
+        assert self._records is not None
+        if self._position >= len(self._records):
+            return END_OF_FILE, ""
+        record = self._records[self._position]
+        self._position += 1
+        return SUCCESS, record
 
 
-class RandomAccessFileHandler(BaseFileHandler):
-    """
-    Handles indexed/random access files (CUSTFILE, ACCTFILE).
-    """
+class KeyedFileHandler(BaseFileHandler):
+    """Implements keyed READ logic."""
 
-    def __init__(self, dd_name: str):
-        super().__init__(dd_name)
-        self.records: Optional[List[str]] = None
-
-    def open(self) -> str:
-        path = self.resolve_file_path()
-        try:
-            with path.open("r", encoding="utf-8") as file_handle:
-                self.records = [line.rstrip("\r\n") for line in file_handle]
-        except FileNotFoundError:
-            self.records = None
-            self.is_open = False
-            return "35"
-
-        self.is_open = True
-        return "00"
-
-    def read_by_key(self, key: str) -> FileReadResult:
+    def read_by_key(self, key: str) -> Tuple[str, str]:
+        status = self._ensure_open()
+        if status != SUCCESS:
+            return status, ""
         if not key:
-            return "23", None
-
-        if not self.is_open:
-            rc = self.open()
-            if rc != "00":
-                return rc, None
-
-        if self.records is None:
-            return "35", None
-
-        for record in self.records:
+            return RECORD_NOT_FOUND, ""
+        assert self._records is not None
+        for record in self._records:
             if record.startswith(key):
-                return "00", record
-
-        return "23", None
-
-    def close(self) -> str:
-        self.records = None
-        self.is_open = False
-        return "00"
+                return SUCCESS, record
+        return RECORD_NOT_FOUND, ""
 
 
 class TrnxFileHandler(SequentialFileHandler):
-    def __init__(self):
-        super().__init__("TRNXFILE")
+    """Handler for TRNXFILE (sequential access)."""
 
 
 class XrefFileHandler(SequentialFileHandler):
-    def __init__(self):
-        super().__init__("XREFFILE")
+    """Handler for XREFFILE (sequential access)."""
 
 
-class CustFileHandler(RandomAccessFileHandler):
-    def __init__(self):
-        super().__init__("CUSTFILE")
+class CustFileHandler(KeyedFileHandler):
+    """Handler for CUSTFILE (random/keyed access)."""
 
 
-class AcctFileHandler(RandomAccessFileHandler):
-    def __init__(self):
-        super().__init__("ACCTFILE")
+class AcctFileHandler(KeyedFileHandler):
+    """Handler for ACCTFILE (random/keyed access)."""
 
 
 class CBSTM03BSubroutine:
-    """
-    Python rendition of the CBSTM03B COBOL subroutine.
-    """
+    """High-level orchestrator mirroring the COBOL PERFORM blocks."""
 
-    handler_factories: Dict[str, type[BaseFileHandler]] = {
-        "TRNXFILE": TrnxFileHandler,
-        "XREFFILE": XrefFileHandler,
-        "CUSTFILE": CustFileHandler,
-        "ACCTFILE": AcctFileHandler,
-    }
+    def __init__(self) -> None:
+        self.handlers: Dict[str, BaseFileHandler] = {
+            "TRNXFILE": TrnxFileHandler("TRNXFILE"),
+            "XREFFILE": XrefFileHandler("XREFFILE"),
+            "CUSTFILE": CustFileHandler("CUSTFILE"),
+            "ACCTFILE": AcctFileHandler("ACCTFILE"),
+        }
 
-    def __init__(self):
-        self.handlers: Dict[str, BaseFileHandler] = {}
-
-    def _get_handler(self, dd_name: str) -> Optional[BaseFileHandler]:
-        factory = self.handler_factories.get(dd_name)
-        if factory is None:
-            return None
-
-        if dd_name not in self.handlers:
-            self.handlers[dd_name] = factory()
-        return self.handlers[dd_name]
-
-    def process(self, area: M03BArea) -> None:
-        dd_name = area.normalized_dd_name
-        handler = self._get_handler(dd_name)
-
+    def process(self, area: M03BArea) -> M03BArea:
+        handler = self.handlers.get(area.normalized_dd_name)
         if handler is None:
-            area.return_code = "12"
-            return
+            area.return_code = IO_ERROR
+            return area
 
-        if area.is_open:
-            rc = handler.open()
-        elif area.is_close:
-            rc = handler.close()
-        elif area.is_read:
-            rc, data = handler.read()
-            area.field_data = data or ""
-        elif area.is_read_key:
-            key = area.effective_key()
-            rc, data = handler.read_by_key(key)
-            area.field_data = data or ""
+        operation = (area.operation or "").upper()
+        field_data = area.field_data
+
+        if operation == "O":
+            status = handler.open_input()
+        elif operation == "R":
+            status, field_data = handler.read_next()
+        elif operation == "K":
+            status, field_data = handler.read_by_key(area.effective_key)
+        elif operation == "C":
+            status = handler.close()
         else:
-            rc = "12"
+            status = INVALID_OPERATION
 
-        area.return_code = rc
+        area.return_code = status
+        area.field_data = field_data
+        return area
+
+    def close_all(self) -> None:
+        for handler in self.handlers.values():
+            handler.close()
 
 
-_SUBROUTINE: Optional[CBSTM03BSubroutine] = None
+_subroutine_instance: Optional[CBSTM03BSubroutine] = None
 
 
 def _get_subroutine() -> CBSTM03BSubroutine:
-    global _SUBROUTINE
-    if _SUBROUTINE is None:
-        _SUBROUTINE = CBSTM03BSubroutine()
-    return _SUBROUTINE
+    global _subroutine_instance
+    if _subroutine_instance is None:
+        _subroutine_instance = CBSTM03BSubroutine()
+    return _subroutine_instance
 
 
 def cbstmt03b_subroutine(area: M03BArea) -> M03BArea:
-    """
-    Entry point compatible with the original COBOL subroutine linkage.
-    """
-    subroutine = _get_subroutine()
-    subroutine.process(area)
-    return area
+    """Entry-point equivalent to the COBOL PROGRAM-ID."""
+    if not isinstance(area, M03BArea):
+        raise TypeError("cbstmt03b_subroutine expects an M03BArea instance")
+    return _get_subroutine().process(area)
 
 
 def reset_subroutine() -> None:
-    """
-    Helper for tests to reset the singleton state.
-    """
-    global _SUBROUTINE
-    _SUBROUTINE = None
-
-
-__all__ = [
-    "M03BArea",
-    "CBSTM03BSubroutine",
-    "TrnxFileHandler",
-    "XrefFileHandler",
-    "CustFileHandler",
-    "AcctFileHandler",
-    "cbstmt03b_subroutine",
-    "reset_subroutine",
-]
+    """Utility used by tests to obtain a fresh subroutine instance."""
+    global _subroutine_instance
+    if _subroutine_instance is not None:
+        _subroutine_instance.close_all()
+    _subroutine_instance = None
