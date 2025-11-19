@@ -1,360 +1,317 @@
-"""CM103M message logger (Python translation).
+#!/usr/bin/env python3
+"""
+Python translation of the CM103M COBOL program.
 
-The original COBOL program listened to a message queue, echoed inbound
-messages, and wrote a formatted log to `report.log`. This Python version
-emulates that workflow by accepting newline-delimited messages from
-stdin, an optional input file, or command-line arguments. Messages are
-logged with timestamps, and processing stops after a message whose first
-four characters spell “KILL” (case-insensitive).
+The original program waited for messages on an inbound communications queue,
+echoed them back to an outbound queue, and recorded a detailed log to a
+fixed-format report file.  This module keeps the logging behavior, using
+plain text input instead of mainframe communication queues.
+
+Each non-empty, non-comment input line represents one message.  The expected
+format is:
+
+    message text[|recv_status|send_status|error_key|receipt_timestamp]
+
+Only the message text is required.  Status fields default to "OK", the error
+key defaults to a blank, and the timestamp defaults to the time the message is
+processed.  Processing stops after logging a message whose first four
+characters are "KILL" (matching the COBOL program's sentinel behavior).
 """
 
 from __future__ import annotations
 
 import argparse
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 import sys
-from typing import Iterable, Iterator, Sequence, TextIO
+from typing import Iterable, Iterator, Optional, TextIO, Tuple
 
 TEST_ID = "CM103M"
-DEFAULT_REPORT = Path("report.log")
-DEFAULT_ENCODING = "utf-8"
-DEFAULT_MAX_LENGTH = 72
 
-
-def fill(value: str, width: int) -> str:
-    """Pad or truncate a value to the desired width."""
-    truncated = value[:width]
-    padding = width - len(truncated)
-    if padding > 0:
-        truncated += " " * padding
-    return truncated
-
-
-def compose_line(*segments: tuple[str, int]) -> str:
-    """Compose a line from (value, width) segments."""
-    return "".join(fill(value, width) for value, width in segments).rstrip()
-
-
-HYPHEN_LINE = compose_line(
-    ("", 1),
-    ("*" * 65, 65),
-    ("*" * 54, 54),
-)
-
-CCVS_H1 = compose_line(
-    ("", 27),
-    (" FEDERAL COMPILER TESTING CENTER COBOL COMPILER VALIDATION SYSTEM", 67),
-    ("", 26),
-)
-
-CCVS_H3 = compose_line(
-    (" FOR OFFICIAL USE ONLY    ", 34),
-    ("COBOL 85 VERSION 4.2, Apr  1993 SSVG                      ", 58),
-    ("  COPYRIGHT   1974 ", 28),
-)
-
-LOG_HDR1 = compose_line(
-    ("", 54),
-    ("MESSAGE LOG", 11),
-)
-
-LOG_HDR2 = compose_line(
-    ("", 1),
-    ("MCS RECEIPT", 12),
-    ("PROGRAM", 8),
-    ("MCS REC", 9),
-    ("RECV SEND", 12),
-    ("MSG", 38),
-    ("MESSAGE", 7),
-)
-
-LOG_HDR3 = compose_line(
-    ("", 3),
-    ("INBOUND", 10),
-    ("RECEIPT", 8),
-    ("OUTBOUND", 9),
-    ("STAT STAT", 11),
-    ("LENGTH", 39),
-    ("CONTENT", 7),
-)
-
-LOG_HDR4 = compose_line(
-    ("", 1),
-    ("-" * 11, 11),
-    ("", 1),
-    ("-" * 7, 7),
-    ("", 1),
-    ("-" * 7, 7),
-    ("", 2),
-    ("---- ----", 11),
-    ("-" * 5, 5),
-    ("", 2),
-    ("-" * 72, 72),
-)
-
-CCVS_E2 = compose_line(
-    ("", 31),
-    ("", 21),
-    ("", 3),
-    ("", 1),
-    ("ERRORS ENCOUNTERED", 44),
-)
-
-CCVS_E3 = compose_line(
-    (" FOR OFFICIAL USE ONLY", 22),
-    ("", 12),
-    ("ON-SITE VALIDATION, NATIONAL INSTITUTE OF STD & TECH.     ", 58),
-    ("", 13),
-    (" COPYRIGHT 1974", 15),
+CCVS_H1 = (
+    " " * 27
+    + " FEDERAL COMPILER TESTING CENTER COBOL COMPILER VALIDATION SYSTEM"
+    + " " * 26
 )
 
 
 def build_ccvs_h2(test_id: str) -> str:
-    return compose_line(
-        ("CCVS74 NCC  COPY, NOT FOR DISTRIBUTION.", 52),
-        ("TEST RESULTS SET-  ", 19),
-        (test_id, 9),
-        ("", 40),
+    return (
+        "CCVS74 NCC  COPY, NOT FOR DISTRIBUTION.".ljust(52)
+        + "TEST RESULTS SET-  "
+        + test_id.ljust(9)
+        + " " * 40
     )
+
+
+CCVS_H3 = (
+    " FOR OFFICIAL USE ONLY    ".ljust(34)
+    + "COBOL 85 VERSION 4.2, Apr  1993 SSVG                      "
+    + "  COPYRIGHT   1974 "
+)
+
+HYPHEN_LINE = " " + "*" * 119
+
+LOG_HEADER_1 = " " * 54 + "MESSAGE LOG"
+LOG_HEADER_2 = (
+    " "
+    + "MCS RECEIPT".ljust(12)
+    + "PROGRAM".ljust(8)
+    + "MCS REC".ljust(9)
+    + "RECV SEND".ljust(12)
+    + "MSG".ljust(38)
+    + "MESSAGE".ljust(7)
+)
+LOG_HEADER_3 = (
+    " " * 3
+    + "INBOUND".ljust(10)
+    + "RECEIPT".ljust(8)
+    + "OUTBOUND".ljust(9)
+    + "STAT STAT".ljust(11)
+    + "LENGTH".ljust(39)
+    + "CONTENT".ljust(7)
+)
+LOG_HEADER_4 = (
+    " "
+    + "-" * 11
+    + " "
+    + "-" * 7
+    + " "
+    + "-" * 7
+    + "  "
+    + "---- ----"
+    + "-" * 5
+    + "  "
+    + "-" * 72
+)
+
+CCVS_E3 = (
+    " FOR OFFICIAL USE ONLY".ljust(22)
+    + " " * 12
+    + "ON-SITE VALIDATION, NATIONAL INSTITUTE OF STD & TECH.     "
+    + " " * 13
+    + " COPYRIGHT 1974"
+)
 
 
 def build_ccvs_e1(test_id: str) -> str:
-    return compose_line(
-        ("", 52),
-        ("END OF TEST-  ", 14),
-        (test_id, 9),
-        (" NTIS DISTRIBUTION COBOL 74", 45),
+    return (
+        " " * 52
+        + "END OF TEST-  "
+        + test_id.ljust(9)
+        + " NTIS DISTRIBUTION COBOL 74"
     )
 
 
-def build_header_lines(test_id: str) -> list[str]:
-    """Replicate the original HEAD-ROUTINE output."""
-    lines = [CCVS_H1]
-    lines.extend([""] * 2)
-    lines.append(build_ccvs_h2(test_id))
-    lines.extend([""] * 5)
-    lines.append(CCVS_H3)
-    lines.append("")
-    lines.append(HYPHEN_LINE)
-    return lines
+def build_ccvs_e2(errors: int) -> str:
+    return " " * 52 + f"{errors:>3} " + "ERRORS ENCOUNTERED".ljust(44)
 
 
-def build_log_header_lines() -> list[str]:
-    """Replicate the LOG-HEADER routine output."""
-    lines: list[str] = []
-    lines.extend([""] * 3)
-    lines.append(LOG_HDR1)
-    lines.extend([""] * 3)
-    lines.append(LOG_HDR2)
-    lines.append(LOG_HDR3)
-    lines.append("")
-    lines.append(LOG_HDR4)
-    lines.append("")
-    return lines
+def build_ccvs_e4(executed: int, passed: int) -> str:
+    executed = max(executed, 0)
+    passed = max(min(passed, executed), 0)
+    return f"{passed:>3} OF {executed:>3}  TESTS WERE EXECUTED SUCCESSFULLY"
 
 
-def build_footer_lines(test_id: str) -> list[str]:
-    """Replicate the END-ROUTINE output."""
-    lines = [HYPHEN_LINE]
-    lines.extend([""] * 4)
-    lines.append(build_ccvs_e1(test_id))
-    lines.append(CCVS_E2)
-    lines.append(CCVS_E3)
-    return lines
+@dataclass
+class Message:
+    text: str
+    inbound_status: str = "OK"
+    outbound_status: str = "OK"
+    error_key: str = " "
+    receipt_time: Optional[datetime] = None
+
+    @property
+    def kill_requested(self) -> bool:
+        return self.text[:4].upper() == "KILL"
 
 
 class ReportWriter:
-    """Collects lines and writes them to the report file."""
+    """Helper that renders the fixed-format report used by CM103M."""
 
-    def __init__(self, target: Path, *, encoding: str = DEFAULT_ENCODING) -> None:
-        self.target = target
-        self.encoding = encoding
-        self.lines: list[str] = []
+    def __init__(self, handle: TextIO, test_id: str = TEST_ID) -> None:
+        self.handle = handle
+        self.test_id = test_id
 
-    def add_line(self, text: str = "") -> None:
-        self.lines.append(text.rstrip("\n"))
+    def write_line(self, text: str = "") -> None:
+        self.handle.write(text.rstrip("\n"))
+        self.handle.write("\n")
 
-    def add_blank(self, count: int = 1) -> None:
-        for _ in range(count):
-            self.add_line("")
+    def write_header(self) -> None:
+        self.write_line(CCVS_H1)
+        self.write_line(build_ccvs_h2(self.test_id))
+        self.write_line(CCVS_H3)
+        self.write_line(HYPHEN_LINE)
+        self.write_line()
 
-    def extend(self, lines: Iterable[str]) -> None:
-        for line in lines:
-            self.add_line(line)
+    def write_log_header(self) -> None:
+        self.write_line(LOG_HEADER_1)
+        self.write_line(LOG_HEADER_2)
+        self.write_line(LOG_HEADER_3)
+        self.write_line(LOG_HEADER_4)
+        self.write_line()
 
-    def save(self) -> None:
-        self.target.parent.mkdir(parents=True, exist_ok=True)
-        content = "\n".join(self.lines)
-        if self.lines:
-            content += "\n"
-        self.target.write_text(content, encoding=self.encoding)
-
-
-def format_time_rec(moment: datetime) -> str:
-    """Format a timestamp as HH:MM:SS.hh (hundredths)."""
-    hundredths = int(round(moment.microsecond / 10000))
-    second = moment.second
-    minute = moment.minute
-    hour = moment.hour
-
-    if hundredths == 100:
-        hundredths = 0
-        second += 1
-        if second == 60:
-            second = 0
-            minute += 1
-            if minute == 60:
-                minute = 0
-                hour = (hour + 1) % 24
-
-    return f"{hour:02}:{minute:02}:{second:02}.{hundredths:02}"
+    def write_footer(self, executed: int, errors: int) -> None:
+        self.write_line(HYPHEN_LINE)
+        self.write_line()
+        self.write_line(build_ccvs_e1(self.test_id))
+        self.write_line(build_ccvs_e2(errors))
+        self.write_line(CCVS_E3)
+        self.write_line(build_ccvs_e4(executed, executed - errors))
 
 
-def format_seconds_field(value: float) -> str:
-    """Format elapsed time using the PIC ---.99 pattern."""
-    constrained = max(-999.99, min(999.99, value))
-    return f"{constrained:6.2f}"
+def maybe_parse_timestamp(value: str) -> Optional[datetime]:
+    cleaned = value.strip()
+    if not cleaned:
+        return None
+    candidate = cleaned if not cleaned.endswith("Z") else f"{cleaned[:-1]}+00:00"
+    try:
+        return datetime.fromisoformat(candidate)
+    except ValueError:
+        return None
 
 
-def build_log_line(raw_message: str, max_length: int) -> tuple[str, bool]:
-    """Create a formatted log line and indicate if the message was the terminator."""
-    queue_time = datetime.now()
+def parse_message_line(line: str) -> Message:
+    parts = line.split("|", 4)
+    text = parts[0]
+    inbound = parts[1].strip() if len(parts) > 1 else "OK"
+    outbound = parts[2].strip() if len(parts) > 2 else "OK"
+    error_key = (parts[3].strip() if len(parts) > 3 else "") or " "
+    receipt_time = maybe_parse_timestamp(parts[4]) if len(parts) > 4 else None
+
+    inbound = inbound or "OK"
+    outbound = outbound or "OK"
+
+    return Message(
+        text=text,
+        inbound_status=inbound,
+        outbound_status=outbound,
+        error_key=error_key,
+        receipt_time=receipt_time,
+    )
+
+
+def iter_messages(raw_lines: Iterable[str]) -> Iterator[Message]:
+    for raw in raw_lines:
+        stripped = raw.rstrip("\r\n")
+        if not stripped.strip():
+            continue
+        if stripped.lstrip().startswith("#"):
+            continue
+        yield parse_message_line(stripped)
+
+
+def normalise_status(value: str) -> str:
+    cleaned = (value or "").upper()
+    if not cleaned:
+        cleaned = "OK"
+    return cleaned.ljust(2)[:2]
+
+
+def is_status_ok(value: str) -> bool:
+    cleaned = (value or "").strip().upper()
+    return cleaned in {"", "OK", "0", "00"}
+
+
+def clamp_seconds(value: float) -> float:
+    return max(min(value, 999.99), -999.99)
+
+
+def diff_seconds(late: datetime, early: datetime) -> float:
+    return clamp_seconds((late - early).total_seconds())
+
+
+def build_log_entry(message: Message) -> Tuple[str, bool, bool]:
+    base_time = message.receipt_time or datetime.now()
     in_time = datetime.now()
-    out_time = datetime.now()
+    send_time = datetime.now()
 
-    message_field = raw_message[:max_length].ljust(max_length)
-    msg_length = len(raw_message)
-    truncated = msg_length > max_length
+    prog_time = diff_seconds(in_time, base_time)
+    time_sent = diff_seconds(send_time, base_time)
 
-    recv_status = "OK"
-    send_status = "OV" if truncated else "OK"
-    send_error = "T" if truncated else " "
+    prog_time_field = f"{prog_time:7.2f}"
+    time_sent_field = f"{time_sent:7.2f}"
 
+    recv_status = normalise_status(message.inbound_status)
+    send_status = normalise_status(message.outbound_status)
+    err_key = (message.error_key or " ")[:1] or " "
+
+    msg_length = min(len(message.text), 999)
+    msg_field = message.text[:72].ljust(72)
+
+    time_record = base_time.strftime("%H:%M:%S")
     line = (
-        " "
-        + format_time_rec(queue_time)
-        + " "
-        + format_seconds_field((in_time - queue_time).total_seconds())
-        + "  "
-        + format_seconds_field((out_time - queue_time).total_seconds())
-        + "    "
-        + recv_status
-        + "  "
-        + send_status
-        + "/"
-        + send_error
-        + "   "
-        + f"{min(msg_length, 999):>3}"
-        + "   "
-        + message_field
+        f" {time_record} "
+        f"{prog_time_field}"
+        f"  {time_sent_field}"
+        f"    {recv_status}"
+        f"  {send_status}/{err_key}"
+        f"   {msg_length:3d}   "
+        f"{msg_field}"
     )
 
-    kill_seen = message_field[:4].upper() == "KILL"
-    return line, kill_seen
+    has_error = not (
+        is_status_ok(message.inbound_status)
+        and is_status_ok(message.outbound_status)
+        and err_key.strip() in {"", "0"}
+    )
+
+    return line, has_error, message.kill_requested
 
 
-def read_stream(stream: TextIO) -> Iterator[str]:
-    """Yield stripped lines from a text stream."""
-    for raw_line in stream:
-        yield raw_line.rstrip("\r\n")
+def log_messages(
+    raw_lines: Iterable[str], report_path: str | Path = "report.log"
+) -> Tuple[int, int]:
+    report_path = Path(report_path)
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+
+    record_count = 0
+    error_count = 0
+
+    with report_path.open("w", encoding="utf-8") as handle:
+        writer = ReportWriter(handle, test_id=TEST_ID)
+        writer.write_header()
+        writer.write_log_header()
+
+        for message in iter_messages(raw_lines):
+            line, has_error, kill = build_log_entry(message)
+            writer.write_line(line)
+
+            record_count += 1
+            if has_error:
+                error_count += 1
+
+            if kill:
+                break
+
+        writer.write_footer(record_count, error_count)
+
+    return record_count, error_count
 
 
-def iter_messages(args: argparse.Namespace) -> Iterator[str]:
-    """Determine the message source based on CLI arguments."""
-    if args.messages:
-        for message in args.messages:
-            yield message
-        return
-
-    input_path: Path | None = args.input
-    if input_path is not None:
-        if str(input_path) == "-":
-            yield from read_stream(sys.stdin)
-        else:
-            with input_path.open("r", encoding=args.encoding) as source:
-                yield from read_stream(source)
-        return
-
-    if sys.stdin.isatty():
-        sys.stderr.write(
-            "Enter messages followed by EOF (Ctrl-D on Unix, Ctrl-Z then Enter on Windows).\n"
-        )
-    yield from read_stream(sys.stdin)
-
-
-def positive_int(value: str) -> int:
-    ivalue = int(value)
-    if ivalue <= 0:
-        raise argparse.ArgumentTypeError("value must be a positive integer")
-    return ivalue
-
-
-def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
+def main(argv: Optional[Iterable[str]] = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Python port of CM103M: log inbound messages to report.log."
-    )
-    parser.add_argument(
-        "-i",
-        "--input",
-        type=Path,
-        default=None,
-        help="Read messages from a file (use '-' for stdin).",
-    )
-    parser.add_argument(
-        "-o",
-        "--output",
-        "--report",
-        dest="report",
-        type=Path,
-        default=DEFAULT_REPORT,
-        help="Path to the report file (default: report.log).",
-    )
-    parser.add_argument(
-        "--encoding",
-        default=DEFAULT_ENCODING,
-        help="Encoding for input files and the report (default: utf-8).",
-    )
-    parser.add_argument(
-        "--max-length",
-        type=positive_int,
-        default=DEFAULT_MAX_LENGTH,
-        help="Maximum message length before truncation (default: 72).",
-    )
-    parser.add_argument(
-        "-q",
-        "--quiet",
-        action="store_true",
-        help="Suppress the completion message.",
+        description="Generate CM103M-style report.log entries from plain text input."
     )
     parser.add_argument(
         "messages",
-        nargs="*",
-        help="Inline messages to process (bypasses --input/stdin when provided).",
+        nargs="?",
+        help="Path to an input file containing message definitions. "
+        "If omitted, stdin is used.",
     )
-    return parser.parse_args(argv)
+    parser.add_argument(
+        "--report",
+        default="report.log",
+        help="Destination path for the generated report (default: %(default)s).",
+    )
+    args = parser.parse_args(list(argv) if argv is not None else None)
 
-
-def main(argv: Sequence[str] | None = None) -> int:
-    args = parse_args(argv)
-
-    writer = ReportWriter(args.report, encoding=args.encoding)
-    writer.extend(build_header_lines(TEST_ID))
-    writer.extend(build_log_header_lines())
-
-    entry_count = 0
-    for raw in iter_messages(args):
-        log_line, kill_seen = build_log_line(raw, args.max_length)
-        writer.add_line(log_line)
-        entry_count += 1
-        if kill_seen:
-            break
-
-    writer.extend(build_footer_lines(TEST_ID))
-    writer.save()
-
-    if not args.quiet:
-        print(f"{entry_count} message(s) logged to {args.report}", file=sys.stderr)
+    if args.messages:
+        with open(args.messages, "r", encoding="utf-8") as source:
+            log_messages(source, args.report)
+    else:
+        log_messages(sys.stdin, args.report)
 
     return 0
 
