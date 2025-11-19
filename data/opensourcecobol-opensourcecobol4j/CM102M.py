@@ -138,7 +138,7 @@ class CM102MTestHarness:
     def __init__(self) -> None:
         self.queue = CommunicationQueue([self.DEFAULT_DESTINATION], self.PASSWORD)
         self.results: List[TestCaseResult] = []
-        self.message_log: List<MessageLogEntry] = []
+        self.message_log: List[MessageLogEntry] = []
 
     def run(self) -> List[TestCaseResult]:
         self._run_disable_status_tests()
