@@ -1498,25 +1498,39 @@ class Coder:
 
                     # Special handling for rate limit errors - use longer delays and timeout
                     is_rate_limit = ex_info.name in ("RateLimitError", "RouterRateLimitError")
+                    is_free_tier = False
                     if is_rate_limit:
-                        # For rate limits, start with longer delay and allow longer total wait time
-                        if retry_delay < 5.0:
-                            retry_delay = 5.0  # Start with 5 seconds for rate limits
-                        max_retry_timeout = RETRY_TIMEOUT * 3  # Allow 3x longer for rate limits
-                        
-                        # Check if it's a free tier model and suggest adding API key
+                        # Check if it's a free tier model - fail faster for free models
                         model_name = self.main_model.name if hasattr(self, "main_model") else ""
                         err_str = str(err).lower()
-                        if ":free" in model_name.lower() or "free" in err_str:
-                            self.io.tool_output(
-                                "\n💡 Tip: Free tier models have strict rate limits."
-                            )
-                            self.io.tool_output(
-                                "   Consider adding your own API key for better rate limits:"
-                            )
-                            self.io.tool_output(
-                                "   https://openrouter.ai/settings/integrations"
-                            )
+                        is_free_tier = ":free" in model_name.lower() or "free" in err_str
+                        
+                        if is_free_tier:
+                            # For free tier models, fail much faster (after 2-3 retries)
+                            # Free models have very strict rate limits that rarely recover quickly
+                            max_retry_timeout = 30.0  # Only wait 30 seconds total for free models
+                            if retry_delay < 5.0:
+                                retry_delay = 5.0  # Start with 5 seconds
+                            
+                            # Show tip only once
+                            if retry_delay == 5.0:
+                                self.io.tool_output(
+                                    "\n💡 Tip: Free tier models have strict rate limits."
+                                )
+                                self.io.tool_output(
+                                    "   Consider adding your own API key for better rate limits:"
+                                )
+                                self.io.tool_output(
+                                    "   https://openrouter.ai/settings/integrations"
+                                )
+                                self.io.tool_output(
+                                    "\n   Alternatively, try a different model with: /model <model-name>"
+                                )
+                        else:
+                            # For paid models, allow longer retry timeout
+                            if retry_delay < 5.0:
+                                retry_delay = 5.0  # Start with 5 seconds for rate limits
+                            max_retry_timeout = RETRY_TIMEOUT * 3  # Allow 3x longer for paid rate limits
 
                     should_retry = ex_info.retry
                     if should_retry:
@@ -1524,17 +1538,35 @@ class Coder:
                         if retry_delay > max_retry_timeout:
                             should_retry = False
                             if is_rate_limit:
-                                self.io.tool_error(
-                                    f"\n⚠️  Rate limit retry timeout reached ({max_retry_timeout}s)."
-                                )
-                                self.io.tool_error(
-                                    "   The API provider is still rate limiting. Try again later or:"
-                                )
-                                self.io.tool_error("   1. Switch to a different model")
-                                self.io.tool_error(
-                                    "   2. Add your own API key for better rate limits"
-                                )
-                                self.io.tool_error("   3. Wait a few minutes before retrying")
+                                model_name = self.main_model.name if hasattr(self, "main_model") else ""
+                                is_free_tier = ":free" in model_name.lower()
+                                
+                                if is_free_tier:
+                                    self.io.tool_error(
+                                        f"\n⚠️  Free tier model rate limited ({max_retry_timeout}s timeout reached)."
+                                    )
+                                    self.io.tool_error(
+                                        "   Free tier models have very strict rate limits. Options:"
+                                    )
+                                    self.io.tool_error("   1. Switch to a different model: /model <model-name>")
+                                    self.io.tool_error(
+                                        "   2. Add your OpenRouter API key for better rate limits"
+                                    )
+                                    self.io.tool_error(
+                                        "   3. Wait 5-10 minutes before retrying this model"
+                                    )
+                                else:
+                                    self.io.tool_error(
+                                        f"\n⚠️  Rate limit retry timeout reached ({max_retry_timeout}s)."
+                                    )
+                                    self.io.tool_error(
+                                        "   The API provider is still rate limiting. Try again later or:"
+                                    )
+                                    self.io.tool_error("   1. Switch to a different model")
+                                    self.io.tool_error(
+                                        "   2. Add your own API key for better rate limits"
+                                    )
+                                    self.io.tool_error("   3. Wait a few minutes before retrying")
 
                     if not should_retry:
                         self.mdstream = None
