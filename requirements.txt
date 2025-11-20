@@ -77,12 +77,14 @@ mixpanel>=4.10.0
 oslex>=0.1.3
 
 # Code evaluation metrics
-codebleu>=0.7.1
-# Note: Despite codebleu 0.7.0 requiring tree-sitter<0.23.0, we need tree-sitter>=0.24.0
-# to fix "an integer is required" compatibility issue with tree-sitter-python.
-# The newer tree-sitter works fine despite the version constraint warning.
-tree-sitter>=0.24.0
+codebleu>=0.7.0
+# Note: codebleu 0.7.0 requires tree-sitter<0.23.0, but we need >=0.24.0 to fix
+# "an integer is required" compatibility issue. Install codebleu first, then upgrade:
+#   pip install 'tree-sitter>=0.24.0' --upgrade
 # tree-sitter-python may already be provided by grep-ast dependency.
 
 # Harbor benchmarking (optional - only needed for evals/harbor/)
 harbor>=0.1.18
+
+# Visualization (optional - only needed for evals/codebleu/visualize.py)
+matplotlib>=3.7.0
