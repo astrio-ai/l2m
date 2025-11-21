@@ -2,7 +2,6 @@
 
 from .copypaste import *  # noqa: F403
 from .editor import *  # noqa: F403
-from .voice import *  # noqa: F403
 
 # GUI is optional (requires streamlit), so import lazily
 # from .gui import *  # noqa: F403
@@ -10,8 +9,6 @@ from .voice import *  # noqa: F403
 __all__ = [
     "ClipboardWatcher",
     "GUI",
-    "Voice",
-    "SoundDeviceError",
 ]
 
 # Lazy import for GUI to avoid requiring streamlit at import time

@@ -680,27 +680,6 @@ def get_parser(default_config_files, git_root):
         default=False,
     )
 
-    group = parser.add_argument_group("Voice settings")
-    group.add_argument(
-        "--voice-format",
-        metavar="VOICE_FORMAT",
-        default="wav",
-        choices=["wav", "mp3", "webm"],
-        help="Audio format for voice recording (default: wav). webm and mp3 require ffmpeg",
-    )
-    group.add_argument(
-        "--voice-language",
-        metavar="VOICE_LANGUAGE",
-        default="en",
-        help="Specify the language for voice using ISO 639-1 code (default: auto)",
-    )
-    group.add_argument(
-        "--voice-input-device",
-        metavar="VOICE_INPUT_DEVICE",
-        default=None,
-        help="Specify the input device name for voice recording",
-    )
-
     group = parser.add_argument_group("Other settings")
     group.add_argument(
         "--disable-playwright",
