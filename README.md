@@ -11,6 +11,10 @@
 
 Legacy2Modern (L2M) is an open-source, AI coding agent that helps you modernize legacy codebases into modern programming languages within your terminal.
 
+<p align="left">
+  <img src="./.github/l2m-cli.png" alt="L2M CLI" width="80%" />
+</p>
+
 ## Features
 
 - **Modern TUI**: Clean, Codex-style terminal interface with brand-colored UI elements
