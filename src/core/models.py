@@ -1070,7 +1070,7 @@ class Model(ModelSettings):
                             print("\n💡 Tip: Free tier models have strict rate limits.")
                             print("   Consider adding your own API key for better rate limits:")
                             print("   https://openrouter.ai/settings/integrations")
-                            print("\n   Alternatively, try a different model.")
+                            print("\n   Alternatively, try a different model with: /model <model-name>")
                     else:
                         # For paid models, allow longer retry timeout
                         if retry_delay < 5.0:
