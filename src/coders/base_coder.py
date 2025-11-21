@@ -90,6 +90,7 @@ all_fences = [
 class Coder:
     abs_fnames = None
     abs_read_only_fnames = None
+    _shutdown_flag = False  # Flag to signal shutdown
     repo = None
     last_l2m_commit_hash = None
     l2m_edited_files = None
@@ -1483,6 +1484,9 @@ class Coder:
         interrupted = False
         try:
             while True:
+                # Check if shutdown was requested before each iteration
+                if self._shutdown_flag:
+                    break
                 try:
                     yield from self.send(messages, functions=self.functions)
                     break
@@ -1580,8 +1584,20 @@ class Coder:
                     else:
                         self.io.tool_error(err_msg)
 
+                    # Check if shutdown was requested
+                    if self._shutdown_flag:
+                        break
+                    
                     self.io.tool_output(f"Retrying in {retry_delay:.1f} seconds...")
-                    time.sleep(retry_delay)
+                    # Check shutdown flag during sleep
+                    sleep_interval = min(retry_delay, 0.5)  # Check every 0.5 seconds
+                    elapsed = 0.0
+                    while elapsed < retry_delay and not self._shutdown_flag:
+                        time.sleep(sleep_interval)
+                        elapsed += sleep_interval
+                    
+                    if self._shutdown_flag:
+                        break
                     continue
                 except KeyboardInterrupt:
                     interrupted = True
@@ -1795,6 +1811,7 @@ class Coder:
     def __del__(self):
         """Cleanup when the Coder object is destroyed."""
         self.ok_to_warm_cache = False
+        self._shutdown_flag = True
 
     def add_assistant_reply_to_cur_messages(self):
         if self.partial_response_content:
