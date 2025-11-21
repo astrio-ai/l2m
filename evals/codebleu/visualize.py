@@ -2,15 +2,30 @@
 
 import json
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List, Tuple
 
 try:
     import matplotlib.pyplot as plt
     import matplotlib
+    import numpy as np
+    from scipy import stats
     matplotlib.use("Agg")  # Use non-interactive backend
     HAS_MATPLOTLIB = True
+    HAS_SCIPY = True
 except ImportError:
     HAS_MATPLOTLIB = False
+    HAS_SCIPY = False
+    try:
+        import numpy as np
+    except ImportError:
+        np = None
+
+# CodeBLEU color palette
+COLOR_CODEBLEU = "#293241"  # CodeBLEU (total)
+COLOR_NGRAM = "#ee6c4d"  # N-gram
+COLOR_WEIGHTED_NGRAM = "#e0fbfc"  # Weighted N-gram
+COLOR_SYNTAX = "#98c1d9"  # Syntax
+COLOR_DATAFLOW = "#3d5a80"  # Data-flow
 
 
 def load_results(json_file: Path) -> Dict[str, Any]:
@@ -51,7 +66,13 @@ def plot_codebleu_scores(
     dataflow_scores = []
     
     for file_key, result in results_dict.items():
-        if result.get("status") == "success" and "codebleu" in result:
+        # Handle both formats:
+        # - modernize_and_evaluate.py: has "status" field ("success" or "evaluation_failed")
+        # - benchmark.py: no "status" field, just has "codebleu" directly
+        has_codebleu = "codebleu" in result
+        status_check = "status" not in result or result.get("status") == "success"
+        
+        if has_codebleu and status_check:
             files.append(file_key.replace(".CBL", ""))
             codebleu_scores.append(result["codebleu"])
             
@@ -72,13 +93,13 @@ def plot_codebleu_scores(
     width = 0.15 if show_components else 0.6
     
     if show_components:
-        ax.bar([x - 1.5*width for x in x_pos], ngram_scores, width, label="N-gram", alpha=0.8)
-        ax.bar([x - 0.5*width for x in x_pos], weighted_ngram_scores, width, label="Weighted N-gram", alpha=0.8)
-        ax.bar([x + 0.5*width for x in x_pos], syntax_scores, width, label="Syntax", alpha=0.8)
-        ax.bar([x + 1.5*width for x in x_pos], dataflow_scores, width, label="Data-flow", alpha=0.8)
-        ax.bar([x - 2.5*width for x in x_pos], codebleu_scores, width, label="CodeBLEU (total)", alpha=0.9, edgecolor="black", linewidth=1.5)
+        ax.bar([x - 1.5*width for x in x_pos], ngram_scores, width, label="N-gram", alpha=0.8, color=COLOR_NGRAM)
+        ax.bar([x - 0.5*width for x in x_pos], weighted_ngram_scores, width, label="Weighted N-gram", alpha=0.8, color=COLOR_WEIGHTED_NGRAM)
+        ax.bar([x + 0.5*width for x in x_pos], syntax_scores, width, label="Syntax", alpha=0.8, color=COLOR_SYNTAX)
+        ax.bar([x + 1.5*width for x in x_pos], dataflow_scores, width, label="Data-flow", alpha=0.8, color=COLOR_DATAFLOW)
+        ax.bar([x - 2.5*width for x in x_pos], codebleu_scores, width, label="CodeBLEU (total)", alpha=0.9, linewidth=1.5, color=COLOR_CODEBLEU)
     else:
-        bars = ax.bar(x_pos, codebleu_scores, width, alpha=0.7, color="steelblue", edgecolor="black")
+        bars = ax.bar(x_pos, codebleu_scores, width, alpha=0.7, color=COLOR_CODEBLEU)
         
         # Add value labels on bars
         for i, (bar, score) in enumerate(zip(bars, codebleu_scores)):
@@ -92,8 +113,8 @@ def plot_codebleu_scores(
                 fontsize=9,
             )
     
-    ax.set_xlabel("Files", fontsize=12, fontweight="bold")
-    ax.set_ylabel("CodeBLEU Score", fontsize=12, fontweight="bold")
+    ax.set_xlabel("Number of Files", fontsize=12, fontweight="bold")
+    ax.set_ylabel("Average CodeBLEU Score", fontsize=12, fontweight="bold")
     ax.set_title("CodeBLEU Evaluation Results", fontsize=14, fontweight="bold")
     ax.set_xticks(x_pos)
     ax.set_xticklabels(files, rotation=45, ha="right")
@@ -143,7 +164,13 @@ def plot_component_comparison(results: Dict[str, Any], output_file: Optional[Pat
     dataflow_scores = []
     
     for file_key, result in results_dict.items():
-        if result.get("status") == "success" and "codebleu" in result:
+        # Handle both formats:
+        # - modernize_and_evaluate.py: has "status" field ("success" or "evaluation_failed")
+        # - benchmark.py: no "status" field, just has "codebleu" directly
+        has_codebleu = "codebleu" in result
+        status_check = "status" not in result or result.get("status") == "success"
+        
+        if has_codebleu and status_check:
             files.append(file_key.replace(".CBL", ""))
             ngram_scores.append(result.get("ngram_match_score", 0.0))
             weighted_ngram_scores.append(result.get("weighted_ngram_match_score", 0.0))
@@ -160,13 +187,13 @@ def plot_component_comparison(results: Dict[str, Any], output_file: Optional[Pat
     x_pos = range(len(files))
     width = 0.2
     
-    ax.bar([x - 1.5*width for x in x_pos], ngram_scores, width, label="N-gram Match", alpha=0.8, color="#1f77b4")
-    ax.bar([x - 0.5*width for x in x_pos], weighted_ngram_scores, width, label="Weighted N-gram", alpha=0.8, color="#ff7f0e")
-    ax.bar([x + 0.5*width for x in x_pos], syntax_scores, width, label="Syntax Match", alpha=0.8, color="#2ca02c")
-    ax.bar([x + 1.5*width for x in x_pos], dataflow_scores, width, label="Data-flow Match", alpha=0.8, color="#d62728")
+    ax.bar([x - 1.5*width for x in x_pos], ngram_scores, width, label="N-gram Match", alpha=0.8, color=COLOR_NGRAM)
+    ax.bar([x - 0.5*width for x in x_pos], weighted_ngram_scores, width, label="Weighted N-gram", alpha=0.8, color=COLOR_WEIGHTED_NGRAM)
+    ax.bar([x + 0.5*width for x in x_pos], syntax_scores, width, label="Syntax Match", alpha=0.8, color=COLOR_SYNTAX)
+    ax.bar([x + 1.5*width for x in x_pos], dataflow_scores, width, label="Data-flow Match", alpha=0.8, color=COLOR_DATAFLOW)
     
-    ax.set_xlabel("Files", fontsize=12, fontweight="bold")
-    ax.set_ylabel("Score", fontsize=12, fontweight="bold")
+    ax.set_xlabel("Number ofFiles", fontsize=12, fontweight="bold")
+    ax.set_ylabel("Average Score", fontsize=12, fontweight="bold")
     ax.set_title("CodeBLEU Component Scores Comparison", fontsize=14, fontweight="bold")
     ax.set_xticks(x_pos)
     ax.set_xticklabels(files, rotation=45, ha="right")
@@ -198,7 +225,7 @@ def plot_score_distribution(results: Dict[str, Any], output_file: Optional[Path]
     codebleu_scores = [
         result["codebleu"]
         for result in results_dict.values()
-        if result.get("status") == "success" and "codebleu" in result
+        if "codebleu" in result and ("status" not in result or result.get("status") == "success")
     ]
     
     if not codebleu_scores:
@@ -207,7 +234,7 @@ def plot_score_distribution(results: Dict[str, Any], output_file: Optional[Path]
     
     fig, ax = plt.subplots(figsize=(10, 6))
     
-    ax.hist(codebleu_scores, bins=min(20, len(codebleu_scores)), edgecolor="black", alpha=0.7, color="steelblue")
+    ax.hist(codebleu_scores, bins=min(20, len(codebleu_scores)), alpha=0.7, color=COLOR_CODEBLEU)
     
     summary = results.get("summary", {})
     mean_score = summary.get("mean_codebleu", 0.0)
@@ -218,7 +245,7 @@ def plot_score_distribution(results: Dict[str, Any], output_file: Optional[Path]
     ax.axvline(x=min_score, color="orange", linestyle=":", linewidth=2, label=f"Min: {min_score:.3f}")
     ax.axvline(x=max_score, color="green", linestyle=":", linewidth=2, label=f"Max: {max_score:.3f}")
     
-    ax.set_xlabel("CodeBLEU Score", fontsize=12, fontweight="bold")
+    ax.set_xlabel("Average CodeBLEU Score", fontsize=12, fontweight="bold")
     ax.set_ylabel("Number of Files", fontsize=12, fontweight="bold")
     ax.set_title("CodeBLEU Score Distribution", fontsize=14, fontweight="bold")
     ax.grid(axis="y", alpha=0.3, linestyle="--")
@@ -233,6 +260,141 @@ def plot_score_distribution(results: Dict[str, Any], output_file: Optional[Path]
     else:
         plt.savefig("codebleu_distribution.png", dpi=300, bbox_inches="tight")
         print("Distribution plot saved to: codebleu_distribution.png")
+    
+    plt.close()
+
+
+def plot_component_relationships(
+    results: Dict[str, Any],
+    output_file: Optional[Path] = None,
+):
+    """
+    Create scatter plots showing relationships between CodeBLEU components with regression analysis.
+    
+    Creates a 2x2 grid showing:
+    1. CodeBLEU vs Syntax Match
+    2. CodeBLEU vs N-gram Match
+    3. Syntax vs Data-flow Match
+    4. CodeBLEU vs Weighted N-gram Match
+    """
+    if not HAS_MATPLOTLIB:
+        print("Error: matplotlib is required for visualization.")
+        print("Install with: pip install matplotlib")
+        return
+    
+    if not HAS_SCIPY or np is None:
+        print("Error: numpy and scipy are required for regression analysis.")
+        print("Install with: pip install numpy scipy")
+        return
+    
+    results_dict = results.get("results", {})
+    if not results_dict:
+        print("No results to visualize.")
+        return
+    
+    # Extract data
+    codebleu_scores = []
+    ngram_scores = []
+    weighted_ngram_scores = []
+    syntax_scores = []
+    dataflow_scores = []
+    file_names = []
+    
+    for file_key, result in results_dict.items():
+        has_codebleu = "codebleu" in result
+        status_check = "status" not in result or result.get("status") == "success"
+        
+        if has_codebleu and status_check:
+            file_names.append(file_key.replace(".CBL", ""))
+            codebleu_scores.append(result["codebleu"])
+            ngram_scores.append(result.get("ngram_match_score", 0.0))
+            weighted_ngram_scores.append(result.get("weighted_ngram_match_score", 0.0))
+            syntax_scores.append(result.get("syntax_match_score", 0.0))
+            dataflow_scores.append(result.get("dataflow_match_score", 0.0))
+    
+    if not codebleu_scores:
+        print("No successful evaluations to visualize.")
+        return
+    
+    # Convert to numpy arrays
+    codebleu = np.array(codebleu_scores)
+    ngram = np.array(ngram_scores)
+    weighted_ngram = np.array(weighted_ngram_scores)
+    syntax = np.array(syntax_scores)
+    dataflow = np.array(dataflow_scores)
+    
+    # Create 2x2 subplot grid
+    fig, axes = plt.subplots(2, 2, figsize=(14, 12))
+    fig.suptitle("CodeBLEU Component Relationships", fontsize=16, fontweight="bold")
+    
+    # Helper function to add regression line and statistics
+    def add_regression(ax, x, y, xlabel, ylabel, title):
+        """Add scatter plot with regression line and statistics box."""
+        # Remove NaN values
+        mask = ~(np.isnan(x) | np.isnan(y))
+        x_clean = x[mask]
+        y_clean = y[mask]
+        
+        if len(x_clean) < 2:
+            ax.text(0.5, 0.5, "Insufficient data", ha="center", va="center", transform=ax.transAxes)
+            return
+        
+        # Calculate regression
+        slope, intercept, r_value, p_value, std_err = stats.linregress(x_clean, y_clean)
+        r_squared = r_value ** 2
+        
+        # Create scatter plot
+        scatter = ax.scatter(x_clean, y_clean, alpha=0.6, s=100, c=COLOR_CODEBLEU, edgecolors='white', linewidths=0.5)
+        
+        # Add regression line
+        x_line = np.linspace(x_clean.min(), x_clean.max(), 100)
+        y_line = slope * x_line + intercept
+        ax.plot(x_line, y_line, '--', color='gray', linewidth=2, alpha=0.7, label='Regression line')
+        
+        # Add statistics box
+        stats_text = f'β = {slope:.3f}\np = {p_value:.3f}\nR² = {r_squared:.3f}'
+        ax.text(0.98, 0.02, stats_text, transform=ax.transAxes,
+                fontsize=10, verticalalignment='bottom', horizontalalignment='right',
+                bbox=dict(boxstyle='round', facecolor='white', alpha=0.8, edgecolor='gray'))
+        
+        ax.set_xlabel(xlabel, fontsize=11, fontweight="bold")
+        ax.set_ylabel(ylabel, fontsize=11, fontweight="bold")
+        ax.set_title(title, fontsize=12, fontweight="bold")
+        ax.grid(True, alpha=0.3, linestyle='--')
+    
+    # Plot 1: CodeBLEU vs Syntax Match
+    add_regression(axes[0, 0], syntax, codebleu,
+                   "Syntax Match Score",
+                   "CodeBLEU Score",
+                   "CodeBLEU vs Syntax Match")
+    
+    # Plot 2: CodeBLEU vs N-gram Match
+    add_regression(axes[0, 1], ngram, codebleu,
+                   "N-gram Match Score",
+                   "CodeBLEU Score",
+                   "CodeBLEU vs N-gram Match")
+    
+    # Plot 3: Syntax vs Data-flow Match
+    add_regression(axes[1, 0], dataflow, syntax,
+                   "Data-flow Match Score",
+                   "Syntax Match Score",
+                   "Syntax vs Data-flow Match")
+    
+    # Plot 4: CodeBLEU vs Weighted N-gram Match
+    add_regression(axes[1, 1], weighted_ngram, codebleu,
+                   "Weighted N-gram Match Score",
+                   "CodeBLEU Score",
+                   "CodeBLEU vs Weighted N-gram Match")
+    
+    plt.tight_layout()
+    
+    if output_file:
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+        plt.savefig(output_file, dpi=300, bbox_inches="tight")
+        print(f"Component relationships plot saved to: {output_file}")
+    else:
+        plt.savefig("codebleu_relationships.png", dpi=300, bbox_inches="tight")
+        print("Component relationships plot saved to: codebleu_relationships.png")
     
     plt.close()
 
@@ -285,6 +447,11 @@ def create_all_visualizations(
     plot_score_distribution(
         results,
         output_file=output_dir / f"{prefix}_distribution.png",
+    )
+    
+    plot_component_relationships(
+        results,
+        output_file=output_dir / f"{prefix}_relationships.png",
     )
     
     print(f"\n✅ All visualizations saved to: {output_dir}")
@@ -349,6 +516,12 @@ Examples:
         help="Only create distribution histogram",
     )
     
+    parser.add_argument(
+        "--relationships-only",
+        action="store_true",
+        help="Only create component relationships scatter plots",
+    )
+    
     args = parser.parse_args()
     
     results_json = Path(args.results_json)
@@ -369,6 +542,8 @@ Examples:
         plot_component_comparison(results, output_file=output_dir / f"{args.prefix}_components.png")
     elif args.distribution_only:
         plot_score_distribution(results, output_file=output_dir / f"{args.prefix}_distribution.png")
+    elif args.relationships_only:
+        plot_component_relationships(results, output_file=output_dir / f"{args.prefix}_relationships.png")
     else:
         create_all_visualizations(results_json, output_dir, args.prefix)
 
