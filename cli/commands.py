@@ -1053,7 +1053,14 @@ class Commands:
 
     def cmd_exit(self, args):
         "Exit the application"
+        # Set shutdown flag to stop retry loops
+        self.coder._shutdown_flag = True
         self.coder.event("exit", reason="/exit")
+        
+        # Give a brief moment for cleanup
+        import time
+        time.sleep(0.1)
+        
         sys.exit()
 
     def cmd_quit(self, args):
