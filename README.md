@@ -17,7 +17,7 @@ Legacy2Modern (L2M) is an open-source, AI coding agent that helps you modernize 
 
 ## Features
 
-- **Modern TUI**: Clean, Codex-style terminal interface with brand-colored UI elements
+- **Modern TUI**: Clean terminal interface with brand-colored UI elements
 - **Multi-Provider Support**: Works with OpenAI, Anthropic, DeepSeek, Gemini, and 100+ other LLM providers via LiteLLM
 - **Interactive Chat**: Natural conversation with your codebase - ask questions, request changes, and get AI assistance
 - **File Management**: Add files to context, drop them when done, view what's in your chat session
