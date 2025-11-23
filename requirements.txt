@@ -84,4 +84,4 @@ codebleu>=0.7.0
 # harbor>=0.1.18
 
 # Visualization (optional - only needed for evals/codebleu/visualize.py)
-matplotlib>=3.7.0
+# matplotlib>=3.7.0
