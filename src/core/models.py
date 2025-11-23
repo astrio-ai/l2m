@@ -133,7 +133,6 @@ class ModelSettings:
     editor_model_name: Optional[str] = None
     editor_edit_format: Optional[str] = None
     reasoning_tag: Optional[str] = None
-    remove_reasoning: Optional[str] = None  # Deprecated alias for reasoning_tag
     system_prompt_prefix: Optional[str] = None
     accepts_settings: Optional[list] = None
 
@@ -365,11 +364,6 @@ class Model(ModelSettings):
         for field in fields(ModelSettings):
             val = getattr(source, field.name)
             setattr(self, field.name, val)
-
-        # Handle backward compatibility: if remove_reasoning is set but reasoning_tag isn't,
-        # use remove_reasoning's value for reasoning_tag
-        if self.reasoning_tag is None and self.remove_reasoning is not None:
-            self.reasoning_tag = self.remove_reasoning
 
     def configure_model_settings(self, model):
         # Look for exact model match
