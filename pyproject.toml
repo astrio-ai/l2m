@@ -3,7 +3,7 @@ name = "l2m"
 version = "0.3.1"
 description = "Legacy2Modern: COBOL to Python modernization"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.10,<4.0"
 license = {text = "Apache-2.0"}
 authors = [
     {name = "Astrio AI", email = "naingoolwin.astrio@gmail.com"}
@@ -107,3 +107,9 @@ include-package-data = true
 "src.resources" = ["*.yml", "*.json"]
 "src" = ["queries/**/*.scm"]
 
+[tool.poetry]
+include = [
+    "src/resources/**/*.yml",
+    "src/resources/**/*.json",
+    "src/queries/**/*.scm"
+]
