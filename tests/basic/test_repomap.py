@@ -421,6 +421,40 @@ class TestRepoMapAllLanguages(unittest.TestCase):
     def test_language_matlab(self):
         self._test_language_repo_map("matlab", "m", "Person")
 
+    # Legacy languages for modernization
+    def test_language_cobol(self):
+        self._test_language_repo_map("cobol", "cbl", "GREETER")
+
+    def test_language_fortran(self):
+        self._test_language_repo_map("fortran", "f90", "Greeter")
+
+    def test_language_ada(self):
+        self._test_language_repo_map("ada", "adb", "Greeter")
+
+    def test_language_pascal(self):
+        self._test_language_repo_map("pascal", "pas", "Greeter")
+
+    def test_language_perl(self):
+        self._test_language_repo_map("perl", "pl", "greet")
+
+    def test_language_vhdl(self):
+        self._test_language_repo_map("vhdl", "vhd", "Counter")
+
+    def test_language_verilog(self):
+        self._test_language_repo_map("verilog", "v", "Counter")
+
+    def test_language_tcl(self):
+        self._test_language_repo_map("tcl", "tcl", "greet")
+
+    def test_language_asm(self):
+        self._test_language_repo_map("asm", "asm", "print_message")
+
+    def test_language_objc(self):
+        self._test_language_repo_map("objc", "m", "Greeter")
+
+    def test_language_nix(self):
+        self._test_language_repo_map("nix", "nix", "greeter")
+
     def _test_language_repo_map(self, lang, key, symbol):
         """Helper method to test repo map generation for a specific language."""
         # Get the fixture file path and name based on language

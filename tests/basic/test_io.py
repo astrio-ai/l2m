@@ -37,6 +37,11 @@ class TestInputOutput(unittest.TestCase):
 
     def test_color_initialization(self):
         """Test that color values are properly initialized with # prefix"""
+        # Skip in dumb terminal environments where colors are disabled
+        import os
+        if os.environ.get("TERM") == "dumb" or not os.isatty(1):
+            self.skipTest("Colors disabled in non-interactive terminal")
+        
         # Test with hex colors without #
         io = InputOutput(
             user_input_color="00cc00",
