@@ -1,17 +1,20 @@
 website = "https://l2m.astrio.app/"
-add_all_files = "https://l2m.astrio.app/docs/faq.html#how-can-i-add-all-the-files-to-the-chat"
-edit_errors = "https://l2m.astrio.app/docs/troubleshooting/edit-errors.html"
-git = "https://l2m.astrio.app/docs/git.html"
-enable_playwright = "https://l2m.astrio.app/docs/install/optional.html#enable-playwright"
-favicon = "https://l2m.astrio.app/assets/icons/favicon-32x32.png"
-model_warnings = "https://l2m.astrio.app/docs/llms/warnings.html"
-token_limits = "https://l2m.astrio.app/docs/troubleshooting/token-limits.html"
-llms = "https://l2m.astrio.app/docs/llms.html"
-large_repos = "https://l2m.astrio.app/docs/faq.html#can-i-use-l2m-in-a-large-mono-repo"
+github_repo = "https://github.com/astrio-ai/l2m"
 github_issues = "https://github.com/astrio-ai/l2m/issues/new"
-install_properly = "https://l2m.astrio.app/docs/troubleshooting/imports.html"
-analytics = "https://l2m.astrio.app/docs/more/analytics.html"
-release_notes = "https://l2m.astrio.app/HISTORY.html#release-notes"
-edit_formats = "https://l2m.astrio.app/docs/more/edit-formats.html"
-models_and_keys = "https://l2m.astrio.app/docs/troubleshooting/models-and-keys.html"
-git_index_version = "https://l2m.astrio.app/docs/git.html"
+github_readme = "https://github.com/astrio-ai/l2m#readme"
+
+# TODO: Update these URLs when documentation site is deployed
+add_all_files = github_readme
+edit_errors = github_readme
+git = github_readme
+enable_playwright = github_readme
+model_warnings = github_readme
+token_limits = github_readme
+llms = github_readme
+large_repos = github_readme
+install_properly = github_readme
+analytics = github_readme
+release_notes = github_repo + "/releases"
+edit_formats = github_readme
+models_and_keys = github_readme
+git_index_version = github_readme
