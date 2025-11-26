@@ -898,13 +898,28 @@ class Model(ModelSettings):
 
     def github_copilot_token_to_open_ai_key(self, extra_headers):
         # check to see if there's an openai api key
-        # If so, check to see if it's expire
+        # If so, check to see if it's expired (for GitHub Copilot tokens)
         openai_api_key = "OPENAI_API_KEY"
 
-        if openai_api_key not in os.environ or (
-            int(dict(x.split("=") for x in os.environ[openai_api_key].split(";"))["exp"])
-            < int(datetime.now().timestamp())
-        ):
+        needs_refresh = False
+        if openai_api_key not in os.environ:
+            needs_refresh = True
+        else:
+            # GitHub Copilot tokens have format: "token;exp=timestamp;..."
+            # Regular OpenAI keys don't have this format, so skip expiry check for them
+            try:
+                token_value = os.environ[openai_api_key]
+                if ";" in token_value and "exp=" in token_value:
+                    token_parts = dict(x.split("=") for x in token_value.split(";") if "=" in x)
+                    if "exp" in token_parts:
+                        exp_time = int(token_parts["exp"])
+                        if exp_time < int(datetime.now().timestamp()):
+                            needs_refresh = True
+            except (ValueError, KeyError):
+                # If parsing fails, assume it's a regular API key (not a Copilot token)
+                pass
+
+        if needs_refresh:
             import requests
 
             class GitHubCopilotTokenError(Exception):
