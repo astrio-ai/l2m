@@ -71,17 +71,16 @@ OpenAI provides access to GPT models including GPT-4o, GPT-4 Turbo, and GPT-3.5.
 
 #### Available Models
 
-- `gpt-4o` (Default - recommended)
-- `gpt-4o-mini` (Faster, cheaper)
-- `gpt-4-turbo`
-- `gpt-3.5-turbo`
-- `o1` (Reasoning model)
-- `o1-mini` (Faster reasoning)
+- `gpt-5.1-2025-11-13` (Best for coding and agentic tasks - recommended)
+- `gpt-5-mini-2025-08-07` (Faster, cost-efficient)
+- `gpt-5-nano-2025-08-07` (Fastest, most cost-efficient)
+
+See all [models](https://platform.openai.com/docs/models).
 
 #### Model Override
 
 ```env
-OPENAI_MODEL=gpt-4o-mini
+OPENAI_MODEL=gpt-5.1
 ```
 
 #### Example Usage
@@ -91,14 +90,14 @@ OPENAI_MODEL=gpt-4o-mini
 l2m
 
 # Use specific OpenAI model
-l2m --model gpt-4o-mini
+l2m --model gpt-5-nano
 ```
 
 #### Cost
 
-- GPT-4o: $2.50/$10.00 per 1M tokens (input/output)
-- GPT-4o-mini: $0.15/$0.60 per 1M tokens
-- GPT-3.5-turbo: $0.50/$1.50 per 1M tokens
+- GPT-5.1: $1.25/$10.00 per 1M tokens (input/output)
+- GPT-5-mini: $0.25/$0.20 per 1M tokens
+- GPT-5-nano: $0.05/$0.4 per 1M tokens
 
 See [OpenAI Pricing](https://openai.com/api/pricing/) for current rates.
 
@@ -119,42 +118,37 @@ Anthropic provides Claude models, known for excellent coding capabilities.
 
 #### Available Models
 
-- `claude-sonnet-4-20250514` (Latest Sonnet - recommended)
-- `claude-opus-4-20250514` (Most capable)
-- `claude-3-5-sonnet-20241022` (Previous Sonnet)
-- `claude-3-5-haiku-20241022` (Fastest)
+- `claude-sonnet-4-5-20250929` (Latest Sonnet - recommended)
+- `claude-opus-4-5-20251101` (Most capable)
+- `claude-haiku-4-5-20251001` (Fastest)
+- `claude-opus-4-1-20250805` (Previous Opus)
 
-#### Model Aliases
-
-L2M provides convenient aliases:
-- `sonnet` → `claude-sonnet-4-20250514`
-- `opus` → `claude-opus-4-20250514`
-- `haiku` → `claude-3-5-haiku-20241022`
+See all [models](https://platform.claude.com/docs/en/about-claude/models/overview).
 
 #### Model Override
 
 ```env
-ANTHROPIC_MODEL=claude-sonnet-4-20250514
+ANTHROPIC_MODEL=claude-sonnet-4-5-20250929
 ```
 
 #### Example Usage
 
 ```bash
-# Use Claude Sonnet 4
+# Use Claude Sonnet 4.5
 l2m --model sonnet
 
-# Use Claude Opus 4
+# Use Claude Opus 4.5
 l2m --model opus
 
 # Use full model name
-l2m --model anthropic/claude-sonnet-4-20250514
+l2m --model anthropic/claude-sonnet-4-5-20250929
 ```
 
 #### Cost
 
-- Claude Sonnet 4: $3.00/$15.00 per 1M tokens (input/output)
-- Claude Opus 4: $15.00/$75.00 per 1M tokens
-- Claude Haiku 3.5: $0.80/$4.00 per 1M tokens
+- Claude Sonnet 4.5: $3.00/$15.00 per 1M tokens (input/output)
+- Claude Opus 4.5: $5.00/$25.00 per 1M tokens
+- Claude Haiku 4.5: $1.00/$5.00 per 1M tokens
 
 See [Anthropic Pricing](https://www.anthropic.com/pricing) for current rates.
 
@@ -175,15 +169,12 @@ Google's Gemini models offer multimodal capabilities and long context windows.
 
 #### Available Models
 
-- `gemini-2.5-pro` (Default - most capable)
-- `gemini-2.5-flash` (Faster, cheaper)
+- `gemini-3-pro-preview` (Default - most capable)
+- `gemini-2.5-pro` (Previous Pro model)
+- `gemini-2.5-flash` (Fastest)
 - `gemini-2.5-flash-lite` (Lightest)
 
-#### Model Aliases
-
-- `gemini` → `gemini-2.5-pro`
-- `flash` → `gemini-2.5-flash`
-- `flash-lite` → `gemini-2.5-flash-lite`
+See all [models](https://ai.google.dev/gemini-api/docs/models).
 
 #### Model Override
 
@@ -203,6 +194,7 @@ l2m --model flash
 
 #### Cost
 
+- Gemini 3: Free tier available, then $2.00/$12.00 per 1M tokens
 - Gemini 2.5 Pro: Free tier available, then $1.25/$5.00 per 1M tokens
 - Gemini 2.5 Flash: Free tier available, then $0.075/$0.30 per 1M tokens
 
@@ -230,10 +222,7 @@ DeepSeek provides cost-effective models with strong coding capabilities.
 - `deepseek-reasoner` (R1 reasoning model)
 - `deepseek-v3.2-exp` (Experimental v3.2)
 
-#### Model Aliases
-
-- `deepseek` → `deepseek-chat`
-- `r1` → `deepseek-reasoner`
+See all [models](https://api-docs.deepseek.com/api/list-models).
 
 #### Model Override
 
@@ -326,6 +315,8 @@ Groq provides fast inference for open-source models.
 - `groq/llama-3.3-70b-versatile`
 - `groq/llama-3.1-8b-instant`
 - `groq/mixtral-8x7b-32768`
+
+See all [models](https://console.groq.com/docs/models).
 
 #### Example Usage
 
@@ -613,7 +604,7 @@ OPENAI_API_TYPE=azure
 ## Getting Help
 
 - **GitHub Issues**: [Report bugs](https://github.com/astrio-ai/l2m/issues)
-- **Discord**: [Join community](https://discord.gg/2BVwAUzW)
+- **Discord**: [Join community](https://discord.gg/gESuZkdD5R)
 - **Email**: naingoolwin.astrio@gmail.com
 - **LiteLLM Docs**: [LiteLLM Provider Docs](https://docs.litellm.ai/docs/providers)
 
