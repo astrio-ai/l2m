@@ -1197,7 +1197,7 @@ class TestCommands(TestCase):
 
             # Store the commit hash
             last_commit_hash = repo.head.commit.hexsha[:7]
-            coder.l2m_commit_hashes.add(last_commit_hash)
+            coder.atlas_commit_hashes.add(last_commit_hash)
 
             file_path.write_text("dirty content")
 
@@ -1244,7 +1244,7 @@ class TestCommands(TestCase):
 
             # Store the commit hash
             last_commit_hash = repo.head.commit.hexsha[:7]
-            coder.l2m_commit_hashes.add(last_commit_hash)
+            coder.atlas_commit_hashes.add(last_commit_hash)
 
             # Attempt to undo the last commit, should refuse
             commands.cmd_undo("")
@@ -1273,7 +1273,7 @@ class TestCommands(TestCase):
 
             # Store the commit hash
             last_commit_hash = repo.head.commit.hexsha[:7]
-            coder.l2m_commit_hashes.add(last_commit_hash)
+            coder.atlas_commit_hashes.add(last_commit_hash)
 
             # Attempt to undo the last commit
             commands.cmd_undo("")

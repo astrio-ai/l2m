@@ -9,7 +9,7 @@ class TestBrowser(unittest.TestCase):
     @patch("cli.main.launch_gui")
     @patch("cli.main.check_streamlit_install", return_value=True)
     def test_browser_flag_imports_streamlit(self, mock_check_streamlit, mock_launch_gui):
-        os.environ["L2M_ANALYTICS"] = "false"
+        os.environ["ATLAS_ANALYTICS"] = "false"
 
         # Run main with --browser and --yes flags
         main(["--browser", "--yes"])

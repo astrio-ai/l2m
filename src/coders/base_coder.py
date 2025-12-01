@@ -92,8 +92,8 @@ class Coder:
     abs_read_only_fnames = None
     _shutdown_flag = False  # Flag to signal shutdown
     repo = None
-    last_l2m_commit_hash = None
-    l2m_edited_files = None
+    last_atlas_commit_hash = None
+    atlas_edited_files = None
     last_asked_for_commit_time = 0
     repo_map = None
     functions = None
@@ -176,7 +176,7 @@ class Coder:
                 read_only_fnames=list(from_coder.abs_read_only_fnames),  # Copy read-only files
                 done_messages=done_messages,
                 cur_messages=from_coder.cur_messages,
-                l2m_commit_hashes=from_coder.l2m_commit_hashes,
+                atlas_commit_hashes=from_coder.atlas_commit_hashes,
                 commands=from_coder.commands.clone(),
                 total_cost=from_coder.total_cost,
                 ignore_mentions=from_coder.ignore_mentions,
@@ -322,7 +322,7 @@ class Coder:
         auto_test=False,
         lint_cmds=None,
         test_cmd=None,
-        l2m_commit_hashes=None,
+        atlas_commit_hashes=None,
         map_mul_no_files=8,
         commands=None,
         summarizer=None,
@@ -350,7 +350,7 @@ class Coder:
         self.chat_language = chat_language
         self.commit_language = commit_language
         self.commit_before_message = []
-        self.l2m_commit_hashes = set()
+        self.atlas_commit_hashes = set()
         self.rejected_urls = set()
         self.abs_root_path_cache = {}
 
@@ -377,10 +377,10 @@ class Coder:
         if io is None:
             io = InputOutput()
 
-        if l2m_commit_hashes:
-            self.l2m_commit_hashes = l2m_commit_hashes
+        if atlas_commit_hashes:
+            self.atlas_commit_hashes = atlas_commit_hashes
         else:
-            self.l2m_commit_hashes = set()
+            self.atlas_commit_hashes = set()
 
         self.chat_completion_call_hashes = []
         self.chat_completion_response_hashes = []
@@ -458,7 +458,7 @@ class Coder:
                 continue
 
             if self.repo and self.repo.ignored_file(fname):
-                self.io.tool_warning(f"Skipping {fname} that matches l2mignore spec.")
+                self.io.tool_warning(f"Skipping {fname} that matches atlasignore spec.")
                 continue
 
             if not fname.exists():
@@ -886,7 +886,7 @@ class Coder:
         yield from self.send_message(user_message)
 
     def init_before_message(self):
-        self.l2m_edited_files = set()
+        self.atlas_edited_files = set()
         self.reflected_message = None
         self.num_reflections = 0
         self.lint_outcome = None
@@ -1370,7 +1370,7 @@ class Coder:
             return
 
         delay = 5 * 60 - 5
-        delay = float(os.environ.get("L2M_CACHE_KEEPALIVE_DELAY", delay))
+        delay = float(os.environ.get("ATLAS_CACHE_KEEPALIVE_DELAY", delay))
         self.next_cache_warm = time.time() + delay
         self.warming_pings_left = self.num_cache_warming_pings
         self.cache_warming_chunks = chunks
@@ -1698,7 +1698,7 @@ class Coder:
         edited = self.apply_updates()
 
         if edited:
-            self.l2m_edited_files.update(edited)
+            self.atlas_edited_files.update(edited)
             saved_message = self.auto_commit(edited)
 
             if not saved_message and hasattr(self.gpt_prompts, "files_content_gpt_edits_no_repo"):
@@ -2532,9 +2532,9 @@ class Coder:
 
     def show_auto_commit_outcome(self, res):
         commit_hash, commit_message = res
-        self.last_l2m_commit_hash = commit_hash
-        self.l2m_commit_hashes.add(commit_hash)
-        self.last_l2m_commit_message = commit_message
+        self.last_atlas_commit_hash = commit_hash
+        self.atlas_commit_hashes.add(commit_hash)
+        self.last_atlas_commit_message = commit_message
         if self.show_diffs:
             self.commands.cmd_diff()
 

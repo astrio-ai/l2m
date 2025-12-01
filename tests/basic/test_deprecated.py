@@ -14,8 +14,8 @@ class TestDeprecated(TestCase):
     def setUp(self):
         self.original_env = os.environ.copy()
         os.environ["OPENAI_API_KEY"] = "deadbeef"
-        os.environ["L2M_CHECK_UPDATE"] = "false"
-        os.environ["L2M_ANALYTICS"] = "false"
+        os.environ["ATLAS_CHECK_UPDATE"] = "false"
+        os.environ["ATLAS_ANALYTICS"] = "false"
 
     def tearDown(self):
         os.environ.clear()

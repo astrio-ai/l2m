@@ -1,4 +1,3 @@
-
 # Credits
 
 Atlas uses modified versions of the tags.scm files from these open source 

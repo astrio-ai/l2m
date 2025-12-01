@@ -97,3 +97,4 @@ tests/fixtures/chat-history.md
 tests/fixtures/chat-history-search-replace-gold.txt
 
 .atlas*
+data/

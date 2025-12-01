@@ -6,11 +6,11 @@ from src.utils.dump import dump  # noqa: F401
 
 warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
 
-L2M_SITE_URL = "https://www.astrio.app"
-L2M_APP_NAME = "Atlas"
+ATLAS_SITE_URL = "https://www.astrio.app"
+ATLAS_APP_NAME = "Atlas"
 
-os.environ["OR_SITE_URL"] = L2M_SITE_URL
-os.environ["OR_APP_NAME"] = L2M_APP_NAME
+os.environ["OR_SITE_URL"] = ATLAS_SITE_URL
+os.environ["OR_APP_NAME"] = ATLAS_APP_NAME
 os.environ["LITELLM_MODE"] = "PRODUCTION"
 
 # `import litellm` takes 1.5 seconds, defer it!
