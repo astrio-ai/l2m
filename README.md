@@ -1,4 +1,4 @@
-# ATLAS: Autonomous Transpilation for Legacy Application System
+# ATLAS: Autonomous Transpilation for Legacy Application Systems
 **Status**: Currently in progress of writing a research paper for ATLAS. There'll not be many feature updates next few weeks. 
 
 <div align="left">
@@ -13,7 +13,7 @@
 ATLAS is an open-source, AI coding agent that helps you modernize legacy codebases into modern programming languages within your terminal.
 
 <p align="left">
-  <img src="./.github/l2m-cli.png" alt="ATLAS CLI" width="80%" />
+  <img src="./.github/atlas-cli.png" alt="ATLAS CLI" width="80%" />
 </p>
 
 ## Features
@@ -42,7 +42,7 @@ curl -fsSL https://astrio.app/atlas/install | bash
 or
 
 ```bash
-pip install l2m
+pip install astrio-atlas
 ```
 
 ### Set Up API Keys
@@ -71,7 +71,7 @@ cp .env.example .env
 
 ```bash
 # Start the interactive CLI
-l2m
+atlas
 ```
 
 ## Documentation
