@@ -18,7 +18,7 @@ from src.deprecated import add_deprecated_model_args
 from src.utils.dump import dump  # noqa: F401
 
 
-def resolve_l2mignore_path(path_str, git_root=None):
+def resolve_atlasignore_path(path_str, git_root=None):
     path = Path(path_str)
     if path.is_absolute():
         return str(path)
@@ -33,21 +33,21 @@ def default_env_file(git_root):
 
 def get_parser(default_config_files, git_root):
     parser = configargparse.ArgumentParser(
-        description="l2m is AI pair programming in your terminal",
+        description="atlas is AI pair programming in your terminal",
         add_config_file_help=True,
         default_config_files=default_config_files,
         config_file_parser_class=configargparse.YAMLConfigFileParser,
-        auto_env_var_prefix="L2M_",
+        auto_env_var_prefix="ATLAS_",
     )
     # List of valid edit formats for argparse validation & shtab completion.
     # Dynamically gather them from the registered coder classes so the list
     # stays in sync if new formats are added.
-    from src import coders as _l2m_coders
+    from src import coders as _atlas_coders
 
     edit_format_choices = sorted(
         {
             c.edit_format
-            for c in _l2m_coders.__all__
+            for c in _atlas_coders.__all__
             if hasattr(c, "edit_format") and c.edit_format is not None
         }
     )
@@ -118,13 +118,13 @@ def get_parser(default_config_files, git_root):
     group.add_argument(
         "--model-settings-file",
         metavar="MODEL_SETTINGS_FILE",
-        default=".l2m.model.settings.yml",
-        help="Specify a file with l2m model settings for unknown models",
+        default=".atlas.model.settings.yml",
+        help="Specify a file with atlas model settings for unknown models",
     ).complete = shtab.FILE
     group.add_argument(
         "--model-metadata-file",
         metavar="MODEL_METADATA_FILE",
-        default=".l2m.model.metadata.json",
+        default=".atlas.model.metadata.json",
         help="Specify a file with context window and costs for unknown models",
     ).complete = shtab.FILE
     group.add_argument(
@@ -264,10 +264,10 @@ def get_parser(default_config_files, git_root):
 
     group = parser.add_argument_group("History Files")
     default_input_history_file = (
-        os.path.join(git_root, ".l2m.input.history") if git_root else ".l2m.input.history"
+        os.path.join(git_root, ".atlas.input.history") if git_root else ".atlas.input.history"
     )
     default_chat_history_file = (
-        os.path.join(git_root, ".l2m.chat.history.md") if git_root else ".l2m.chat.history.md"
+        os.path.join(git_root, ".atlas.chat.history.md") if git_root else ".atlas.chat.history.md"
     )
     group.add_argument(
         "--input-history-file",
@@ -291,7 +291,7 @@ def get_parser(default_config_files, git_root):
         "--llm-history-file",
         metavar="LLM_HISTORY_FILE",
         default=None,
-        help="Log the conversation with the LLM to this file (for example, .l2m.llm.history)",
+        help="Log the conversation with the LLM to this file (for example, .atlas.llm.history)",
     ).complete = shtab.FILE
 
     group = parser.add_argument_group("Output settings")
@@ -404,24 +404,24 @@ def get_parser(default_config_files, git_root):
         "--gitignore",
         action=argparse.BooleanOptionalAction,
         default=True,
-        help="Enable/disable adding .l2m* to .gitignore (default: True)",
+        help="Enable/disable adding .atlas* to .gitignore (default: True)",
     )
     group.add_argument(
         "--add-gitignore-files",
         action=argparse.BooleanOptionalAction,
         default=False,
-        help="Enable/disable the addition of files listed in .gitignore to L2M's editing scope.",
+        help="Enable/disable the addition of files listed in .gitignore to Atlas's editing scope.",
     )
-    default_l2mignore_file = (
-        os.path.join(git_root, ".l2mignore") if git_root else ".l2mignore"
+    default_atlasignore_file = (
+        os.path.join(git_root, ".atlasignore") if git_root else ".atlasignore"
     )
 
     group.add_argument(
-        "--l2mignore",
-        metavar="L2MIGNORE",
-        type=lambda path_str: resolve_l2mignore_path(path_str, git_root),
-        default=default_l2mignore_file,
-        help="Specify the l2m ignore file (default: .l2mignore in git root)",
+        "--atlasignore",
+        metavar="ATLASIGNORE",
+        type=lambda path_str: resolve_atlasignore_path(path_str, git_root),
+        default=default_atlasignore_file,
+        help="Specify the atlas ignore file (default: .atlasignore in git root)",
     ).complete = shtab.FILE
     group.add_argument(
         "--subtree-only",
@@ -446,7 +446,7 @@ def get_parser(default_config_files, git_root):
         action=argparse.BooleanOptionalAction,
         default=None,
         help=(
-            "Attribute l2m code changes in the git author name (default: True). If explicitly set"
+            "Attribute atlas code changes in the git author name (default: True). If explicitly set"
             " to True, overrides --attribute-co-authored-by precedence."
         ),
     )
@@ -455,28 +455,28 @@ def get_parser(default_config_files, git_root):
         action=argparse.BooleanOptionalAction,
         default=None,
         help=(
-            "Attribute l2m commits in the git committer name (default: True). If explicitly set"
-            " to True, overrides --attribute-co-authored-by precedence for l2m edits."
+            "Attribute atlas commits in the git committer name (default: True). If explicitly set"
+            " to True, overrides --attribute-co-authored-by precedence for atlas edits."
         ),
     )
     group.add_argument(
         "--attribute-commit-message-author",
         action=argparse.BooleanOptionalAction,
         default=False,
-        help="Prefix commit messages with 'l2m: ' if l2m authored the changes (default: False)",
+        help="Prefix commit messages with 'atlas: ' if atlas authored the changes (default: False)",
     )
     group.add_argument(
         "--attribute-commit-message-committer",
         action=argparse.BooleanOptionalAction,
         default=False,
-        help="Prefix all commit messages with 'l2m: ' (default: False)",
+        help="Prefix all commit messages with 'atlas: ' (default: False)",
     )
     group.add_argument(
         "--attribute-co-authored-by",
         action=argparse.BooleanOptionalAction,
         default=True,
         help=(
-            "Attribute l2m edits using the Co-authored-by trailer in the commit message"
+            "Attribute atlas edits using the Co-authored-by trailer in the commit message"
             " (default: True). If True, this takes precedence over default --attribute-author and"
             " --attribute-committer behavior unless they are explicitly set to True."
         ),
@@ -595,7 +595,7 @@ def get_parser(default_config_files, git_root):
     group.add_argument(
         "--check-update",
         action=argparse.BooleanOptionalAction,
-        help="Check for new l2m versions on launch",
+        help="Check for new atlas versions on launch",
         default=True,
     )
     group.add_argument(
@@ -608,7 +608,7 @@ def get_parser(default_config_files, git_root):
         "--upgrade",
         "--update",
         action="store_true",
-        help="Upgrade l2m to the latest version from PyPI",
+        help="Upgrade atlas to the latest version from PyPI",
         default=False,
     )
     group.add_argument(
@@ -641,14 +641,14 @@ def get_parser(default_config_files, git_root):
         "--gui",
         "--browser",
         action=argparse.BooleanOptionalAction,
-        help="Run l2m in your browser (default: False)",
+        help="Run atlas in your browser (default: False)",
         default=False,
     )
     group.add_argument(
         "--copy-paste",
         action=argparse.BooleanOptionalAction,
         default=False,
-        help="Enable automatic copy/paste of chat between l2m and web UI (default: False)",
+        help="Enable automatic copy/paste of chat between atlas and web UI (default: False)",
     )
     group.add_argument(
         "--apply",
@@ -758,7 +758,7 @@ def get_parser(default_config_files, git_root):
         is_config_file=True,
         metavar="CONFIG_FILE",
         help=(
-            "Specify the config file (default: search for .l2m.conf.yml in git root, cwd"
+            "Specify the config file (default: search for .atlas.conf.yml in git root, cwd"
             " or home directory)"
         ),
     ).complete = shtab.FILE
@@ -823,7 +823,7 @@ def get_parser(default_config_files, git_root):
         choices=supported_shells_list,
         help=(
             "Print shell completion script for the specified SHELL and exit. Supported shells:"
-            f" {', '.join(supported_shells_list)}. Example: l2m --shell-completions bash"
+            f" {', '.join(supported_shells_list)}. Example: atlas --shell-completions bash"
         ),
     )
 

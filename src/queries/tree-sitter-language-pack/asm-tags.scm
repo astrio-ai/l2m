@@ -1,4 +1,4 @@
-; Assembly tags for L2M repo map
+; Assembly tags for Atlas repo map
 
 ; Label definitions (function/procedure entry points)
 (label

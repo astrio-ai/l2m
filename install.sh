@@ -1,13 +1,13 @@
 #!/bin/bash
-# L2M Installer Script
-# This script downloads and installs L2M from GitHub Releases or PyPI
+# Atlas Installer Script
+# This script downloads and installs Atlas from GitHub Releases or PyPI
 
 set -euo pipefail
 
 # Configuration
-REPO="astrio-ai/l2m"
+REPO="astrio-ai/atlas"
 INSTALL_DIR="${HOME}/.local/bin"
-BINARY_NAME="l2m"
+BINARY_NAME="atlas"
 
 # Detect OS and architecture
 detect_platform() {
@@ -40,7 +40,7 @@ get_latest_version() {
     
     if [ -z "$version" ]; then
         # Fallback: try to get version from PyPI
-        version=$(curl -s "https://pypi.org/pypi/l2m/json" 2>/dev/null | grep '"version":' | head -1 | sed -E 's/.*"([^"]+)".*/\1/' || echo "")
+        version=$(curl -s "https://pypi.org/pypi/atlas/json" 2>/dev/null | grep '"version":' | head -1 | sed -E 's/.*"([^"]+)".*/\1/' || echo "")
     fi
     
     echo "$version"
@@ -58,29 +58,29 @@ install_via_pip() {
     fi
     
     # Install using pip
-    $pip_cmd install --user l2m >/dev/null 2>&1 || return 1
+    $pip_cmd install --user atlas >/dev/null 2>&1 || return 1
     
     # Find where pip installed the binary
     local bin_path
-    bin_path=$($pip_cmd show -f l2m 2>/dev/null | grep "Location:" | awk '{print $2}' || echo "")
+    bin_path=$($pip_cmd show -f atlas 2>/dev/null | grep "Location:" | awk '{print $2}' || echo "")
     
     if [ -z "$bin_path" ]; then
         # Try alternative method
         bin_path=$(python3 -m site --user-base 2>/dev/null || echo "")
         if [ -n "$bin_path" ]; then
-            bin_path="${bin_path}/bin/l2m"
+            bin_path="${bin_path}/bin/atlas"
         fi
     else
         # pip installs scripts to bin directory in user site-packages
         local user_base
         user_base=$(python3 -m site --user-base 2>/dev/null || echo "")
         if [ -n "$user_base" ]; then
-            bin_path="${user_base}/bin/l2m"
+            bin_path="${user_base}/bin/atlas"
         fi
     fi
     
     # Verify binary exists
-    if [ -f "$bin_path" ] || command -v l2m &> /dev/null; then
+    if [ -f "$bin_path" ] || command -v atlas &> /dev/null; then
         echo "pip (user install)"
         return 0
     fi
@@ -92,9 +92,9 @@ install_via_pip() {
 install_via_binary() {
     local platform=$1
     local version=$2
-    local download_url="https://github.com/${REPO}/releases/download/${version}/l2m-${platform}.zip"
+    local download_url="https://github.com/${REPO}/releases/download/${version}/atlas-${platform}.zip"
     local temp_dir=$(mktemp -d)
-    local zip_file="${temp_dir}/l2m.zip"
+    local zip_file="${temp_dir}/atlas.zip"
     
     # Download the zip file
     if ! curl -fsSL -o "$zip_file" "$download_url" 2>/dev/null; then
@@ -113,24 +113,24 @@ install_via_binary() {
     
     # Find the binary (handle nested structure from release workflow)
     local binary_path=""
-    local extracted_dir="${temp_dir}/l2m-${platform}"
+    local extracted_dir="${temp_dir}/atlas-${platform}"
     
     if [ -d "$extracted_dir" ]; then
-        if [ -f "${extracted_dir}/l2m" ]; then
-            binary_path="${extracted_dir}/l2m"
-        elif [ -f "${extracted_dir}/l2m.exe" ]; then
-            binary_path="${extracted_dir}/l2m.exe"
-            BINARY_NAME="l2m.exe"
+        if [ -f "${extracted_dir}/atlas" ]; then
+            binary_path="${extracted_dir}/atlas"
+        elif [ -f "${extracted_dir}/atlas.exe" ]; then
+            binary_path="${extracted_dir}/atlas.exe"
+            BINARY_NAME="atlas.exe"
         fi
     fi
     
     # Fallback: check root of temp directory
     if [ -z "$binary_path" ]; then
-        if [ -f "${temp_dir}/l2m" ]; then
-            binary_path="${temp_dir}/l2m"
-        elif [ -f "${temp_dir}/l2m.exe" ]; then
-            binary_path="${temp_dir}/l2m.exe"
-            BINARY_NAME="l2m.exe"
+        if [ -f "${temp_dir}/atlas" ]; then
+            binary_path="${temp_dir}/atlas"
+        elif [ -f "${temp_dir}/atlas.exe" ]; then
+            binary_path="${temp_dir}/atlas.exe"
+            BINARY_NAME="atlas.exe"
         fi
     fi
     
@@ -195,13 +195,13 @@ add_to_path() {
     
     # Add to shell config
     echo "" >> "$shell_config"
-    echo "# L2M binary location" >> "$shell_config"
+    echo "# Atlas binary location" >> "$shell_config"
     echo "$path_line" >> "$shell_config"
 }
 
 # Main installation flow
 main() {
-    echo "Setting up L2M..."
+    echo "Setting up Atlas..."
     echo ""
     
     # Check dependencies
@@ -233,7 +233,7 @@ main() {
     fi
     
     if [ -z "$install_location" ]; then
-        echo "Error: Failed to install L2M" >&2
+        echo "Error: Failed to install Atlas" >&2
         exit 1
     fi
     
@@ -248,13 +248,13 @@ main() {
         if ! command -v pip3 &> /dev/null; then
             pip_cmd="pip"
         fi
-        installed_version=$($pip_cmd show l2m 2>/dev/null | grep "^Version:" | awk '{print $2}' || echo "")
+        installed_version=$($pip_cmd show atlas 2>/dev/null | grep "^Version:" | awk '{print $2}' || echo "")
     fi
     
     # Fallback: try --version flag
     if [ -z "$installed_version" ]; then
-        if command -v l2m &> /dev/null; then
-            installed_version=$(l2m --version 2>/dev/null | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "")
+        if command -v atlas &> /dev/null; then
+            installed_version=$(atlas --version 2>/dev/null | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "")
         elif [ -f "$install_location" ] && [ "$install_location" != "pip (user install)" ]; then
             installed_version=$("$install_location" --version 2>/dev/null | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "")
         fi
@@ -262,7 +262,7 @@ main() {
     
     # Success message
     echo ""
-    echo "L2M successfully installed!"
+    echo "Atlas successfully installed!"
     if [ -n "$installed_version" ]; then
         echo "Version: $installed_version"
     elif [ -n "$version" ]; then
@@ -270,7 +270,7 @@ main() {
     fi
     echo "Location: $install_location"
     echo ""
-    echo "Next: Run l2m --help to get started"
+    echo "Next: Run atlas --help to get started"
     echo ""
     echo "Installation complete!"
 }

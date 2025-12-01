@@ -1,4 +1,4 @@
-; VHDL tags for L2M repo map
+; VHDL tags for Atlas repo map
 
 ; Entity declarations
 (entity_declaration

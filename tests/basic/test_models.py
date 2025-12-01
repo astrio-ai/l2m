@@ -374,7 +374,7 @@ class TestModels(unittest.TestCase):
         self.assertEqual(model.editor_edit_format, "editor-diff")
         self.assertTrue(model.use_repo_map)
 
-    def test_l2m_extra_model_settings(self):
+    def test_atlas_extra_model_settings(self):
         import tempfile
 
         import yaml
@@ -382,7 +382,7 @@ class TestModels(unittest.TestCase):
         # Create temporary YAML file with test settings
         test_settings = [
             {
-                "name": "l2m/extra_params",
+                "name": "atlas/extra_params",
                 "extra_params": {
                     "extra_headers": {"Foo": "bar"},
                     "some_param": "some value",

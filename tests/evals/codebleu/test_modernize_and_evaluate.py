@@ -73,7 +73,7 @@ def test_find_groundtruth_python_not_found(tmp_path):
     assert result is None
 
 
-@patch("evals.codebleu.modernize_and_evaluate.run_l2m_modernization")
+@patch("evals.codebleu.modernize_and_evaluate.run_atlas_modernization")
 def test_modernize_and_evaluate_skip_modernization(tmp_path):
     """Test modernize_and_evaluate with skip_modernization flag."""
     # Create COBOL and Python files

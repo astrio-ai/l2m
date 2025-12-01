@@ -26,9 +26,9 @@ env/
 ENV/
 .venv
 
-# L2M runtime artifacts
-.l2m.tags.cache.v4/
-.l2m.chat.history.md
+# ATLAS runtime artifacts
+.atlas.tags.cache.v4/
+.atlas.chat.history.md
 
 # Environment variables
 .env
@@ -92,8 +92,8 @@ build/
 # Lock files (if not using uv as primary package manager)
 uv.lock
 
-# Large test fixtures (from Aider - not needed for L2M)
+# Large test fixtures (from Aider - not needed for ATLAS)
 tests/fixtures/chat-history.md
 tests/fixtures/chat-history-search-replace-gold.txt
 
-.l2m*
+.atlas*

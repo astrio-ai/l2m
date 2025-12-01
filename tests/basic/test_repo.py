@@ -207,32 +207,32 @@ class TestRepo(unittest.TestCase):
             # Initialize GitRepo with default None values for attributes
             git_repo = GitRepo(io, None, None, attribute_author=None, attribute_committer=None)
 
-            # commit a change with l2m_edits=True (using default attributes)
+            # commit a change with atlas_edits=True (using default attributes)
             fname.write_text("new content")
-            commit_result = git_repo.commit(fnames=[str(fname)], l2m_edits=True)
+            commit_result = git_repo.commit(fnames=[str(fname)], atlas_edits=True)
             self.assertIsNotNone(commit_result)
 
             # check the committer name (defaults interpreted as True)
             commit = raw_repo.head.commit
-            self.assertEqual(commit.author.name, "Test User (l2m)")
-            self.assertEqual(commit.committer.name, "Test User (l2m)")
+            self.assertEqual(commit.author.name, "Test User (atlas)")
+            self.assertEqual(commit.committer.name, "Test User (atlas)")
 
-            # commit a change without l2m_edits (using default attributes)
+            # commit a change without atlas_edits (using default attributes)
             fname.write_text("new content again!")
-            commit_result = git_repo.commit(fnames=[str(fname)], l2m_edits=False)
+            commit_result = git_repo.commit(fnames=[str(fname)], atlas_edits=False)
             self.assertIsNotNone(commit_result)
 
             # check the committer name (author not modified, committer still modified by default)
             commit = raw_repo.head.commit
             self.assertEqual(commit.author.name, "Test User")
-            self.assertEqual(commit.committer.name, "Test User (l2m)")
+            self.assertEqual(commit.committer.name, "Test User (atlas)")
 
             # Now test with explicit False
             git_repo_explicit_false = GitRepo(
                 io, None, None, attribute_author=False, attribute_committer=False
             )
             fname.write_text("explicit false content")
-            commit_result = git_repo_explicit_false.commit(fnames=[str(fname)], l2m_edits=True)
+            commit_result = git_repo_explicit_false.commit(fnames=[str(fname)], atlas_edits=True)
             self.assertIsNotNone(commit_result)
             commit = raw_repo.head.commit
             self.assertEqual(commit.author.name, "Test User")  # Explicit False
@@ -248,7 +248,7 @@ class TestRepo(unittest.TestCase):
             git_repo_user_no_committer = GitRepo(io, None, None, attribute_committer=False)
             fname.write_text("user no committer content")
             commit_result = git_repo_user_no_committer.commit(
-                fnames=[str(fname)], l2m_edits=False
+                fnames=[str(fname)], atlas_edits=False
             )
             self.assertIsNotNone(commit_result)
             commit = raw_repo.head.commit
@@ -291,17 +291,17 @@ class TestRepo(unittest.TestCase):
             io = InputOutput()
             git_repo = GitRepo(io, None, None)
 
-            # commit a change with l2m_edits=True and co-authored-by flag
+            # commit a change with atlas_edits=True and co-authored-by flag
             fname.write_text("new content")
             commit_result = git_repo.commit(
-                fnames=[str(fname)], l2m_edits=True, coder=mock_coder, message="L2M edit"
+                fnames=[str(fname)], atlas_edits=True, coder=mock_coder, message="Atlas edit"
             )
             self.assertIsNotNone(commit_result)
 
             # check the commit message and author/committer
             commit = raw_repo.head.commit
-            self.assertIn("Co-authored-by: l2m (gpt-test) <l2m@l2m.chat>", commit.message)
-            self.assertEqual(commit.message.splitlines()[0], "L2M edit")
+            self.assertIn("Co-authored-by: atlas (gpt-test) <atlas@atlas.chat>", commit.message)
+            self.assertEqual(commit.message.splitlines()[0], "Atlas edit")
             # With default (None), co-authored-by takes precedence
             self.assertEqual(
                 commit.author.name,
@@ -345,35 +345,35 @@ class TestRepo(unittest.TestCase):
             io = InputOutput()
             git_repo = GitRepo(io, None, None)
 
-            # commit a change with l2m_edits=True and combo flags
+            # commit a change with atlas_edits=True and combo flags
             fname.write_text("new content combo")
             commit_result = git_repo.commit(
-                fnames=[str(fname)], l2m_edits=True, coder=mock_coder, message="L2M combo edit"
+                fnames=[str(fname)], atlas_edits=True, coder=mock_coder, message="Atlas combo edit"
             )
             self.assertIsNotNone(commit_result)
 
             # check the commit message and author/committer
             commit = raw_repo.head.commit
             self.assertIn(
-                "Co-authored-by: l2m (gpt-test-combo) <l2m@l2m.chat>", commit.message
+                "Co-authored-by: atlas (gpt-test-combo) <atlas@atlas.chat>", commit.message
             )
-            self.assertEqual(commit.message.splitlines()[0], "L2M combo edit")
+            self.assertEqual(commit.message.splitlines()[0], "Atlas combo edit")
             # When co-authored-by is true BUT author/committer are explicit True,
             # modification SHOULD happen
             self.assertEqual(
                 commit.author.name,
-                "Test User (l2m)",
+                "Test User (atlas)",
                 msg="Author name should be modified when explicitly True, even with co-author",
             )
             self.assertEqual(
                 commit.committer.name,
-                "Test User (l2m)",
+                "Test User (atlas)",
                 msg="Committer name should be modified when explicitly True, even with co-author",
             )
 
     @unittest.skipIf(platform.system() == "Windows", "Git env var behavior differs on Windows")
     def test_commit_ai_edits_no_coauthor_explicit_false(self):
-        # Test AI edits (l2m_edits=True) when co-authored-by is False,
+        # Test AI edits (atlas_edits=True) when co-authored-by is False,
         # but author or committer attribution is explicitly disabled.
         with GitTemporaryDirectory():
             # Setup repo
@@ -401,15 +401,15 @@ class TestRepo(unittest.TestCase):
             fname.write_text("no author content")
             commit_result = git_repo_no_author.commit(
                 fnames=[str(fname)],
-                l2m_edits=True,
+                atlas_edits=True,
                 coder=mock_coder_no_author,
-                message="L2M no author",
+                message="Atlas no author",
             )
             self.assertIsNotNone(commit_result)
             commit = raw_repo.head.commit
             self.assertNotIn("Co-authored-by:", commit.message)
             self.assertEqual(commit.author.name, "Test User")  # Explicit False
-            self.assertEqual(commit.committer.name, "Test User (l2m)")  # Default True
+            self.assertEqual(commit.committer.name, "Test User (atlas)")  # Default True
 
             # Case 2: attribute_author = None (default True), attribute_committer = False
             mock_coder_no_committer = MagicMock()
@@ -425,16 +425,16 @@ class TestRepo(unittest.TestCase):
             fname.write_text("no committer content")
             commit_result = git_repo_no_committer.commit(
                 fnames=[str(fname)],
-                l2m_edits=True,
+                atlas_edits=True,
                 coder=mock_coder_no_committer,
-                message="L2M no committer",
+                message="Atlas no committer",
             )
             self.assertIsNotNone(commit_result)
             commit = raw_repo.head.commit
             self.assertNotIn("Co-authored-by:", commit.message)
             self.assertEqual(
                 commit.author.name,
-                "Test User (l2m)",
+                "Test User (atlas)",
                 msg="Author name should be modified (default True) when co-author=False",
             )
             self.assertEqual(
@@ -510,7 +510,7 @@ class TestRepo(unittest.TestCase):
             self.assertIn(str(fname), fnames)
             self.assertIn(str(fname2), fnames)
 
-    def test_get_tracked_files_with_l2mignore(self):
+    def test_get_tracked_files_with_atlasignore(self):
         with GitTemporaryDirectory():
             # new repo
             raw_repo = git.Repo()
@@ -520,8 +520,8 @@ class TestRepo(unittest.TestCase):
             fname.touch()
             raw_repo.git.add(str(fname))
 
-            l2mignore = Path(".l2mignore")
-            git_repo = GitRepo(InputOutput(), None, None, str(l2mignore))
+            atlasignore = Path(".atlasignore")
+            git_repo = GitRepo(InputOutput(), None, None, str(atlasignore))
 
             # better be there
             fnames = git_repo.get_tracked_files()
@@ -542,7 +542,7 @@ class TestRepo(unittest.TestCase):
             self.assertIn(str(fname), fnames)
             self.assertIn(str(fname2), fnames)
 
-            l2mignore.write_text("new.txt\n")
+            atlasignore.write_text("new.txt\n")
             time.sleep(2)
 
             # new.txt should be gone!
@@ -554,7 +554,7 @@ class TestRepo(unittest.TestCase):
             # The mtime doesn't change, even if I time.sleep(1)
             # Before doing this write_text()!?
             #
-            # l2mignore.write_text("new2.txt\n")
+            # atlasignore.write_text("new2.txt\n")
             # new2.txt should be gone!
             # fnames = git_repo.get_tracked_files()
             # self.assertIn(str(fname), fnames)

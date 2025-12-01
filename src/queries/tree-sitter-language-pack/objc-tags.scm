@@ -1,4 +1,4 @@
-; Objective-C tags for L2M repo map
+; Objective-C tags for Atlas repo map
 
 ; Class interface declarations
 (class_interface

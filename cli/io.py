@@ -42,7 +42,7 @@ from src.utils import is_image_file
 from cli.footer_hints import FooterHints
 
 # Constants
-NOTIFICATION_MESSAGE = "L2M is waiting for your input"
+NOTIFICATION_MESSAGE = "Atlas is waiting for your input"
 
 # Custom dark theme for markdown to avoid white backgrounds
 DARK_THEME = Theme({
@@ -356,7 +356,7 @@ class InputOutput:
         self.dry_run = dry_run
 
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        self.append_chat_history(f"\n# l2m chat started at {current_time}\n\n")
+        self.append_chat_history(f"\n# atlas chat started at {current_time}\n\n")
 
         self.prompt_session = None
         self.is_dumb_terminal = is_dumb_terminal()
@@ -849,7 +849,7 @@ class InputOutput:
         
         # Define options
         options = [
-            (False, "Allow L2M to work in this folder without asking for approval"),
+            (False, "Allow Atlas to work in this folder without asking for approval"),
             (True, "Require approval of edits and commands"),
         ]
         
@@ -865,8 +865,8 @@ class InputOutput:
         
         try:
             result = radiolist_dialog(
-                title="L2M Approval Mode",
-                text=f"You are running L2M in {folder_path}\n\n"
+                title="Atlas Approval Mode",
+                text=f"You are running Atlas in {folder_path}\n\n"
                      "Since this folder is not version controlled, we recommend requiring approval of all edits and commands.\n\n"
                      "Use arrow keys to navigate, Enter to select:",
                 values=options,
@@ -1141,17 +1141,17 @@ class InputOutput:
         if system == "Darwin":  # macOS
             # Check for terminal-notifier first
             if shutil.which("terminal-notifier"):
-                return f"terminal-notifier -title 'L2M' -message '{NOTIFICATION_MESSAGE}'"
+                return f"terminal-notifier -title 'Atlas' -message '{NOTIFICATION_MESSAGE}'"
             # Fall back to osascript
             return (
-                f'osascript -e \'display notification "{NOTIFICATION_MESSAGE}" with title "L2M"\''
+                f'osascript -e \'display notification "{NOTIFICATION_MESSAGE}" with title "Atlas"\''
             )
         elif system == "Linux":
             # Check for common Linux notification tools
             for cmd in ["notify-send", "zenity"]:
                 if shutil.which(cmd):
                     if cmd == "notify-send":
-                        return f"notify-send 'L2M' '{NOTIFICATION_MESSAGE}'"
+                        return f"notify-send 'Atlas' '{NOTIFICATION_MESSAGE}'"
                     elif cmd == "zenity":
                         return f"zenity --notification --text='{NOTIFICATION_MESSAGE}'"
             return None  # No known notification tool found
@@ -1161,7 +1161,7 @@ class InputOutput:
                 "powershell -command"
                 " \"[System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms');"
                 f" [System.Windows.Forms.MessageBox]::Show('{NOTIFICATION_MESSAGE}',"
-                " 'L2M')\""
+                " 'Atlas')\""
             )
 
         return None  # Unknown system

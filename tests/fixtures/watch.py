@@ -7,7 +7,7 @@
 # ai! 3 urgent change needed
 #AI! 4 another urgent one
 # this is not an ai comment
-# l2m is not an ai comment
+# atlas is not an ai comment
 # not an ai! comment
 
 

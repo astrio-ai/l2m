@@ -39,7 +39,7 @@ UPDATING_REPO_MAP_MESSAGE = "Updating repo map"
 
 
 class RepoMap:
-    TAGS_CACHE_DIR = f".l2m.tags.cache.v{CACHE_VERSION}"
+    TAGS_CACHE_DIR = f".atlas.tags.cache.v{CACHE_VERSION}"
 
     warned_files = set()
 

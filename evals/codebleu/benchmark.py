@@ -1,4 +1,4 @@
-"""CodeBLEU benchmark runner for evaluating L2M modernization results."""
+"""CodeBLEU benchmark runner for evaluating Atlas modernization results."""
 
 import json
 from pathlib import Path

@@ -7,7 +7,7 @@ from src.utils.dump import dump  # noqa: F401
 warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
 
 L2M_SITE_URL = "https://www.astrio.app"
-L2M_APP_NAME = "L2M"
+L2M_APP_NAME = "Atlas"
 
 os.environ["OR_SITE_URL"] = L2M_SITE_URL
 os.environ["OR_APP_NAME"] = L2M_APP_NAME

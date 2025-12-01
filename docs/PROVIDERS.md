@@ -1,6 +1,6 @@
 # Provider Setup Guide
 
-This guide provides detailed setup instructions for each LLM provider supported by L2M. L2M uses [LiteLLM](https://github.com/BerriAI/litellm) under the hood, which enables support for 100+ LLM providers.
+This guide provides detailed setup instructions for each LLM provider supported by Atlas. Atlas uses [LiteLLM](https://github.com/BerriAI/litellm) under the hood, which enables support for 100+ LLM providers.
 
 ## Table of Contents
 
@@ -34,14 +34,14 @@ This guide provides detailed setup instructions for each LLM provider supported 
    OPENAI_API_KEY=sk-...
    ```
 
-3. Run L2M:
+3. Run Atlas:
    ```bash
-   l2m
+   atlas
    ```
 
 ## Provider Priority
 
-L2M automatically selects the first available provider based on this priority order:
+Atlas automatically selects the first available provider based on this priority order:
 
 1. **OpenAI** (if `OPENAI_API_KEY` is set)
 2. **Anthropic** (if `ANTHROPIC_API_KEY` is set)
@@ -51,7 +51,7 @@ L2M automatically selects the first available provider based on this priority or
 
 You can override this by specifying a model explicitly:
 ```bash
-l2m --model anthropic/claude-sonnet-4-20250514
+atlas --model anthropic/claude-sonnet-4-20250514
 ```
 
 ## Supported Providers
@@ -87,10 +87,10 @@ OPENAI_MODEL=gpt-5.1
 
 ```bash
 # Use default OpenAI model
-l2m
+atlas
 
 # Use specific OpenAI model
-l2m --model gpt-5-nano
+atlas --model gpt-5-nano
 ```
 
 #### Cost
@@ -135,13 +135,13 @@ ANTHROPIC_MODEL=claude-sonnet-4-5-20250929
 
 ```bash
 # Use Claude Sonnet 4.5
-l2m --model sonnet
+atlas --model sonnet
 
 # Use Claude Opus 4.5
-l2m --model opus
+atlas --model opus
 
 # Use full model name
-l2m --model anthropic/claude-sonnet-4-5-20250929
+atlas --model anthropic/claude-sonnet-4-5-20250929
 ```
 
 #### Cost
@@ -186,10 +186,10 @@ GEMINI_MODEL=gemini-2.5-flash
 
 ```bash
 # Use Gemini Pro
-l2m --model gemini
+atlas --model gemini
 
 # Use Gemini Flash
-l2m --model flash
+atlas --model flash
 ```
 
 #### Cost
@@ -234,10 +234,10 @@ DEEPSEEK_MODEL=deepseek-coder
 
 ```bash
 # Use DeepSeek Chat
-l2m --model deepseek
+atlas --model deepseek
 
 # Use DeepSeek R1 (reasoning)
-l2m --model r1
+atlas --model r1
 ```
 
 #### Cost
@@ -278,10 +278,10 @@ OpenRouter provides access to 100+ models from different providers through a sin
 
 ```bash
 # Use a specific model via OpenRouter
-l2m --model openrouter/anthropic/claude-sonnet-4-20250514
+atlas --model openrouter/anthropic/claude-sonnet-4-20250514
 
 # Use free tier model
-l2m --model openrouter/qwen/qwen-2.5-72b-instruct:free
+atlas --model openrouter/qwen/qwen-2.5-72b-instruct:free
 ```
 
 #### Free Tier Limitations
@@ -321,7 +321,7 @@ See all [models](https://console.groq.com/docs/models).
 #### Example Usage
 
 ```bash
-l2m --model groq/llama-3.3-70b-versatile
+atlas --model groq/llama-3.3-70b-versatile
 ```
 
 #### Features
@@ -348,7 +348,7 @@ Fireworks AI offers fast inference for open and proprietary models.
 #### Example Usage
 
 ```bash
-l2m --model fireworks_ai/accounts/fireworks/models/llama-v3p1-70b-instruct
+atlas --model fireworks_ai/accounts/fireworks/models/llama-v3p1-70b-instruct
 ```
 
 ---
@@ -369,13 +369,13 @@ Use your GitHub Copilot subscription to access GPT models.
 
 #### How It Works
 
-L2M automatically converts your GitHub Copilot token to an OpenAI-compatible token.
+Atlas automatically converts your GitHub Copilot token to an OpenAI-compatible token.
 
 #### Example Usage
 
 ```bash
-# L2M will automatically use Copilot credentials
-l2m --model gpt-4o
+# Atlas will automatically use Copilot credentials
+atlas --model gpt-4o
 ```
 
 #### Limitations
@@ -420,7 +420,7 @@ AWS_REGION=us-east-1
 #### Example Usage
 
 ```bash
-l2m --model bedrock/anthropic.claude-sonnet-4-20250514-v1:0
+atlas --model bedrock/anthropic.claude-sonnet-4-20250514-v1:0
 ```
 
 #### Cost
@@ -445,7 +445,7 @@ OPENAI_API_TYPE=azure
 #### Example Usage
 
 ```bash
-l2m --model azure/gpt-4o
+atlas --model azure/gpt-4o
 ```
 
 ---
@@ -471,11 +471,11 @@ No API key required. Ollama must be running locally.
 
 ```bash
 # Use Llama 3.3 locally
-l2m --model ollama/llama3.3
+atlas --model ollama/llama3.3
 
 # Use other Ollama models
-l2m --model ollama/codellama
-l2m --model ollama/qwen2.5-coder
+atlas --model ollama/codellama
+atlas --model ollama/qwen2.5-coder
 ```
 
 #### Benefits
@@ -499,9 +499,9 @@ l2m --model ollama/qwen2.5-coder
 
 ```bash
 # Specify model with --model flag
-l2m --model sonnet
-l2m --model gpt-4o
-l2m --model gemini
+atlas --model sonnet
+atlas --model gpt-4o
+atlas --model gemini
 ```
 
 ### Using Environment Variable
@@ -513,7 +513,7 @@ L2M_MODEL=gpt-4o
 ### Switching Models Mid-Session
 
 ```bash
-# Inside L2M CLI
+# Inside Atlas CLI
 /model sonnet
 /model gpt-4o-mini
 ```
@@ -521,7 +521,7 @@ L2M_MODEL=gpt-4o
 ### List Available Models
 
 ```bash
-l2m --list-models
+atlas --list-models
 ```
 
 ## Common Issues
@@ -541,7 +541,7 @@ l2m --list-models
 
 **Solution**:
 1. Check model name spelling
-2. Use `l2m --list-models` to see available models
+2. Use `atlas --list-models` to see available models
 3. Try a suggested similar model name
 
 ### Rate Limit Errors
@@ -603,7 +603,7 @@ OPENAI_API_TYPE=azure
 
 ## Getting Help
 
-- **GitHub Issues**: [Report bugs](https://github.com/astrio-ai/l2m/issues)
+- **GitHub Issues**: [Report bugs](https://github.com/astrio-ai/atlas/issues)
 - **Discord**: [Join community](https://discord.gg/gESuZkdD5R)
 - **Email**: naingoolwin.astrio@gmail.com
 - **LiteLLM Docs**: [LiteLLM Provider Docs](https://docs.litellm.ai/docs/providers)

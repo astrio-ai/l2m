@@ -209,7 +209,7 @@ class Coder:
 
     def get_announcements(self):
         lines = []
-        lines.append(f"L2M v{__version__}")
+        lines.append(f"Atlas v{__version__}")
 
         # Model
         main_model = self.main_model
@@ -258,7 +258,7 @@ class Coder:
             lines.append(f"Git repo: {rel_repo_dir} with {num_files:,} files")
             if num_files > 1000:
                 lines.append(
-                    "Warning: For large repos, consider using --subtree-only and .l2mignore"
+                    "Warning: For large repos, consider using --subtree-only and .atlasignore"
                 )
                 lines.append(f"See: {urls.large_repos}")
         else:
@@ -560,7 +560,7 @@ class Coder:
         self.io.tool_output()  # Blank line before
         
         # Show version first
-        self.io.tool_output(f"L2M v{__version__}", bold=True)
+        self.io.tool_output(f"Atlas v{__version__}", bold=True)
         self.io.tool_output()
         
         # Format: command (brand color #278ef5) - description (grayish #787878)
@@ -2516,7 +2516,7 @@ class Coder:
             context = self.get_context_from_history(self.cur_messages)
 
         try:
-            res = self.repo.commit(fnames=edited, context=context, l2m_edits=True, coder=self)
+            res = self.repo.commit(fnames=edited, context=context, atlas_edits=True, coder=self)
             if res:
                 self.show_auto_commit_outcome(res)
                 commit_hash, commit_message = res
@@ -2542,7 +2542,7 @@ class Coder:
         if not self.commit_before_message:
             return
         if self.commit_before_message[-1] != self.repo.get_head_commit_sha():
-            self.io.tool_output("You can use /undo to undo and discard each l2m commit.")
+            self.io.tool_output("You can use /undo to undo and discard each atlas commit.")
 
     def dirty_commit(self):
         if not self.need_commit_before_edits:

@@ -145,7 +145,7 @@ class Analytics:
 
     def get_data_file_path(self):
         try:
-            data_file = Path.home() / ".l2m" / "analytics.json"
+            data_file = Path.home() / ".atlas" / "analytics.json"
             data_file.parent.mkdir(parents=True, exist_ok=True)
             return data_file
         except OSError:

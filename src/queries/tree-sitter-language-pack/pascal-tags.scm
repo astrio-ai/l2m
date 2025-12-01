@@ -1,4 +1,4 @@
-; Pascal tags for L2M repo map
+; Pascal tags for Atlas repo map
 
 ; Program definition
 (program

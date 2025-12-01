@@ -1,0 +1,66 @@
+#!/bin/bash
+# Installation script for Atlas agent in Harbor container
+# This template will be rendered and executed in the container
+
+set -e
+
+echo "Installing Atlas agent..."
+
+# Install git if needed (required for git+https:// installs)
+if ! command -v git &> /dev/null; then
+    echo "Installing git..."
+    apt-get update && apt-get install -y git
+fi
+
+# Install Python dependencies if needed
+if ! command -v pip &> /dev/null; then
+    echo "Installing pip..."
+    python3 -m ensurepip --upgrade || apt-get update && apt-get install -y python3-pip
+fi
+
+# Install Atlas from source or PyPI
+# Note: Ubuntu 24.04+ has PEP 668 (externally-managed-environment), so we need --break-system-packages
+{% if atlas_install_method == "pypi" %}
+# Install from PyPI (when published)
+pip install --break-system-packages astrio-atlas
+{% elif atlas_install_method == "local" %}
+# Install from local source
+# Assumes Atlas source is mounted or copied into the container at /atlas
+if [ -d "/atlas" ]; then
+    cd /atlas
+    pip install --break-system-packages -e .
+elif [ -d "/opt/atlas" ]; then
+    cd /opt/atlas
+    pip install --break-system-packages -e .
+else
+    echo "Error: Atlas source not found. Please mount Atlas source to /atlas or /opt/atlas"
+    exit 1
+fi
+{% else %}
+# Install from git repository (default)
+# This is the most reliable method when source is not mounted
+pip install --break-system-packages git+https://github.com/astrio-ai/atlas.git
+{% endif %}
+
+# Verify installation
+if command -v atlas &> /dev/null; then
+    echo "Atlas installed successfully"
+    atlas --version || echo "Version check failed (may be normal)"
+else
+    echo "Error: Atlas installation failed"
+    exit 1
+fi
+
+# Set up environment variables if needed
+{% if openai_api_key %}
+export OPENAI_API_KEY="{{ openai_api_key }}"
+{% endif %}
+{% if anthropic_api_key %}
+export ANTHROPIC_API_KEY="{{ anthropic_api_key }}"
+{% endif %}
+{% if google_api_key %}
+export GOOGLE_API_KEY="{{ google_api_key }}"
+{% endif %}
+
+echo "Atlas agent setup complete"
+

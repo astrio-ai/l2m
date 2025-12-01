@@ -9,34 +9,34 @@ import src
 from src import utils
 from src.utils.dump import dump  # noqa: F401
 
-VERSION_CHECK_FNAME = Path.home() / ".l2m" / "caches" / "versioncheck"
+VERSION_CHECK_FNAME = Path.home() / ".atlas" / "caches" / "versioncheck"
 
 
 def install_from_main_branch(io):
     """
-    Install the latest version of l2m from the main branch of the GitHub repository.
+    Install the latest version of atlas from the main branch of the GitHub repository.
     """
 
     return utils.check_pip_install_extra(
         io,
         None,
-        "Install the development version of l2m from the main branch?",
-        ["git+https://github.com/astrio-ai/l2m.git"],
+        "Install the development version of atlas from the main branch?",
+        ["git+https://github.com/astrio-ai/atlas.git"],
         self_update=True,
     )
 
 
 def install_upgrade(io, latest_version=None):
     """
-    Install the latest version of l2m from PyPI.
+    Install the latest version of atlas from PyPI.
     """
 
     if latest_version:
-        new_ver_text = f"Newer l2m version v{latest_version} is available."
+        new_ver_text = f"Newer atlas version v{latest_version} is available."
     else:
-        new_ver_text = "Install latest version of l2m?"
+        new_ver_text = "Install latest version of atlas?"
 
-    docker_image = os.environ.get("L2M_DOCKER_IMAGE")
+    docker_image = os.environ.get("ATLAS_DOCKER_IMAGE")
     if docker_image:
         text = f"""
 {new_ver_text} To upgrade, run:
@@ -50,12 +50,12 @@ def install_upgrade(io, latest_version=None):
         io,
         None,
         new_ver_text,
-        ["l2m"],
+        ["atlas"],
         self_update=True,
     )
 
     if success:
-        io.tool_output("Re-run l2m to use new version.")
+        io.tool_output("Re-run atlas to use new version.")
         sys.exit()
 
     return
@@ -75,7 +75,7 @@ def check_version(io, just_check=False, verbose=False):
     import requests
 
     try:
-        response = requests.get("https://pypi.org/pypi/l2m/json", timeout=5)
+        response = requests.get("https://pypi.org/pypi/atlas/json", timeout=5)
         # If package doesn't exist on PyPI yet (404), silently skip version check
         if response.status_code == 404:
             if verbose:

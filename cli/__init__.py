@@ -1,4 +1,4 @@
-"""CLI package for Legacy2Modern.
+"""CLI package for Atlas.
 
 This package contains the command-line interface components:
 - main: Main entry point and CLI orchestration

@@ -1,6 +1,6 @@
-# Contributing to L2M
+# Contributing to Atlas
 
-Thank you for contributing to L2M! We're an exciting open source project built to translate, refactor, and modernize legacy software systems into modern, maintainable programming languages using AI-powered agents, and we'd love to have you contribute! Here's some resources and guidance to help you get started:
+Thank you for contributing to Atlas! We're an exciting open source project built to translate, refactor, and modernize legacy software systems into modern, maintainable programming languages using AI-powered agents, and we'd love to have you contribute! Here's some resources and guidance to help you get started:
 
 ## Table of Contents
 
@@ -113,7 +113,7 @@ We welcome contributions in these areas:
 ## Questions?
 
 - **Discord**: Join our [Discord community](https://discord.gg/2BVwAUzW)
-- **GitHub Discussions**: [Start a discussion](https://github.com/astrio-ai/l2m/discussions)
+- **GitHub Discussions**: [Start a discussion](https://github.com/astrio-ai/atlas/discussions)
 - **Email**: [naingoolwin.astrio@gmail.com](mailto:naingoolwin.astrio@gmail.com)
 
 ## License
@@ -122,5 +122,5 @@ By contributing, you agree that your contributions will be licensed under the Ap
 
 ---
 
-Thank you for helping make Legacy2Modern better! 🚀
+Thank you for helping make Atlas better! 🚀
 

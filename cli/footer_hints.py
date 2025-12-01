@@ -1,4 +1,4 @@
-"""Footer hints system for L2M CLI.
+"""Footer hints system for Atlas CLI.
 
 Provides context-aware keyboard shortcuts and status information.
 """

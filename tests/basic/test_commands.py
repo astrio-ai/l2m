@@ -146,7 +146,7 @@ class TestCommands(TestCase):
             mock_tool_error.assert_called_once_with("Failed to copy to clipboard: Clipboard error")
 
     def test_cmd_add_bad_glob(self):
-        # https://github.com/L2M-AI/l2m/issues/293
+        # https://github.com/Atlas-AI/atlas/issues/293
 
         io = InputOutput(pretty=False, fancy_input=False, yes=False)
         from src.coders import Coder
@@ -436,7 +436,7 @@ class TestCommands(TestCase):
                 pass
 
             # this was blowing up with GitCommandError, per:
-            # https://github.com/L2M-AI/l2m/issues/201
+            # https://github.com/Atlas-AI/atlas/issues/201
             commands.cmd_add("temp.txt")
 
     def test_cmd_commit(self):
@@ -477,7 +477,7 @@ class TestCommands(TestCase):
             outside_file.touch()
 
             # This should not be allowed!
-            # https://github.com/L2M-AI/l2m/issues/178
+            # https://github.com/Atlas-AI/atlas/issues/178
             commands.cmd_add("../outside.txt")
 
             self.assertEqual(len(coder.abs_fnames), 0)
@@ -501,7 +501,7 @@ class TestCommands(TestCase):
 
             # This should not be allowed!
             # It was blowing up with GitCommandError, per:
-            # https://github.com/L2M-AI/l2m/issues/178
+            # https://github.com/Atlas-AI/atlas/issues/178
             commands.cmd_add("../outside.txt")
 
             self.assertEqual(len(coder.abs_fnames), 0)
@@ -1338,7 +1338,7 @@ class TestCommands(TestCase):
             commands.cmd_think_tokens("")
             mock_tool_output.assert_any_call(mock.ANY)  # Just verify it calls tool_output
 
-    def test_cmd_add_l2mignored_file(self):
+    def test_cmd_add_atlasignored_file(self):
         with GitTemporaryDirectory():
             repo = git.Repo()
 
@@ -1350,8 +1350,8 @@ class TestCommands(TestCase):
             repo.git.add(str(fname2))
             repo.git.commit("-m", "initial")
 
-            l2mignore = Path(".l2mignore")
-            l2mignore.write_text(f"{fname1}\n{fname2}\ndir\n")
+            atlasignore = Path(".atlasignore")
+            atlasignore.write_text(f"{fname1}\n{fname2}\ndir\n")
 
             io = InputOutput(yes=True)
 
@@ -1360,7 +1360,7 @@ class TestCommands(TestCase):
                 io,
                 fnames,
                 None,
-                l2m_ignore_file=str(l2mignore),
+                atlas_ignore_file=str(atlasignore),
             )
 
             coder = Coder.create(

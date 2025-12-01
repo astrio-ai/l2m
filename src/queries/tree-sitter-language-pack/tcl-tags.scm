@@ -1,4 +1,4 @@
-; Tcl tags for L2M repo map
+; Tcl tags for Atlas repo map
 
 ; Procedure definitions
 (procedure

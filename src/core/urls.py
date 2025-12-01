@@ -1,7 +1,7 @@
-website = "https://l2m.astrio.app/"
-github_repo = "https://github.com/astrio-ai/l2m"
-github_issues = "https://github.com/astrio-ai/l2m/issues/new"
-github_readme = "https://github.com/astrio-ai/l2m#readme"
+website = "https://astrio.app/atlas/"
+github_repo = "https://github.com/astrio-ai/atlas"
+github_issues = "https://github.com/astrio-ai/atlas/issues/new"
+github_readme = "https://github.com/astrio-ai/atlas#readme"
 
 # TODO: Update these URLs when documentation site is deployed
 add_all_files = github_readme

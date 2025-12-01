@@ -142,7 +142,7 @@ class Commands:
 
         show_formats = OrderedDict(
             [
-                ("help", "Get help about using l2m (usage, config, troubleshoot)."),
+                ("help", "Get help about using atlas (usage, config, troubleshoot)."),
                 ("ask", "Ask questions about your code without making any changes."),
                 ("code", "Ask for changes to your code (using the best edit format)."),
                 (
@@ -549,7 +549,7 @@ class Commands:
         self.io.tool_output(f"{cost_pad}{fmt(limit)} tokens max context window size")
 
     def cmd_undo(self, args):
-        "Undo the last git commit if it was done by l2m"
+        "Undo the last git commit if it was done by atlas"
         try:
             self.raw_cmd_undo(args)
         except ANY_GIT_ERROR as err:
@@ -568,8 +568,8 @@ class Commands:
         last_commit_hash = self.coder.repo.get_head_commit_sha(short=True)
         last_commit_message = self.coder.repo.get_head_commit_message("(unknown)").strip()
         last_commit_message = (last_commit_message.splitlines() or [""])[0]
-        if last_commit_hash not in self.coder.l2m_commit_hashes:
-            self.io.tool_error("The last commit was not made by l2m in this chat session.")
+        if last_commit_hash not in self.coder.atlas_commit_hashes:
+            self.io.tool_error("The last commit was not made by atlas in this chat session.")
             self.io.tool_output(
                 "You could try `/git reset --hard HEAD^` but be aware that this is a destructive"
                 " command!"
@@ -795,7 +795,7 @@ class Commands:
         return res
 
     def cmd_add(self, args):
-        "Add files to the chat so l2m can edit them or review them in detail"
+        "Add files to the chat so atlas can edit them or review them in detail"
 
         all_matched_files = set()
 
@@ -807,7 +807,7 @@ class Commands:
                 fname = Path(self.coder.root) / word
 
             if self.coder.repo and self.coder.repo.ignored_file(fname):
-                self.io.tool_warning(f"Skipping {fname} due to l2mignore or --subtree-only.")
+                self.io.tool_warning(f"Skipping {fname} due to atlasignore or --subtree-only.")
                 continue
 
             if fname.exists():
@@ -1109,10 +1109,10 @@ class Commands:
             else:
                 self.io.tool_output(f"{cmd} No description available.")
         self.io.tool_output()
-        self.io.tool_output("Use `/help <question>` to ask questions about how to use l2m.")
+        self.io.tool_output("Use `/help <question>` to ask questions about how to use atlas.")
 
     def cmd_help(self, args):
-        "Ask questions about l2m"
+        "Ask questions about atlas"
 
         if not args.strip():
             self.basic_help()
@@ -1139,7 +1139,7 @@ class Commands:
         )
         user_msg = self.help.ask(args)
         user_msg += """
-# Announcement lines from when this session of l2m was launched:
+# Announcement lines from when this session of atlas was launched:
 
 """
         user_msg += "\n".join(self.coder.get_announcements()) + "\n"

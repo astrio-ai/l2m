@@ -1,8 +1,8 @@
-"""CodeBLEU evaluation module for L2M benchmarking."""
+"""CodeBLEU evaluation module for Atlas benchmarking."""
 
 from evals.codebleu.benchmark import CodeBLEUBenchmark, run_benchmark
 from evals.codebleu.evaluator import CodeBLEUEvaluator, evaluate_codebleu
-from evals.codebleu.l2m_helpers import evaluate_l2m_output, run_l2m_modernization
+from evals.codebleu.atlas_helpers import evaluate_atlas_output, run_atlas_modernization
 
 try:
     from evals.codebleu.visualize import (
@@ -17,8 +17,8 @@ try:
         "evaluate_codebleu",
         "CodeBLEUBenchmark",
         "run_benchmark",
-        "evaluate_l2m_output",
-        "run_l2m_modernization",
+        "evaluate_atlas_output",
+        "run_atlas_modernization",
         "load_results",
         "plot_codebleu_scores",
         "plot_component_comparison",
@@ -32,7 +32,7 @@ except ImportError:
         "evaluate_codebleu",
         "CodeBLEUBenchmark",
         "run_benchmark",
-        "evaluate_l2m_output",
-        "run_l2m_modernization",
+        "evaluate_atlas_output",
+        "run_atlas_modernization",
     ]
 

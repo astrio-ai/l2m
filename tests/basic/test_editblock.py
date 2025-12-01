@@ -167,14 +167,14 @@ oops!
 
     def test_find_original_update_blocks_no_final_newline(self):
         edit = """
-l2m/coder.py
+atlas/coder.py
 <<<<<<< SEARCH
             self.console.print("[red]^C again to quit")
 =======
             self.io.tool_error("^C again to quit")
 >>>>>>> REPLACE
 
-l2m/coder.py
+atlas/coder.py
 <<<<<<< SEARCH
             self.io.tool_error("Malformed ORIGINAL/UPDATE blocks, retrying...")
             self.io.tool_error(err)
@@ -183,14 +183,14 @@ l2m/coder.py
             self.io.tool_error(str(err))
 >>>>>>> REPLACE
 
-l2m/coder.py
+atlas/coder.py
 <<<<<<< SEARCH
             self.console.print("[red]Unable to get commit message from gpt-3.5-turbo. Use /commit to try again.\n")
 =======
             self.io.tool_error("Unable to get commit message from gpt-3.5-turbo. Use /commit to try again.")
 >>>>>>> REPLACE
 
-l2m/coder.py
+atlas/coder.py
 <<<<<<< SEARCH
             self.console.print("[red]Skipped commit.")
 =======
@@ -222,7 +222,7 @@ tests/test_repomap.py
             mock_run.return_value = CompletedProcess(args=["ctags", "--version"], returncode=0, stdout='''{
   "_type": "tag",
   "name": "status",
-  "path": "l2m/main.py",
+  "path": "atlas/main.py",
   "pattern": "/^    status = main()$/",
   "kind": "variable"
 }''')
@@ -232,7 +232,7 @@ tests/test_repomap.py
             mock_check_output.return_value = '''{
   "_type": "tag",
   "name": "status",
-  "path": "l2m/main.py",
+  "path": "atlas/main.py",
   "pattern": "/^    status = main()$/",
   "kind": "variable"
 }'''
@@ -321,7 +321,7 @@ These changes replace the `subprocess.run` patches with `subprocess.check_output
         self.assertEqual(result, expected_output)
 
     def test_create_new_file_with_other_file_in_chat(self):
-        # https://github.com/L2M-AI/l2m/issues/2258
+        # https://github.com/Atlas-AI/atlas/issues/2258
         with ChdirTemporaryDirectory():
             # Create a few temporary files
             file1 = "file.txt"
@@ -533,7 +533,7 @@ Hope you like it!
         )
 
     def test_find_original_update_blocks_quad_backticks_with_triples_in_LLM_reply(self):
-        # https://github.com/L2M-AI/l2m/issues/2879
+        # https://github.com/Atlas-AI/atlas/issues/2879
         edit = """
 Here's the change:
 
@@ -555,7 +555,7 @@ Hope you like it!
 
     # Test for shell script blocks with sh language identifier (issue #3785)
     def test_find_original_update_blocks_with_sh_language_identifier(self):
-        # https://github.com/L2M-AI/l2m/issues/3785
+        # https://github.com/Atlas-AI/atlas/issues/3785
         edit = """
 Here's a shell script:
 

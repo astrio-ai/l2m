@@ -18,7 +18,7 @@ warnings.simplefilter("ignore", category=FutureWarning)
 
 def install_help_extra(io):
     pip_install_cmd = [
-        "l2m-chat[help]",
+        "atlas-chat[help]",
         "--extra-index-url",
         "https://download.pytorch.org/whl/cpu",
     ]
@@ -32,7 +32,7 @@ def install_help_extra(io):
 
 
 def get_package_files():
-    for path in importlib_resources.files("l2m.website").iterdir():
+    for path in importlib_resources.files("atlas.website").iterdir():
         if path.is_file():
             yield path
         elif path.is_dir():
@@ -79,7 +79,7 @@ def fname_to_url(filepath):
     # Ensure the URL starts and ends with '/'
     url_path = url_path.strip("/")
 
-    return f"https://l2m.chat/{url_path}"
+    return f"https://atlas.chat/{url_path}"
 
 
 def get_index():
@@ -91,7 +91,7 @@ def get_index():
     )
     from llama_index.core.node_parser import MarkdownNodeParser
 
-    dname = Path.home() / ".l2m" / "caches" / ("help." + __version__)
+    dname = Path.home() / ".atlas" / "caches" / ("help." + __version__)
 
     index = None
     try:
@@ -113,7 +113,7 @@ def get_index():
                 continue
 
             doc = Document(
-                text=importlib_resources.files("l2m.website")
+                text=importlib_resources.files("atlas.website")
                 .joinpath(fname)
                 .read_text(encoding="utf-8"),
                 metadata=dict(

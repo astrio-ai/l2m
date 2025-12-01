@@ -1,6 +1,6 @@
 # Documentation
 
-Welcome to the Legacy2Modern (L2M) documentation!
+Welcome to the Atlas (Atlas) documentation!
 
 ## Documentation Index
 
@@ -14,7 +14,7 @@ Welcome to the Legacy2Modern (L2M) documentation!
 
 - **Installation**: See [Getting Started](getting_started.md#installation)
 - **Basic Usage**: See [Getting Started](getting_started.md#basic-usage)
-- **CLI Usage**: Run `l2m` for interactive terminal interface
+- **CLI Usage**: Run `atlas` for interactive terminal interface
 - **Architecture**: See [Architecture](architecture.md) for system design
 
 ## Documentation Structure
@@ -41,7 +41,7 @@ docs/
 
 ### Users
 - Follow [Getting Started](getting_started.md) for setup
-- Use the interactive CLI: `l2m`
+- Use the interactive CLI: `atlas`
 - Type `help` in the CLI for available commands
 - See the main [README.md](../README.md) for feature overview
 
@@ -50,9 +50,9 @@ docs/
 ### Installation
 ```bash
 # Install the package via pypi
-pip install l2m
+pip install astrio-atlas
 # or from curl
-curl -fsSL https://astrio.app/l2m/install | bash
+curl -fsSL https://astrio.app/atlas/install | bash
 
 # Configure environment
 cp .env.example .env
@@ -61,7 +61,7 @@ cp .env.example .env
 
 ### Usage
 ```bash
-l2m
+atlas
 ```
 
 ### Understanding the System
@@ -89,7 +89,7 @@ To improve documentation:
 
 ## Support
 
-- **GitHub Issues**: [Report documentation issues](https://github.com/astrio-ai/l2m/issues)
+- **GitHub Issues**: [Report documentation issues](https://github.com/astrio-ai/atlas/issues)
 - **Discord**: [Get help](https://discord.gg/2BVwAUzW)
 - **Email**: naingoolwin.astrio@gmail.com
 

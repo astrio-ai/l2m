@@ -2,7 +2,7 @@
 
 ## Setup commands
 
-- Install package: `pip install l2m`
+- Install package: `pip install astrio-atlas`
 - Set up environment: `cp .env.example .env` (add `OPENAI_API_KEY`)
 
 ## Coding style
@@ -24,7 +24,7 @@
 - Main code: `src/` and `cli/`
 - Tests: `tests/`
 - Documentation: `docs/`
-- Entry point: `cli/main.py` (CLI command: `l2m`)
+- Entry point: `cli/main.py` (CLI command: `atlas`)
 - Evaluations: `evals/` (CodeBLEU and Harbor benchmarks)
 - Data: `data/` (COBOL files, groundtruth Python, evaluation outputs)
 - Output directories:
@@ -51,7 +51,7 @@
 ### CodeBLEU Evaluation
 
 - **Location**: `evals/codebleu/`
-- **Purpose**: Measure code quality of L2M-generated Python vs groundtruth using CodeBLEU metric
+- **Purpose**: Measure code quality of Atlas-generated Python vs groundtruth using CodeBLEU metric
 - **Key files**:
   - `modernize_and_evaluate.py`: Automated workflow (modernize COBOL → evaluate)
   - `evaluator.py`: CodeBLEU evaluation wrapper
@@ -70,13 +70,13 @@
   ```
 - **Important**: 
   - Groundtruth Python files must be in same directory or specified `groundtruth_dir`
-  - L2M modernization uses `--yes-always`, `--no-stream`, `--no-cache-prompts`, `--map-refresh manual` for speed
+  - Atlas modernization uses `--yes-always`, `--no-stream`, `--no-cache-prompts`, `--map-refresh manual` for speed
   - Visualization saves PNGs to `data/output/visuals/` by default
 
 ### Harbor Evaluation
 
 - **Location**: `evals/harbor/`
-- **Purpose**: Benchmark L2M agent in containerized environments
+- **Purpose**: Benchmark Atlas agent in containerized environments
 - **Note**: Separate optional dependency (`harbor>=0.1.18`)
 
 ## Known issues and gotchas
@@ -92,10 +92,10 @@
     pip install 'tree-sitter>=0.24.0' --upgrade
     ```
 
-### L2M modernization optimization
+### Atlas modernization optimization
 
 - Use `"Convert"` message instead of `"Modernize"` to avoid multi-agent pipeline
-- Pass file path explicitly as argument to L2M
+- Pass file path explicitly as argument to Atlas
 - Use optimization flags: `--no-stream`, `--no-cache-prompts`, `--map-refresh manual`
 - Set `stdin=subprocess.DEVNULL` for non-interactive mode
 - Typical speed: ~2 minutes per COBOL file (not 10+ minutes)
@@ -111,7 +111,7 @@
 ### Environment variables
 
 - See `.env.example` for comprehensive list of supported variables
-- Key vars: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `L2M_MODEL`, `OPENROUTER_API_KEY`
+- Key vars: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `ATLAS_MODEL`, `OPENROUTER_API_KEY`
 - Rate limiting: Free-tier models have strict limits (30s timeout); paid models allow longer
 
 ## When to ask for help

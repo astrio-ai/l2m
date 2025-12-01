@@ -153,7 +153,7 @@ class ModelInfoManager:
     CACHE_TTL = 60 * 60 * 24  # 24 hours
 
     def __init__(self):
-        self.cache_dir = Path.home() / ".l2m" / "caches"
+        self.cache_dir = Path.home() / ".atlas" / "caches"
         self.cache_file = self.cache_dir / "model_prices_and_context_window.json"
         self.content = None
         self.local_model_metadata = {}
@@ -330,7 +330,7 @@ class Model(ModelSettings):
 
         # Find the extra settings
         self.extra_model_settings = next(
-            (ms for ms in MODEL_SETTINGS if ms.name == "l2m/extra_params"), None
+            (ms for ms in MODEL_SETTINGS if ms.name == "atlas/extra_params"), None
         )
 
         self.info = self.get_model_info(model)
@@ -389,7 +389,7 @@ class Model(ModelSettings):
         if (
             self.extra_model_settings
             and self.extra_model_settings.extra_params
-            and self.extra_model_settings.name == "l2m/extra_params"
+            and self.extra_model_settings.name == "atlas/extra_params"
         ):
             # Initialize extra_params if it doesn't exist
             if not self.extra_params:
@@ -963,7 +963,7 @@ class Model(ModelSettings):
             os.environ[openai_api_key] = token
 
     def send_completion(self, messages, functions, stream, temperature=None):
-        if os.environ.get("L2M_SANITY_CHECK_TURNS"):
+        if os.environ.get("ATLAS_SANITY_CHECK_TURNS"):
             sanity_check_messages(messages)
 
         if self.is_deepseek_r1():
@@ -1015,7 +1015,7 @@ class Model(ModelSettings):
         if "GITHUB_COPILOT_TOKEN" in os.environ:
             if "extra_headers" not in kwargs:
                 kwargs["extra_headers"] = {
-                    "Editor-Version": f"l2m/{__version__}",
+                    "Editor-Version": f"atlas/{__version__}",
                     "Copilot-Integration-Id": "vscode-chat",
                 }
 

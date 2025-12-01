@@ -97,7 +97,7 @@ class TestHelp(unittest.TestCase):
         except ImportError:
             self.skipTest("llama_index not available")
         help_instance = Help()
-        question = "What is l2m?"
+        question = "What is atlas?"
         result = help_instance.ask(question)
 
         self.assertIn(f"# Question: {question}", result)
@@ -115,37 +115,37 @@ class TestHelp(unittest.TestCase):
 
     def test_fname_to_url_unix(self):
         # Test relative Unix-style paths
-        self.assertEqual(fname_to_url("website/docs/index.md"), "https://l2m.chat/docs")
+        self.assertEqual(fname_to_url("website/docs/index.md"), "https://atlas.chat/docs")
         self.assertEqual(
-            fname_to_url("website/docs/usage.md"), "https://l2m.chat/docs/usage.html"
+            fname_to_url("website/docs/usage.md"), "https://atlas.chat/docs/usage.html"
         )
         self.assertEqual(fname_to_url("website/_includes/header.md"), "")
 
         # Test absolute Unix-style paths
         self.assertEqual(
-            fname_to_url("/home/user/project/website/docs/index.md"), "https://l2m.chat/docs"
+            fname_to_url("/home/user/project/website/docs/index.md"), "https://atlas.chat/docs"
         )
         self.assertEqual(
             fname_to_url("/home/user/project/website/docs/usage.md"),
-            "https://l2m.chat/docs/usage.html",
+            "https://atlas.chat/docs/usage.html",
         )
         self.assertEqual(fname_to_url("/home/user/project/website/_includes/header.md"), "")
 
     def test_fname_to_url_windows(self):
         # Test relative Windows-style paths
-        self.assertEqual(fname_to_url(r"website\docs\index.md"), "https://l2m.chat/docs")
+        self.assertEqual(fname_to_url(r"website\docs\index.md"), "https://atlas.chat/docs")
         self.assertEqual(
-            fname_to_url(r"website\docs\usage.md"), "https://l2m.chat/docs/usage.html"
+            fname_to_url(r"website\docs\usage.md"), "https://atlas.chat/docs/usage.html"
         )
         self.assertEqual(fname_to_url(r"website\_includes\header.md"), "")
 
         # Test absolute Windows-style paths
         self.assertEqual(
-            fname_to_url(r"C:\Users\user\project\website\docs\index.md"), "https://l2m.chat/docs"
+            fname_to_url(r"C:\Users\user\project\website\docs\index.md"), "https://atlas.chat/docs"
         )
         self.assertEqual(
             fname_to_url(r"C:\Users\user\project\website\docs\usage.md"),
-            "https://l2m.chat/docs/usage.html",
+            "https://atlas.chat/docs/usage.html",
         )
         self.assertEqual(fname_to_url(r"C:\Users\user\project\website\_includes\header.md"), "")
 

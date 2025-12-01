@@ -29,7 +29,7 @@ def test_gitignore_patterns():
     spec = load_gitignores(gitignores)
 
     # Test built-in patterns
-    assert spec.match_file(".l2m.conf")
+    assert spec.match_file(".atlas.conf")
     assert spec.match_file(".git/config")
     assert spec.match_file("file~")  # Emacs/vim backup
     assert spec.match_file("file.bak")
