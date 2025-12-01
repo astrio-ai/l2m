@@ -36,17 +36,13 @@ jobs:
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          # Option 1: Use API token (recommended for immediate fix)
-          # Requires PYPI_API_TOKEN secret in GitHub repository settings
-          # Create token at: https://pypi.org/manage/account/token/
-          # Scope: "astrio-atlas" project or "Entire account"
-          password: ${{ secrets.PYPI_API_TOKEN }}
+          # Using PyPI trusted publishing (no password/API token needed)
+          # Configure trusted publisher on PyPI project settings:
+          # https://pypi.org/manage/project/astrio-atlas/settings/publishing/
+          # 
+          # Click the link from workflow warnings to auto-configure, or manually:
+          # - Owner: astrio-ai
+          # - Repository: atlas
+          # - Workflow filename: .github/workflows/pypi-publish.yml
           verbose: true
-          # Option 2: Use trusted publishing (requires PyPI configuration)
-          # Remove the 'password' line above and configure trusted publishing on PyPI:
-          # 1. Go to: https://pypi.org/manage/project/astrio-atlas/settings/publishing/
-          # 2. Add trusted publisher:
-          #    - Owner: astrio-ai
-          #    - Repository: atlas
-          #    - Workflow: .github/workflows/pypi-publish.yml
 
