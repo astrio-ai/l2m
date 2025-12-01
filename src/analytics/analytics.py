@@ -198,7 +198,7 @@ class Analytics:
             "os_platform": platform.system(),
             "os_release": platform.release(),
             "machine": platform.machine(),
-            "l2m_version": __version__,
+            "atlas_version": __version__,
         }
 
     def _redact_model_name(self, model):
