@@ -239,7 +239,7 @@ class MarkdownStream:
 
 
 if __name__ == "__main__":
-    with open("l2m/io.py", "r") as f:
+    with open("atlas/io.py", "r") as f:
         code = f.read()
     _text = _text_prefix + code + _text_suffix
     _text = _text * 10

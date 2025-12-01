@@ -1,6 +1,6 @@
-"""Evals package for L2M benchmarking.
+"""Evals package for Atlas benchmarking.
 
-This package provides evaluation tools for benchmarking L2M (Legacy2Modern):
+This package provides evaluation tools for benchmarking Atlas (Atlas):
 
 - CodeBLEU: Code similarity evaluation using CodeBLEU metrics
 - Harbor: Terminal/benchmarking integration for agent evaluation

@@ -1,17 +1,17 @@
 # Getting Started Guide
 
-Get up and running with L2M under 1 minute!
+Get up and running with Atlas under 1 minute!
 
 ## Installation
 
 ```bash
-pip install l2m
+pip install astrio-atlas
 ```
 
 Or install from source:
 ```bash
-git clone https://github.com/astrio-ai/l2m.git
-cd l2m
+git clone https://github.com/astrio-ai/atlas.git
+cd atlas
 pip install -r requirements.txt
 pip install -e .
 ```
@@ -32,7 +32,7 @@ ANTHROPIC_API_KEY=sk-ant-your-key-here
 Start the interactive CLI:
 
 ```bash
-l2m
+atlas
 ```
 
 Then in the terminal:
@@ -60,15 +60,15 @@ Modernize this COBOL file to Python
 Run with a single message:
 
 ```bash
-l2m --message "Modernize data/hello/HELLO.cbl to Python"
-l2m data/hello/HELLO.cbl --message "Convert to Python"
+atlas --message "Modernize data/hello/HELLO.cbl to Python"
+atlas data/hello/HELLO.cbl --message "Convert to Python"
 ```
 
 ## Configuration Options
 
 Specify model:
 ```bash
-l2m --model gpt-4o
+atlas --model gpt-4o
 ```
 
 Or in `.env`:
@@ -78,13 +78,13 @@ L2M_MODEL=gpt-4o
 
 ## Troubleshooting
 
-**Command not found**: `pip install l2m` or ensure it's in your PATH
+**Command not found**: `pip install astrio-atlas` or ensure it's in your PATH
 
 **API key error**: Check `.env` file has correct key
 
-**Model not found**: Use `l2m --list-models` to see available models
+**Model not found**: Use `atlas --list-models` to see available models
 
-**Git errors**: Run `git init` or use `l2m --no-git`
+**Git errors**: Run `git init` or use `atlas --no-git`
 
 ## Next Steps
 
@@ -94,6 +94,6 @@ L2M_MODEL=gpt-4o
 
 ## Getting Help
 
-- **GitHub Issues**: [Report bugs](https://github.com/astrio-ai/l2m/issues)
+- **GitHub Issues**: [Report bugs](https://github.com/astrio-ai/atlas/issues)
 - **Discord**: [Join community](https://discord.gg/2BVwAUzW)
 - **Email**: naingoolwin.astrio@gmail.com

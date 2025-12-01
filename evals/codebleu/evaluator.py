@@ -20,7 +20,7 @@ def _check_tree_sitter_python():
     except ImportError:
         pass
 
-    # Try via grep-ast (which L2M already uses)
+    # Try via grep-ast (which Atlas already uses)
     try:
         from grep_ast.tsl import get_parser
         parser = get_parser("python")
@@ -94,7 +94,7 @@ class CodeBLEUEvaluator:
             raise ImportError(
                 "tree-sitter-python grammar is required for CodeBLEU evaluation. "
                 "Install it with: pip install tree-sitter-python\n"
-                "Note: If you're using grep-ast (which L2M uses), ensure it's properly configured."
+                "Note: If you're using grep-ast (which Atlas uses), ensure it's properly configured."
             )
 
         self.lang = lang

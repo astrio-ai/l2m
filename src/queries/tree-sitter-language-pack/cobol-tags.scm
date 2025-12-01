@@ -1,4 +1,4 @@
-; COBOL tags for L2M repo map
+; COBOL tags for Atlas repo map
 ; Based on tree-sitter-cobol grammar from https://github.com/nolanlwin/tree-sitter-cobol
 
 ; Program definitions

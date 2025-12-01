@@ -10,7 +10,7 @@ from src import __version__
 from src.core.urls import github_issues
 # Import VERSION_CHECK_FNAME lazily to avoid circular imports
 from pathlib import Path
-VERSION_CHECK_FNAME = Path.home() / ".l2m" / "caches" / "versioncheck"
+VERSION_CHECK_FNAME = Path.home() / ".atlas" / "caches" / "versioncheck"
 
 FENCE = "`" * 3
 
@@ -46,7 +46,7 @@ def report_github_issue(issue_text, title=None, confirm=True):
     :param confirm: Whether to ask for confirmation before opening the browser (default: True)
     :return: None
     """
-    version_info = f"L2M version: {__version__}\n"
+    version_info = f"Atlas version: {__version__}\n"
     python_version = f"Python version: {sys.version.split()[0]}\n"
     platform_info = f"Platform: {platform.platform()}\n"
     python_info = get_python_info() + "\n"
@@ -68,7 +68,7 @@ def report_github_issue(issue_text, title=None, confirm=True):
         print(f"\n# {title}\n")
         print(issue_text.strip())
         print()
-        print("Please consider reporting this bug to help improve l2m!")
+        print("Please consider reporting this bug to help improve atlas!")
         prompt = "Open a GitHub Issue pre-filled with the above error in your browser? (Y/n) "
         confirmation = input(prompt).strip().lower()
 

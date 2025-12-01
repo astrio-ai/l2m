@@ -68,7 +68,7 @@ class LiteLLMExceptions:
             if var.endswith("Error"):
                 if var not in self.exception_info:
                     if strict:
-                        raise ValueError(f"{var} is in litellm but not in l2m's exceptions list")
+                        raise ValueError(f"{var} is in litellm but not in atlas's exceptions list")
 
         for var in self.exception_info:
             try:

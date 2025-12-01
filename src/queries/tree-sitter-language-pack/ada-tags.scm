@@ -1,4 +1,4 @@
-; Ada tags for L2M repo map
+; Ada tags for Atlas repo map
 
 ; Package definitions
 (package_declaration

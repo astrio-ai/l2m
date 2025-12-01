@@ -45,8 +45,8 @@ from cli.tui_utils import StyleGuide, format_separator
 def get_approval_mode_config_path(git_root=None):
     """Get the path to the approval mode config file."""
     if git_root:
-        return Path(git_root) / ".l2m.approval.json"
-    return Path.cwd() / ".l2m.approval.json"
+        return Path(git_root) / ".atlas.approval.json"
+    return Path.cwd() / ".atlas.approval.json"
 
 
 def load_approval_mode_config(git_root=None):
@@ -79,18 +79,18 @@ def _get_ascii_art() -> str:
     """Generate left-aligned ASCII art"""
     
     ascii_lines = [
-        "██╗     ██████╗ ███╗   ███╗",
-        "██║     ╚════██╗████╗ ████║",
-        "██║      █████╔╝██╔████╔██║",
-        "██║     ██╔═══╝ ██║╚██╔╝██║",
-        "███████╗███████╗██║ ╚═╝ ██║",
-        "╚══════╝╚══════╝╚═╝     ╚═╝",
+        "",
+        "   _   _   _           ",
+        "  /_\\ | |_| | __ _ ___ ",
+        " //_\\\\| __| |/ _` / __|",
+        "/  _  \\ |_| | (_| \\__ \\",
+        "\\_/ \\_/\\__|_|\\__,_|___/",
+        "",
     ]
     
     # Join lines (left-aligned, no centering)
     art = "\n".join(ascii_lines)
     return StyleGuide.header(art)
-
 
 def check_config_files_for_yes(config_files):
     found = False
@@ -168,11 +168,11 @@ def setup_git(git_root, io):
             pass
     elif cwd == Path.home():
         io.tool_warning(
-            "You should probably run l2m in your project's directory, not your home dir."
+            "You should probably run atlas in your project's directory, not your home dir."
         )
         return
     elif cwd and io.confirm_ask(
-        "No git repo found, create one to track l2m's changes (recommended)?"
+        "No git repo found, create one to track atlas's changes (recommended)?"
     ):
         git_root = str(cwd.resolve())
         repo = make_new_repo(git_root, io)
@@ -212,8 +212,8 @@ def check_gitignore(git_root, io, ask=True):
         repo = git.Repo(git_root)
         patterns_to_add = []
 
-        if not repo.ignored(".l2m"):
-            patterns_to_add.append(".l2m*")
+        if not repo.ignored(".atlas"):
+            patterns_to_add.append(".atlas*")
 
         env_path = Path(git_root) / ".env"
         if env_path.exists() and not repo.ignored(".env"):
@@ -261,8 +261,8 @@ def check_streamlit_install(io):
     return utils.check_pip_install_extra(
         io,
         "streamlit",
-        "You need to install the l2m browser feature",
-        ["l2m-chat[browser]"],
+        "You need to install the atlas browser feature",
+        ["atlas-chat[browser]"],
     )
 
 
@@ -375,7 +375,7 @@ def generate_search_path_list(default_file, git_root, command_line_file):
 
 def register_models(git_root, model_settings_fname, io, verbose=False):
     model_settings_files = generate_search_path_list(
-        ".l2m.model.settings.yml", git_root, model_settings_fname
+        ".atlas.model.settings.yml", git_root, model_settings_fname
     )
 
     try:
@@ -388,7 +388,7 @@ def register_models(git_root, model_settings_fname, io, verbose=False):
         elif verbose:
             io.tool_output("No model settings files loaded")
     except Exception as e:
-        io.tool_error(f"Error loading l2m model settings: {e}")
+        io.tool_error(f"Error loading atlas model settings: {e}")
         return 1
 
     if verbose:
@@ -408,7 +408,7 @@ def load_dotenv_files(git_root, dotenv_fname, encoding="utf-8"):
     )
 
     # Explicitly add the OAuth keys file to the beginning of the list
-    oauth_keys_file = Path.home() / ".l2m" / "oauth-keys.env"
+    oauth_keys_file = Path.home() / ".atlas" / "oauth-keys.env"
     if oauth_keys_file.exists():
         # Insert at the beginning so it's loaded first (and potentially overridden)
         dotenv_files.insert(0, str(oauth_keys_file.resolve()))
@@ -436,7 +436,7 @@ def register_litellm_models(git_root, model_metadata_fname, io, verbose=False):
     model_metadata_files.append(str(resource_metadata))
 
     model_metadata_files += generate_search_path_list(
-        ".l2m.model.metadata.json", git_root, model_metadata_fname
+        ".atlas.model.metadata.json", git_root, model_metadata_fname
     )
 
     try:
@@ -478,9 +478,9 @@ def sanity_check_repo(repo, io):
         bad_ver = True
 
     if bad_ver:
-        io.tool_error("L2M only works with git repos with version number 1 or 2.")
+        io.tool_error("Atlas only works with git repos with version number 1 or 2.")
         io.tool_output("You may be able to convert your repo: git update-index --index-version=2")
-        io.tool_output("Or run l2m --no-git to proceed without using git.")
+        io.tool_output("Or run atlas --no-git to proceed without using git.")
         io.offer_url(urls.git_index_version, "Open documentation url for more info?")
         return False
 
@@ -502,7 +502,7 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
     else:
         git_root = get_git_root()
 
-    conf_fname = Path(".l2m.conf.yml")
+    conf_fname = Path(".atlas.conf.yml")
 
     default_config_files = []
     try:
@@ -698,12 +698,12 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
     if args.analytics is not False:
         if analytics.need_to_ask(args.analytics):
             io.tool_output(
-                "L2M respects your privacy and never collects your code, chat messages, keys or"
+                "Atlas respects your privacy and never collects your code, chat messages, keys or"
                 " personal info."
             )
             io.tool_output(f"For more info: {urls.analytics}")
             disable = not io.confirm_ask(
-                "Allow collection of anonymous analytics to help improve l2m?"
+                "Allow collection of anonymous analytics to help improve atlas?"
             )
 
             analytics.asked_opt_in = True
@@ -963,7 +963,7 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
                 io,
                 fnames,
                 git_dname,
-                args.l2mignore,
+                atlas_ignore_file=args.atlasignore,
                 models=main_model.commit_message_models(),
                 attribute_author=args.attribute_author,
                 attribute_committer=args.attribute_committer,
@@ -1102,8 +1102,8 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
     ignores = []
     if git_root:
         ignores.append(str(Path(git_root) / ".gitignore"))
-    if args.l2mignore:
-        ignores.append(args.l2mignore)
+    if args.atlasignore:
+        ignores.append(args.atlasignore)
 
     if args.watch_files:
         file_watcher = FileWatcher(
@@ -1249,7 +1249,7 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
 
 def is_first_run_of_new_version(io, verbose=False):
     """Check if this is the first run of a new version/executable combination"""
-    installs_file = Path.home() / ".l2m" / "installs.json"
+    installs_file = Path.home() / ".atlas" / "installs.json"
     key = (__version__, sys.executable)
 
     # Never show notes for .dev versions
@@ -1301,7 +1301,7 @@ def check_and_load_imports(io, is_first_run, verbose=False):
                 load_slow_imports(swallow=False)
             except Exception as err:
                 io.tool_error(str(err))
-                io.tool_output("Error loading required imports. Did you install l2m properly?")
+                io.tool_output("Error loading required imports. Did you install atlas properly?")
                 io.offer_url(urls.install_properly, "Open documentation url for more info?")
                 sys.exit(1)
 

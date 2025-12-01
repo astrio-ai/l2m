@@ -1,0 +1,33 @@
+[project]
+name = "l2m"
+version = "0.3.3"  # Final deprecated version - increment from last l2m release
+description = "⚠️ DEPRECATED: This package has been renamed to astrio-atlas. Please install with 'pip install astrio-atlas'"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "Apache-2.0"}
+authors = [
+    {name = "Astrio AI", email = "naingoolwin.astrio@gmail.com"}
+]
+keywords = ["deprecated", "cobol", "python", "modernization", "transpilation"]
+classifiers = [
+    "Development Status :: 7 - Inactive",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = [
+    "astrio-atlas>=0.3.2",  # Require the new package
+]
+
+[project.scripts]
+l2m = "l2m.__main__:main"
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+

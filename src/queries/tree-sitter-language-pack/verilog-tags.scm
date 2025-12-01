@@ -1,4 +1,4 @@
-; Verilog tags for L2M repo map
+; Verilog tags for Atlas repo map
 
 ; Module declarations
 (module_declaration

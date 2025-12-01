@@ -1,7 +1,7 @@
 
 # Credits
 
-L2M uses modified versions of the tags.scm files from these open source 
+Atlas uses modified versions of the tags.scm files from these open source 
 tree-sitter language implementations:
 
 * [https://github.com/tree-sitter/tree-sitter-c](https://github.com/tree-sitter/tree-sitter-c) — licensed under the MIT License.

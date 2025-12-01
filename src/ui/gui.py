@@ -148,7 +148,7 @@ class GUI:
 
     def do_sidebar(self):
         with st.sidebar:
-            st.title("L2M")
+            st.title("Atlas")
             # self.cmds_tab, self.settings_tab = st.tabs(["Commands", "Settings"])
 
             # self.do_recommended_actions()
@@ -159,15 +159,15 @@ class GUI:
             # st.write("### Experimental")
 
             st.warning(
-                "This browser version of l2m is experimental. Please share feedback in [GitHub"
-                " issues](https://github.com/L2M-AI/l2m/issues)."
+                "This browser version of atlas is experimental. Please share feedback in [GitHub"
+                " issues](https://github.com/Atlas-AI/atlas/issues)."
             )
 
     def do_settings_tab(self):
         pass
 
     def do_recommended_actions(self):
-        text = "L2M works best when your code is stored in a git repo.  \n"
+        text = "Atlas works best when your code is stored in a git repo.  \n"
         text += f"[See the FAQ for more info]({urls.git})"
 
         with st.expander("Recommended actions", expanded=True):
@@ -176,8 +176,8 @@ class GUI:
                 self.button("Create git repo", key=random.random(), help="?")
 
             with st.popover("Update your `.gitignore` file"):
-                st.write("It's best to keep l2m's internal files out of your git repo.")
-                self.button("Add `.l2m*` to `.gitignore`", key=random.random(), help="?")
+                st.write("It's best to keep atlas's internal files out of your git repo.")
+                self.button("Add `.atlas*` to `.gitignore`", key=random.random(), help="?")
 
     def do_add_to_chat(self):
         # with st.expander("Add to the chat", expanded=True):
@@ -193,7 +193,7 @@ class GUI:
             disabled=self.prompt_pending(),
             help=(
                 "Only add the files that need to be *edited* for the task you are working"
-                " on. L2M will pull in other relevant code to provide context to the LLM."
+                " on. Atlas will pull in other relevant code to provide context to the LLM."
             ),
         )
 
@@ -524,12 +524,12 @@ class GUI:
 def gui_main():
     st.set_page_config(
         layout="wide",
-        page_title="L2M",
+        page_title="Atlas",
         page_icon=urls.favicon,
         menu_items={
             "Get Help": urls.website,
-            "Report a bug": "https://github.com/L2M-AI/l2m/issues",
-            "About": "# L2M\nAI pair programming in your browser.",
+            "Report a bug": "https://github.com/Atlas-AI/atlas/issues",
+            "About": "# Atlas\nAI pair programming in your browser.",
         },
     )
 

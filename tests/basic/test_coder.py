@@ -797,7 +797,7 @@ two
             diff = saved_diffs[0]
             self.assertIn("file.txt", diff)
 
-    def test_skip_l2mignored_files(self):
+    def test_skip_atlasignored_files(self):
         with GitTemporaryDirectory():
             repo = git.Repo()
 
@@ -813,13 +813,13 @@ two
 
             fnames = [fname1, fname2, fname3]
 
-            l2mignore = Path(".l2mignore")
-            l2mignore.write_text(f"{fname1}\n{fname2}\ndir\n")
+            atlasignore = Path(".atlasignore")
+            atlasignore.write_text(f"{fname1}\n{fname2}\ndir\n")
             repo = GitRepo(
                 io,
                 fnames,
                 None,
-                l2m_ignore_file=str(l2mignore),
+                atlas_ignore_file=str(atlasignore),
             )
 
             coder = Coder.create(

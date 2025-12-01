@@ -18,9 +18,9 @@ class DotEnvFormatter(argparse.HelpFormatter):
     def _format_text(self, text):
         return f"""
 ##########################################################
-# Sample l2m .env file.
+# Sample atlas .env file.
 # Place at the root of your git repo.
-# Or use `l2m --env <fname>` to specify.
+# Or use `atlas --env <fname>` to specify.
 ##########################################################
 
 #################
@@ -91,14 +91,14 @@ class YamlHelpFormatter(argparse.HelpFormatter):
     def _format_text(self, text):
         return """
 ##########################################################
-# Sample .l2m.conf.yml
+# Sample .atlas.conf.yml
 # This file lists *all* the valid configuration entries.
 # Place in your home dir, or at the root of your git repo.
 ##########################################################
 
 # Note: You can only put OpenAI and Anthropic API keys in the YAML
 # config file. Keys for all APIs can be stored in a .env file
-# https://l2m.chat/docs/config/dotenv.html
+# https://atlas.chat/docs/config/dotenv.html
 
 """
 

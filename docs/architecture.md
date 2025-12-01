@@ -2,7 +2,7 @@
 
 ## Overview
 
-Legacy2Modern (L2M) is a **AI coding agent** that helps modernize legacy codebases such as COBOL, Fortran, Java 7, etc. to modern languages such as Python, Java, C++, etc. It uses Large Language Models (LLMs) to understand code, generate modern equivalents, and maintain conversation context throughout the modernization process.
+Atlas (Atlas) is a **AI coding agent** that helps modernize legacy codebases such as COBOL, Fortran, Java 7, etc. to modern languages such as Python, Java, C++, etc. It uses Large Language Models (LLMs) to understand code, generate modern equivalents, and maintain conversation context throughout the modernization process.
 
 ## System Architecture
 
@@ -45,7 +45,7 @@ The terminal user interface (TUI) provides an interactive conversational experie
 
 ### 2. Coder System (`src/coders/`)
 
-The heart of L2M - handles all LLM interactions and code generation:
+The heart of Atlas - handles all LLM interactions and code generation:
 
 - **Base Coder** (`base_coder.py`): Core class managing conversation, context, and file operations
 - **Edit Formats**: Multiple specialized coders for different editing styles:
@@ -108,7 +108,7 @@ sequenceDiagram
     participant G as Git
     participant F as Filesystem
 
-    U->>CLI: Start l2m
+    U->>CLI: Start atlas
     CLI->>C: Initialize Coder
     C->>G: Load repo context
     C->>F: Load files
@@ -212,7 +212,7 @@ graph LR
 
 ## Edit Format System
 
-L2M supports multiple edit formats, each optimized for different use cases:
+Atlas supports multiple edit formats, each optimized for different use cases:
 
 | Format | Use Case | Description |
 |--------|----------|-------------|
@@ -223,7 +223,7 @@ L2M supports multiple edit formats, each optimized for different use cases:
 | `context` | Context-aware | Automatically identifies files to edit |
 | `architect` | Design-first | Design changes, then implement |
 | `ask` | Q&A mode | Answer questions without editing |
-| `help` | Interactive help | Get help about L2M usage |
+| `help` | Interactive help | Get help about Atlas usage |
 
 The system automatically selects the best format based on the model's capabilities, or you can specify it manually.
 
@@ -265,9 +265,9 @@ flowchart LR
 Configuration is loaded from multiple sources (in priority order):
 
 1. **Command-line arguments** - Highest priority
-2. **`.l2m.conf.yml`** - YAML configuration file
+2. **`.atlas.conf.yml`** - YAML configuration file
 3. **`.env`** - Environment variables
-4. **Model settings** - `.l2m.model.settings.yml`
+4. **Model settings** - `.atlas.model.settings.yml`
 5. **Defaults** - Built-in defaults
 
 ## Session Management

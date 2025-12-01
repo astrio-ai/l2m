@@ -1,4 +1,4 @@
-; Perl tags for L2M repo map
+; Perl tags for Atlas repo map
 
 ; Package definitions
 (package_statement

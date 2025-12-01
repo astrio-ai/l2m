@@ -1,8 +1,8 @@
-"""Automated L2M modernization and CodeBLEU evaluation workflow.
+"""Automated Atlas modernization and CodeBLEU evaluation workflow.
 
 This script automates the entire process:
 1. Finds all COBOL files in a directory
-2. Runs L2M modernization on each (non-interactive)
+2. Runs Atlas modernization on each (non-interactive)
 3. Compares generated Python with groundtruth using CodeBLEU
 4. Generates evaluation report
 """
@@ -17,7 +17,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from tqdm import tqdm
 
 from evals.codebleu.benchmark import CodeBLEUBenchmark
-from evals.codebleu.l2m_helpers import find_generated_python, run_l2m_modernization
+from evals.codebleu.atlas_helpers import find_generated_python, run_atlas_modernization
 from evals.codebleu.evaluator import CodeBLEUEvaluator
 
 
@@ -62,7 +62,7 @@ def modernize_and_evaluate(
     pattern: str = "*.cbl",
     lang: str = "python",
     weights: Tuple[float, float, float, float] = (0.25, 0.25, 0.25, 0.25),
-    l2m_message: Optional[str] = None,
+    atlas_message: Optional[str] = None,
     yes_always: bool = True,
     skip_modernization: bool = False,
 ) -> Dict[str, Any]:
@@ -76,9 +76,9 @@ def modernize_and_evaluate(
         pattern: Glob pattern for COBOL files.
         lang: Programming language for CodeBLEU.
         weights: CodeBLEU component weights.
-        l2m_message: Custom message for L2M modernization.
+        atlas_message: Custom message for Atlas modernization.
         yes_always: Use --yes-always flag for non-interactive mode.
-        skip_modernization: Skip L2M modernization (assume Python files already exist).
+        skip_modernization: Skip Atlas modernization (assume Python files already exist).
 
     Returns:
         Dictionary with evaluation results.
@@ -133,14 +133,14 @@ def modernize_and_evaluate(
 
             # Prepare message
             # Use "Convert" instead of "Modernize" to avoid triggering multi-agent pipeline
-            file_message = l2m_message
+            file_message = atlas_message
             if file_message is None:
                 file_message = f"Convert this COBOL file to Python: {cobol_in_output.name}"
             elif cobol_file.name not in file_message:
                 file_message = f"{file_message} File: {cobol_in_output.name}"
 
-            # Run L2M modernization from the subdirectory
-            success, output = run_l2m_modernization(
+            # Run Atlas modernization from the subdirectory
+            success, output = run_atlas_modernization(
                 cobol_in_output,
                 message=file_message,
                 output_dir=output_subdir,  # Use subdirectory as working directory
@@ -153,7 +153,7 @@ def modernize_and_evaluate(
                 modernization_failures += 1
                 result.update({
                     "status": "modernization_failed",
-                    "error": output[:500] if output else "L2M modernization failed",
+                    "error": output[:500] if output else "Atlas modernization failed",
                 })
                 results[file_key] = result
                 continue
@@ -180,7 +180,7 @@ def modernize_and_evaluate(
             if flat_output.exists():
                 generated_python = flat_output
         
-        # Try original location (L2M might create it relative to git root)
+        # Try original location (Atlas might create it relative to git root)
         if generated_python is None:
             generated_python = find_generated_python(cobol_file, search_dir=cobol_file.parent)
             # If found in original location, copy to expected output location
@@ -299,7 +299,7 @@ def print_summary(results: Dict[str, Any]):
     summary = results.get("summary", {})
     
     print("\n" + "=" * 70)
-    print("Automated L2M Modernization & CodeBLEU Evaluation Report")
+    print("Automated Atlas Modernization & CodeBLEU Evaluation Report")
     print("=" * 70)
     print(f"Total COBOL files:       {summary.get('total_files', 0)}")
     print()
@@ -359,7 +359,7 @@ def print_summary(results: Dict[str, Any]):
 def main():
     """CLI entry point for automated evaluation."""
     parser = argparse.ArgumentParser(
-        description="Automated L2M modernization and CodeBLEU evaluation",
+        description="Automated Atlas modernization and CodeBLEU evaluation",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -424,12 +424,12 @@ Examples:
         "--message",
         type=str,
         default=None,
-        help="Custom message for L2M modernization",
+        help="Custom message for Atlas modernization",
     )
     parser.add_argument(
         "--skip-modernization",
         action="store_true",
-        help="Skip L2M modernization (assume Python files already exist in output_dir)",
+        help="Skip Atlas modernization (assume Python files already exist in output_dir)",
     )
     parser.add_argument(
         "--no-yes-always",
@@ -462,7 +462,7 @@ Examples:
             pattern=args.pattern,
             lang=args.lang,
             weights=tuple(args.weights),
-            l2m_message=args.message,
+            atlas_message=args.message,
             yes_always=not args.no_yes_always,
             skip_modernization=args.skip_modernization,
         )

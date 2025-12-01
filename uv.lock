@@ -684,7 +684,7 @@ wheels = [
 ]
 
 [[package]]
-name = "l2m-openai-agents"
+name = "atlas-openai-agents"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

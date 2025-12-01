@@ -31,7 +31,7 @@ class OpenRouterModelManager:
     CACHE_TTL = 60 * 60 * 24  # 24 h
 
     def __init__(self) -> None:
-        self.cache_dir = Path.home() / ".l2m" / "caches"
+        self.cache_dir = Path.home() / ".atlas" / "caches"
         self.cache_file = self.cache_dir / "openrouter_models.json"
         self.content: Dict | None = None
         self.verify_ssl: bool = True
@@ -48,7 +48,7 @@ class OpenRouterModelManager:
         """
         Return metadata for *model* or an empty ``dict`` when unknown.
 
-        ``model`` should use the l2m naming convention, e.g.
+        ``model`` should use the atlas naming convention, e.g.
         ``openrouter/nousresearch/deephermes-3-mistral-24b-preview:free``.
         """
         self._ensure_content()

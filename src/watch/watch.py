@@ -18,7 +18,7 @@ def load_gitignores(gitignore_paths: list[Path]) -> Optional[PathSpec]:
         return None
 
     patterns = [
-        ".l2m*",
+        ".atlas*",
         ".git",
         # Common editor backup/temp files
         "*~",  # Emacs/vim backup

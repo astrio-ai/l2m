@@ -118,15 +118,15 @@ def test_git_index_version_greater_than_2(mock_browser, create_repo, mock_io):
 
     # Assert that the appropriate error messages were logged
     mock_io.tool_error.assert_called_with(
-        "L2M only works with git repos with version number 1 or 2."
+        "Atlas only works with git repos with version number 1 or 2."
     )
     mock_io.tool_error.assert_any_call(
-        "L2M only works with git repos with version number 1 or 2."
+        "Atlas only works with git repos with version number 1 or 2."
     )
     mock_io.tool_output.assert_any_call(
         "You may be able to convert your repo: git update-index --index-version=2"
     )
-    mock_io.tool_output.assert_any_call("Or run l2m --no-git to proceed without using git.")
+    mock_io.tool_output.assert_any_call("Or run atlas --no-git to proceed without using git.")
     mock_io.offer_url.assert_any_call(
         urls.git_index_version,
         "Open documentation url for more info?",

@@ -1,7 +1,7 @@
-"""TUI utilities for L2M TUI.
+"""TUI utilities for Atlas TUI.
 
 This module provides terminal color detection, intelligent blending,
-shimmer effects, and other visual enhancements for L2M TUI.
+shimmer effects, and other visual enhancements for Atlas TUI.
 """
 
 import os

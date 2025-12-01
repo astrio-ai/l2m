@@ -22,13 +22,13 @@ class TestMain(TestCase):
     def setUp(self):
         self.original_env = os.environ.copy()
         os.environ["OPENAI_API_KEY"] = "deadbeef"
-        os.environ["L2M_CHECK_UPDATE"] = "false"
-        os.environ["L2M_ANALYTICS"] = "false"
+        os.environ["ATLAS_CHECK_UPDATE"] = "false"
+        os.environ["ATLAS_ANALYTICS"] = "false"
         self.original_cwd = os.getcwd()
         self.tempdir_obj = IgnorantTemporaryDirectory()
         self.tempdir = self.tempdir_obj.name
         os.chdir(self.tempdir)
-        # Fake home directory prevents tests from using the real ~/.l2m.conf.yml file:
+        # Fake home directory prevents tests from using the real ~/.atlas.conf.yml file:
         self.homedir_obj = IgnorantTemporaryDirectory()
         os.environ["HOME"] = self.homedir_obj.name
         self.input_patcher = patch("builtins.input", return_value=None)
@@ -88,13 +88,13 @@ class TestMain(TestCase):
     def test_main_with_git_config_yml(self):
         make_repo()
 
-        Path(".l2m.conf.yml").write_text("auto-commits: false\n")
+        Path(".atlas.conf.yml").write_text("auto-commits: false\n")
         with patch("src.coders.Coder.create") as MockCoder:
             main(["--yes"], input=DummyInput(), output=DummyOutput())
             _, kwargs = MockCoder.call_args
             assert kwargs["auto_commits"] is False
 
-        Path(".l2m.conf.yml").write_text("auto-commits: true\n")
+        Path(".atlas.conf.yml").write_text("auto-commits: true\n")
         with patch("src.coders.Coder.create") as MockCoder:
             main([], input=DummyInput(), output=DummyOutput())
             _, kwargs = MockCoder.call_args
@@ -111,7 +111,7 @@ class TestMain(TestCase):
 
         # This will throw a git error on windows if get_tracked_files doesn't
         # properly convert git/posix/paths to git\posix\paths.
-        # Because l2m will try and `git add` a file that's already in the repo.
+        # Because atlas will try and `git add` a file that's already in the repo.
         main(["--yes", str(fname), "--exit"], input=DummyInput(), output=DummyOutput())
 
     def test_setup_git(self):
@@ -124,7 +124,7 @@ class TestMain(TestCase):
 
         gitignore = Path.cwd() / ".gitignore"
         self.assertTrue(gitignore.exists())
-        self.assertEqual(".l2m*", gitignore.read_text().splitlines()[0])
+        self.assertEqual(".atlas*", gitignore.read_text().splitlines()[0])
 
     def test_check_gitignore(self):
         with GitTemporaryDirectory():
@@ -138,18 +138,18 @@ class TestMain(TestCase):
             check_gitignore(cwd, io)
             self.assertTrue(gitignore.exists())
 
-            self.assertEqual(".l2m*", gitignore.read_text().splitlines()[0])
+            self.assertEqual(".atlas*", gitignore.read_text().splitlines()[0])
 
             # Test without .env file present
             gitignore.write_text("one\ntwo\n")
             check_gitignore(cwd, io)
-            self.assertEqual("one\ntwo\n.l2m*\n", gitignore.read_text())
+            self.assertEqual("one\ntwo\n.atlas*\n", gitignore.read_text())
 
             # Test with .env file present
             env_file = cwd / ".env"
             env_file.touch()
             check_gitignore(cwd, io)
-            self.assertEqual("one\ntwo\n.l2m*\n.env\n", gitignore.read_text())
+            self.assertEqual("one\ntwo\n.atlas*\n.env\n", gitignore.read_text())
             del os.environ["GIT_CONFIG_GLOBAL"]
 
     def test_command_line_gitignore_files_flag(self):
@@ -419,7 +419,7 @@ class TestMain(TestCase):
         return env_file_path
 
     def test_env_file_flag_sets_automatic_variable(self):
-        env_file_path = self.create_env_file(".env.test", "L2M_DARK_MODE=True")
+        env_file_path = self.create_env_file(".env.test", "ATLAS_DARK_MODE=True")
         with patch("cli.main.InputOutput") as MockInputOutput:
             MockInputOutput.return_value.get_input.return_value = None
             MockInputOutput.return_value.get_input.confirm_ask = True
@@ -434,7 +434,7 @@ class TestMain(TestCase):
             self.assertEqual(kwargs["code_theme"], "monokai")
 
     def test_default_env_file_sets_automatic_variable(self):
-        self.create_env_file(".env", "L2M_DARK_MODE=True")
+        self.create_env_file(".env", "ATLAS_DARK_MODE=True")
         with patch("cli.main.InputOutput") as MockInputOutput:
             MockInputOutput.return_value.get_input.return_value = None
             MockInputOutput.return_value.get_input.confirm_ask = True
@@ -446,7 +446,7 @@ class TestMain(TestCase):
             self.assertEqual(kwargs["code_theme"], "monokai")
 
     def test_false_vals_in_env_file(self):
-        self.create_env_file(".env", "L2M_SHOW_DIFFS=off")
+        self.create_env_file(".env", "ATLAS_SHOW_DIFFS=off")
         with patch("src.coders.Coder.create") as MockCoder:
             main(["--no-git", "--yes"], input=DummyInput(), output=DummyOutput())
             MockCoder.assert_called_once()
@@ -454,7 +454,7 @@ class TestMain(TestCase):
             self.assertEqual(kwargs["show_diffs"], False)
 
     def test_true_vals_in_env_file(self):
-        self.create_env_file(".env", "L2M_SHOW_DIFFS=on")
+        self.create_env_file(".env", "ATLAS_SHOW_DIFFS=on")
         with patch("src.coders.Coder.create") as MockCoder:
             main(["--no-git", "--yes"], input=DummyInput(), output=DummyOutput())
             MockCoder.assert_called_once()
@@ -495,7 +495,7 @@ class TestMain(TestCase):
                 self.assertFalse(called_arg.endswith(f"subdir{os.path.sep}dirty_file.py"))
 
     def test_verbose_mode_lists_env_vars(self):
-        self.create_env_file(".env", "L2M_DARK_MODE=on")
+        self.create_env_file(".env", "ATLAS_DARK_MODE=on")
         with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
             main(
                 ["--no-git", "--verbose", "--exit", "--yes"],
@@ -506,11 +506,11 @@ class TestMain(TestCase):
             relevant_output = "\n".join(
                 line
                 for line in output.splitlines()
-                if "L2M_DARK_MODE" in line or "dark_mode" in line
+                if "ATLAS_DARK_MODE" in line or "dark_mode" in line
             )  # this bit just helps failing assertions to be easier to read
-            self.assertIn("L2M_DARK_MODE", relevant_output)
+            self.assertIn("ATLAS_DARK_MODE", relevant_output)
             self.assertIn("dark_mode", relevant_output)
-            self.assertRegex(relevant_output, r"L2M_DARK_MODE:\s+on")
+            self.assertRegex(relevant_output, r"ATLAS_DARK_MODE:\s+on")
             self.assertRegex(relevant_output, r"dark_mode:\s+True")
 
     def test_yaml_config_file_loading(self):
@@ -527,11 +527,11 @@ class TestMain(TestCase):
             cwd.mkdir()
             os.chdir(cwd)
 
-            # Create .l2m.conf.yml files in different locations
-            home_config = fake_home / ".l2m.conf.yml"
-            git_config = git_dir / ".l2m.conf.yml"
-            cwd_config = cwd / ".l2m.conf.yml"
-            named_config = git_dir / "named.l2m.conf.yml"
+            # Create .atlas.conf.yml files in different locations
+            home_config = fake_home / ".atlas.conf.yml"
+            git_config = git_dir / ".atlas.conf.yml"
+            cwd_config = cwd / ".atlas.conf.yml"
+            named_config = git_dir / "named.atlas.conf.yml"
 
             cwd_config.write_text("model: gpt-4-32k\nmap-tokens: 4096\n")
             git_config.write_text("model: gpt-4\nmap-tokens: 2048\n")
@@ -640,7 +640,7 @@ class TestMain(TestCase):
         litellm._lazy_module = None
 
         with GitTemporaryDirectory():
-            metadata_file = Path(".l2m.model.metadata.json")
+            metadata_file = Path(".atlas.model.metadata.json")
 
             # must be a fully qualified model name: provider/...
             metadata_content = {"deepseek/deepseek-chat": {"max_input_tokens": 1234}}
@@ -904,7 +904,7 @@ class TestMain(TestCase):
 
     def test_pytest_env_vars(self):
         # Verify that environment variables from pytest.ini are properly set
-        self.assertEqual(os.environ.get("L2M_ANALYTICS"), "false")
+        self.assertEqual(os.environ.get("ATLAS_ANALYTICS"), "false")
 
     def test_set_env_single(self):
         # Test setting a single environment variable
@@ -960,7 +960,7 @@ class TestMain(TestCase):
             self.assertEqual(result, 1)
 
     def test_git_config_include(self):
-        # Test that l2m respects git config includes for user.name and user.email
+        # Test that atlas respects git config includes for user.name and user.email
         with GitTemporaryDirectory() as git_dir:
             git_dir = Path(git_dir)
 
@@ -983,7 +983,7 @@ class TestMain(TestCase):
             git_config_path = git_dir / ".git" / "config"
             git_config_content = git_config_path.read_text()
 
-            # Run l2m and verify it doesn't change the git config
+            # Run atlas and verify it doesn't change the git config
             main(["--yes", "--exit"], input=DummyInput(), output=DummyOutput())
 
             # Check that the user settings are still the same using git command
@@ -996,7 +996,7 @@ class TestMain(TestCase):
             self.assertEqual(git_config_content, git_config_content_after)
 
     def test_git_config_include_directive(self):
-        # Test that l2m respects the include directive in git config
+        # Test that atlas respects the include directive in git config
         with GitTemporaryDirectory() as git_dir:
             git_dir = Path(git_dir)
 
@@ -1024,36 +1024,36 @@ class TestMain(TestCase):
             self.assertEqual(repo.git.config("user.name"), "Directive User")
             self.assertEqual(repo.git.config("user.email"), "directive@example.com")
 
-            # Run l2m and verify it doesn't change the git config
+            # Run atlas and verify it doesn't change the git config
             main(["--yes", "--exit"], input=DummyInput(), output=DummyOutput())
 
             # Check that the git config file wasn't modified
-            config_after_l2m = git_config.read_text()
-            self.assertEqual(modified_config_content, config_after_l2m)
+            config_after_atlas = git_config.read_text()
+            self.assertEqual(modified_config_content, config_after_atlas)
 
             # Check that the user settings are still the same using git command
             repo = git.Repo(git_dir)  # Re-open repo to ensure we get fresh config
             self.assertEqual(repo.git.config("user.name"), "Directive User")
             self.assertEqual(repo.git.config("user.email"), "directive@example.com")
 
-    def test_resolve_l2mignore_path(self):
+    def test_resolve_atlasignore_path(self):
         # Import the function directly to test it
-        from cli.args import resolve_l2mignore_path
+        from cli.args import resolve_atlasignore_path
 
         # Test with absolute path
-        abs_path = os.path.abspath("/tmp/test/.l2mignore")
-        self.assertEqual(resolve_l2mignore_path(abs_path), abs_path)
+        abs_path = os.path.abspath("/tmp/test/.atlasignore")
+        self.assertEqual(resolve_atlasignore_path(abs_path), abs_path)
 
         # Test with relative path and git root
         git_root = "/path/to/git/root"
-        rel_path = ".l2mignore"
+        rel_path = ".atlasignore"
         self.assertEqual(
-            resolve_l2mignore_path(rel_path, git_root), str(Path(git_root) / rel_path)
+            resolve_atlasignore_path(rel_path, git_root), str(Path(git_root) / rel_path)
         )
 
         # Test with relative path and no git root
-        rel_path = ".l2mignore"
-        self.assertEqual(resolve_l2mignore_path(rel_path), rel_path)
+        rel_path = ".atlasignore"
+        self.assertEqual(resolve_atlasignore_path(rel_path), rel_path)
 
     def test_invalid_edit_format(self):
         with GitTemporaryDirectory():
@@ -1207,7 +1207,7 @@ class TestMain(TestCase):
         # Test that models from model-metadata.json appear in list-models output
         with GitTemporaryDirectory():
             # Create a temporary model-metadata.json with test models
-            metadata_file = Path(".l2m.model.metadata.json")
+            metadata_file = Path(".atlas.model.metadata.json")
             test_models = {
                 "unique-model-name": {
                     "max_input_tokens": 8192,
@@ -1246,7 +1246,7 @@ class TestMain(TestCase):
         # appear in list-models
         with GitTemporaryDirectory():
             # Create a temporary model-metadata.json with test models
-            metadata_file = Path(".l2m.model.metadata.json")
+            metadata_file = Path(".atlas.model.metadata.json")
             test_models = {
                 "metadata-only-model": {
                     "max_input_tokens": 8192,
@@ -1432,14 +1432,14 @@ class TestMain(TestCase):
         with GitTemporaryDirectory() as git_dir:
             git_dir = Path(git_dir)
 
-            # Create fake home and .l2m directory
+            # Create fake home and .atlas directory
             fake_home = git_dir / "fake_home"
             fake_home.mkdir()
-            l2m_dir = fake_home / ".l2m"
-            l2m_dir.mkdir()
+            atlas_dir = fake_home / ".atlas"
+            atlas_dir.mkdir()
 
             # Create oauth keys file
-            oauth_keys_file = l2m_dir / "oauth-keys.env"
+            oauth_keys_file = atlas_dir / "oauth-keys.env"
             oauth_keys_file.write_text("OAUTH_VAR=oauth_val\nSHARED_VAR=oauth_shared\n")
 
             # Create git root .env file

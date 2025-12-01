@@ -1,4 +1,4 @@
-; Fortran tags for L2M repo map
+; Fortran tags for Atlas repo map
 
 ; Program definitions
 (program

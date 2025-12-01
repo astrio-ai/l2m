@@ -10,7 +10,7 @@ from evals.codebleu.benchmark import CodeBLEUBenchmark, run_benchmark
 def main():
     """CLI entry point for CodeBLEU benchmark."""
     parser = argparse.ArgumentParser(
-        description="Run CodeBLEU evaluation on L2M modernization results",
+        description="Run CodeBLEU evaluation on Atlas modernization results",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:

@@ -72,22 +72,22 @@ Some text...
         content = """
 To implement the `--check-update` option, I will make the following changes:
 
-1. Add the `--check-update` argument to the argument parser in `l2m/main.py`.
-2. Modify the `check_version` function in `l2m/versioncheck.py` to return a boolean indicating whether an update is available.
-3. Use the returned value from `check_version` in `l2m/main.py` to set the exit status code when `--check-update` is used.
+1. Add the `--check-update` argument to the argument parser in `atlas/main.py`.
+2. Modify the `check_version` function in `atlas/versioncheck.py` to return a boolean indicating whether an update is available.
+3. Use the returned value from `check_version` in `atlas/main.py` to set the exit status code when `--check-update` is used.
 
 Here are the diffs for those changes:
 
 ```diff
---- l2m/versioncheck.py
-+++ l2m/versioncheck.py
+--- atlas/versioncheck.py
++++ atlas/versioncheck.py
 @@ ... @@
      except Exception as err:
          print_cmd(f"Error checking pypi for new version: {err}")
 +        return False
 
---- l2m/main.py
-+++ l2m/main.py
+--- atlas/main.py
++++ atlas/main.py
 @@ ... @@
      other_group.add_argument(
          "--version",
