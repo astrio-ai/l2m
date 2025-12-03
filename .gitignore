@@ -29,6 +29,9 @@ ENV/
 # ATLAS runtime artifacts
 .atlas.tags.cache.v4/
 .atlas.chat.history.md
+.atlas.input.history
+# Legacy L2M naming (deprecated)
+.l2m.*
 
 # Environment variables
 .env
