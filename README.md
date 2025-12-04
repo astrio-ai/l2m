@@ -1,5 +1,4 @@
 # ATLAS: Autonomous Transpilation for Legacy Application Systems
-**Status**: Currently in progress of writing a research paper for ATLAS. There'll not be many feature updates next few weeks. 
 
 <div align="left">
 
@@ -10,7 +9,9 @@
 [![Contributing Guide](https://img.shields.io/badge/Contributing-Guide-informational)](https://github.com/astrio-ai/atlas/CONTRIBUTING.md)
 </div>
 
-ATLAS is an open-source, AI coding agent that helps you modernize legacy codebases into modern programming languages within your terminal.
+**ATLAS** is an open-source, AI coding agent that helps you modernize legacy codebases into modern programming languages within your terminal.
+
+**Status**: Paper in progress
 
 <p align="left">
   <img src="./.github/atlas-cli.png" alt="ATLAS CLI" width="80%" />
@@ -98,4 +99,4 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for setup instructions, coding guidelin
 ## Contact Us
 For partnership inquiries or professional use cases:
 
-📧 **[naingoolwin.astrio@gmail.com](mailto:naingoolwin.astrio@gmail.com)**
+📧 **[nolanlwin@astrio.app](mailto:nolanlwin@astrio.app)**
