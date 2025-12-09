@@ -37,6 +37,8 @@ ENV/
 .env
 .env.local
 .env.*.local
+.env.backup
+.env*.backup
 
 # IDE
 .vscode/
