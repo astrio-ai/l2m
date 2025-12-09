@@ -57,7 +57,7 @@ jobs:
           powershell Compress-Archive -Path l2m-${{ matrix.platform }}-${{ matrix.arch }} -DestinationPath l2m-${{ matrix.platform }}-${{ matrix.arch }}.zip
 
       - name: Upload release asset
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: ./dist/l2m-${{ matrix.platform }}-${{ matrix.arch }}.zip
         env:
