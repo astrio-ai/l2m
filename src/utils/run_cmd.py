@@ -54,6 +54,11 @@ def run_cmd_subprocess(command, verbose=False, cwd=None, encoding=sys.stdout.enc
             if parent_process == "powershell.exe":
                 # Quote the command to prevent injection
                 command = f"powershell -Command {shlex.quote(command)}"
+        else:
+            # For Unix systems, quote the command to prevent injection
+            # Note: This function is used for user commands (/run), but we still quote
+            # to prevent injection if command is constructed from multiple sources
+            command = shlex.quote(command)
 
         if verbose:
             print("Running command:", command)

@@ -183,6 +183,13 @@ class LintResult:
 
 
 def lint_python_compile(fname, code):
+    """
+    Compile Python code to check for syntax errors.
+    
+    Security note: This function compiles code from files in the repository.
+    It's used for linting/validation purposes only and does not execute the code.
+    The code comes from files the user has explicitly added to the chat context.
+    """
     try:
         compile(code, fname, "exec")  # USE TRACEBACK BELOW HERE
         return
