@@ -133,16 +133,25 @@ def pipe_editor(input_data="", suffix=None, editor=None):
     
     # Parse editor command safely to prevent command injection
     # Editor may contain arguments (e.g., "vim -c 'set noswapfile'")
+    # Security note: editor_cmd comes from environment variables (VISUAL, EDITOR)
+    # or user-provided defaults, not from untrusted input
     try:
         editor_parts = shlex.split(editor_cmd)
         # Quote filepath to handle spaces/special chars, but add as separate arg
         editor_parts.append(filepath)
         subprocess.call(editor_parts, shell=False)
     except ValueError:
-        # If parsing fails, fall back to shell but quote the filepath
-        import shlex
-        command_str = f"{editor_cmd} {shlex.quote(filepath)}"
-        subprocess.call(command_str, shell=True)
+        # If parsing fails, the editor command has syntax errors
+        # Try a safer approach: use the first word as the editor and quote the rest
+        editor_parts = editor_cmd.split(maxsplit=1)
+        if len(editor_parts) == 1:
+            # Simple editor command without arguments
+            subprocess.call([editor_parts[0], filepath], shell=False)
+        else:
+            # Editor with arguments - quote filepath and append
+            # This is still safer than shell=True as we're not using shell features
+            editor_parts.append(filepath)
+            subprocess.call(editor_parts, shell=False)
     with open(filepath, "r") as f:
         output_data = f.read()
     try:
