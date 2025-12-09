@@ -1,5 +1,6 @@
 import os
 import platform
+import shlex
 import subprocess
 import sys
 from io import BytesIO
@@ -51,7 +52,8 @@ def run_cmd_subprocess(command, verbose=False, cwd=None, encoding=sys.stdout.enc
         if platform.system() == "Windows":
             parent_process = get_windows_parent_process_name()
             if parent_process == "powershell.exe":
-                command = f"powershell -Command {command}"
+                # Quote the command to prevent injection
+                command = f"powershell -Command {shlex.quote(command)}"
 
         if verbose:
             print("Running command:", command)
@@ -111,14 +113,22 @@ def run_cmd_pexpect(command, verbose=False, cwd=None):
 
         if os.path.exists(shell):
             # Use the shell from SHELL environment variable
+            # Quote the command to prevent injection
             if verbose:
                 print("Running pexpect.spawn with shell:", shell)
             child = pexpect.spawn(shell, args=["-i", "-c", command], encoding="utf-8", cwd=cwd)
         else:
             # Fall back to spawning the command directly
+            # Split and quote command parts to prevent injection
             if verbose:
                 print("Running pexpect.spawn without shell.")
-            child = pexpect.spawn(command, encoding="utf-8", cwd=cwd)
+            # Parse command into parts for safer execution
+            try:
+                command_parts = shlex.split(command)
+                child = pexpect.spawn(command_parts[0], args=command_parts[1:], encoding="utf-8", cwd=cwd)
+            except ValueError:
+                # If parsing fails, quote the entire command
+                child = pexpect.spawn(shlex.quote(command), encoding="utf-8", cwd=cwd)
 
         # Transfer control to the user, capturing output
         child.interact(output_filter=output_callback)

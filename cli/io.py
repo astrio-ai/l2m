@@ -1171,9 +1171,21 @@ class InputOutput:
         if self.bell_on_next_input and self.notifications:
             if self.notifications_command:
                 try:
-                    result = subprocess.run(
-                        self.notifications_command, shell=True, capture_output=True
-                    )
+                    import shlex
+                    # Parse command safely to prevent injection
+                    # Notifications command should be a simple command from config
+                    try:
+                        cmd_parts = shlex.split(self.notifications_command)
+                        result = subprocess.run(
+                            cmd_parts, shell=False, capture_output=True
+                        )
+                    except ValueError:
+                        # If parsing fails, quote and use shell (less safe but handles edge cases)
+                        import shlex
+                        quoted_cmd = shlex.quote(self.notifications_command)
+                        result = subprocess.run(
+                            quoted_cmd, shell=True, capture_output=True
+                        )
                     if result.returncode != 0 and result.stderr:
                         error_msg = result.stderr.decode("utf-8", errors="replace")
                         self.tool_warning(f"Failed to run notifications command: {error_msg}")
