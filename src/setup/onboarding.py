@@ -482,8 +482,8 @@ def main():
 
     if api_key:
         print("\nOAuth flow completed successfully!")
-        print(f"Obtained API Key (first 5 chars): {api_key[:5]}...")
-        # Be careful printing the key, even partially
+        print("OpenRouter API Key obtained and configured successfully.")
+        # For security, do not print any portion of the API key.
     else:
         print("\nOAuth flow failed or was cancelled.")
 
