@@ -258,7 +258,7 @@ flowchart LR
 - **GitPython**: Git repository operations
 - **Tree-sitter**: Code parsing and indexing
 - **Pydantic**: Configuration and data validation
-- **Python 3.12+**: Runtime environment
+- **Python 3.14+**: Runtime environment
 
 ## Configuration
 

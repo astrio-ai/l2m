@@ -31,7 +31,7 @@
 
 ### Prerequisites
 
-- Python 3.12+
+- Python 3.14+
 - BYOK for your preferred LLM provider (OpenAI, Anthropic, etc.)
 
 ### Installation

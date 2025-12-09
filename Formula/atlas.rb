@@ -8,7 +8,7 @@ class Atlas < Formula
   license "Apache-2.0"
   head "https://github.com/astrio-ai/atlas.git", branch: "main"
 
-  depends_on "python@3.12"
+  depends_on "python@3.14"
 
   resource "importlib-resources" do
     url "https://files.pythonhosted.org/packages/source/i/importlib_resources/importlib_resources-6.1.1.tar.gz"
