@@ -407,7 +407,6 @@ def hunk_to_before_after(hunk, lines=False):
     for line in hunk:
         if len(line) < 2:
             op = " "
-            line = line
         else:
             op = line[0]
             line = line[1:]
