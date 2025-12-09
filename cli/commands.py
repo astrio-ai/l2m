@@ -956,16 +956,18 @@ class Commands:
         "Run a git command (output excluded from chat)"
         combined_output = None
         try:
-            args = "git " + args
+            import shlex
+            # Parse git arguments safely to prevent command injection
+            git_args = ["git"] + shlex.split(args) if args.strip() else ["git"]
             env = dict(subprocess.os.environ)
             env["GIT_EDITOR"] = "true"
             result = subprocess.run(
-                args,
+                git_args,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
                 env=env,
-                shell=True,
+                shell=False,  # Use list form instead of shell=True for security
                 encoding=self.io.encoding,
                 errors="replace",
             )
