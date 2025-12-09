@@ -49,10 +49,14 @@ def run_cmd_subprocess(command, verbose=False, cwd=None, encoding=sys.stdout.enc
         parent_process = None
 
         # Determine the appropriate shell
+        # Security note: This function is used for user commands (/run) where users
+        # intentionally provide shell commands. shell=True is required to support
+        # shell features like pipes, redirects, etc. The command comes directly from
+        # user input, not from untrusted sources like LLM output or file contents.
         if platform.system() == "Windows":
             parent_process = get_windows_parent_process_name()
             if parent_process == "powershell.exe":
-                # Quote the command to prevent injection
+                # Quote the command to prevent injection when constructing PowerShell command
                 command = f"powershell -Command {shlex.quote(command)}"
         else:
             # For Unix systems, quote the command to prevent injection
