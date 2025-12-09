@@ -10,6 +10,7 @@ import webbrowser
 from urllib.parse import parse_qs, urlparse
 
 import requests
+from cryptography.fernet import Fernet
 
 from src.core import urls
 from cli.io import InputOutput
@@ -429,10 +430,18 @@ def start_openrouter_oauth_flow(io, analytics):
             config_dir = os.path.expanduser("~/.atlas")
             os.makedirs(config_dir, exist_ok=True)
             key_file = os.path.join(config_dir, "oauth-keys.env")
+            # Encrypt API key before saving
+            fernet_key = get_or_create_fernet_key()
+            fernet = Fernet(fernet_key)
+            encrypted_api_key = fernet.encrypt(api_key.encode())
             with open(key_file, "a", encoding="utf-8") as f:
-                f.write(f'OPENROUTER_API_KEY="{api_key}"\n')
+                # Store encrypted key (base64 encoded for safe text storage)
+                f.write(f'OPENROUTER_API_KEY_ENC="{encrypted_api_key.decode()}"\n')
 
-            io.tool_warning("Atlas will load the OpenRouter key automatically in future sessions.")
+            io.tool_warning(
+                "Atlas will load the OpenRouter key automatically in future sessions. "
+                "Your key is stored encrypted locally."
+            )
             io.tool_output()
 
             analytics.event("oauth_flow_success", provider="openrouter")
