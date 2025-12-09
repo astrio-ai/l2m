@@ -661,7 +661,7 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
                 env_var = f"{provider.strip().upper()}_API_KEY"
                 os.environ[env_var] = key.strip()
             except ValueError:
-                io.tool_error(f"Invalid --api-key format: {api_setting}")
+                io.tool_error("Invalid --api-key format for argument")
                 io.tool_output("Format should be: provider=key")
                 return 1
 
