@@ -323,20 +323,25 @@ class TestMain(TestCase):
 
     def test_message_file_flag(self):
         message_file_content = "This is a test message from a file."
-        message_file_path = tempfile.mktemp()
-        with open(message_file_path, "w", encoding="utf-8") as message_file:
+        # Use NamedTemporaryFile with delete=False for secure temporary file creation
+        # The file is created atomically and we clean it up manually
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", delete=False) as message_file:
             message_file.write(message_file_content)
+            message_file_path = message_file.name
 
-        with patch("src.coders.Coder.create") as MockCoder:
-            MockCoder.return_value.run = MagicMock()
-            main(
-                ["--yes", "--message-file", message_file_path],
-                input=DummyInput(),
-                output=DummyOutput(),
-            )
-            MockCoder.return_value.run.assert_called_once_with(with_message=message_file_content)
-
-        os.remove(message_file_path)
+        try:
+            with patch("src.coders.Coder.create") as MockCoder:
+                MockCoder.return_value.run = MagicMock()
+                main(
+                    ["--yes", "--message-file", message_file_path],
+                    input=DummyInput(),
+                    output=DummyOutput(),
+                )
+                MockCoder.return_value.run.assert_called_once_with(with_message=message_file_content)
+        finally:
+            # Clean up the temporary file
+            if os.path.exists(message_file_path):
+                os.remove(message_file_path)
 
     def test_encodings_arg(self):
         fname = "foo.py"

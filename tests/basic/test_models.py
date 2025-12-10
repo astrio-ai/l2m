@@ -390,12 +390,12 @@ class TestModels(unittest.TestCase):
             },
         ]
 
-        # Write to a regular file instead of NamedTemporaryFile
-        # for better cross-platform compatibility
-        tmp = tempfile.mktemp(suffix=".yml")
+        # Use NamedTemporaryFile with delete=False for secure temporary file creation
+        # The file is created atomically and we clean it up manually
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yml", delete=False) as f:
+            yaml.dump(test_settings, f)
+            tmp = f.name
         try:
-            with open(tmp, "w") as f:
-                yaml.dump(test_settings, f)
 
             # Register the test settings
             register_models([tmp])
