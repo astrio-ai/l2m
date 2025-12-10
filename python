@@ -1,0 +1,9 @@
+#!/usr/bin/env python3
+
+def main() -> None:
+    """Print the classic greeting translated from HELLO.CBL."""
+    print("Hello, world!")
+
+
+if __name__ == "__main__":
+    main()
