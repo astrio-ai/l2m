@@ -18,13 +18,7 @@ graph TB
     C -->|Session Data| G[Chat History]
     C -->|Code Analysis| H[Repo Map]
     
-    style B fill:#e1f5ff
-    style C fill:#fff4e1
-    style D fill:#e8f5e9
-    style E fill:#f3e5f5
-    style F fill:#ffebee
-    style G fill:#e0f2f1
-    style H fill:#fff9c4
+    style C fill:#4686ff
 ```
 
 ## Core Components
@@ -166,10 +160,10 @@ flowchart TD
     W --> X[Show Diff]
     X --> Y[Ready for Commit]
     
-    style A fill:#e1f5ff
-    style L fill:#fff4e1
-    style R fill:#e8f5e9
-    style Y fill:#c8e6c9
+    style A fill:#808080
+    style L fill:#808080
+    style R fill:#808080
+    style Y fill:#4686ff
 ```
 
 ## Component Relationships
@@ -206,8 +200,8 @@ graph LR
     CODER --> LINT
     MODEL --> LLM
     
-    style CODER fill:#fff4e1
-    style LLM fill:#e8f5e9
+    style CODER fill:#4686ff
+    style LLM fill:#808080
 ```
 
 ## Edit Format System
@@ -244,10 +238,8 @@ flowchart LR
     I --> L[Git Tracker]
     L --> M[Commit Ready]
     
-    style A fill:#ffebee
-    style F fill:#fff4e1
-    style G fill:#e8f5e9
-    style K fill:#c8e6c9
+    style A fill:#808080
+    style K fill:#4686ff
 ```
 
 ## Technology Stack
