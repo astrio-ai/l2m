@@ -174,29 +174,35 @@ Batch evaluation results also include:
 
 ## Visualization
 
-Generate visualizations from evaluation results:
-
-```python
-from evals.codebleu import load_results, create_all_visualizations
-from pathlib import Path
-
-results = load_results(Path("results.json"))
-create_all_visualizations(
-    results,
-    output_dir=Path("visuals/"),
-)
-```
-
-Or use the command line:
+After generating a `codebleu_results.json`, run the visualization CLI to create the standard score, component, distribution, and relationship charts:
 
 ```bash
-python -m evals.codebleu.visualize results.json --output-dir visuals/
+# Use the interpreter that has compatible tree-sitter wheels (Python 3.12 in this repo)
+python3.12 -m evals.codebleu.visualize data/pynative-python-llm-controlled/codebleu_results.json \
+  --output-dir data/pynative-python-llm-controlled/visuals \
+  --prefix codebleu_llm
 ```
 
-Visualizations include:
-- CodeBLEU score distribution
-- Component comparison charts
-- Score distribution histograms
+This produces five PNGs (`*_scores.png`, `*_scores_with_components.png`, `*_components.png`, `*_distribution.png`, `*_relationships.png`) in the output directory. Control which plots are emitted with the mutually exclusive flags `--scores-only`, `--components-only`, `--distribution-only`, or `--relationships-only`.
+
+You can also compare two runs (e.g., LLM-controlled vs deterministic orchestration) directly:
+
+```bash
+python3.12 -m evals.codebleu.visualize data/pynative-python-llm-controlled/codebleu_results.json \
+  --compare-with data/pynative-python-atlas/codebleu_results.json \
+  --compare-labels "LLM-Controlled" "Deterministic" \
+  --comparison-prefix codebleu_llm_vs_atlas \
+  --output-dir data/pynative-python-comparison/visuals \
+  --scores-only
+```
+
+The command above creates the requested single-run chart plus three comparison plots (`*_summary.png`, `*_distribution.png`, `*_file_scores.png`) that highlight aggregate metrics, score distributions, and per-file deltas.
+
+> **Note:** The visualization module relies on `matplotlib`, `numpy`, and `scipy`, and the CodeBLEU evaluator requires a `tree-sitter` build ≥ 0.24.0. When the system Python (3.9) lacks that wheel, use `python3.12` (already configured in this repo) or install compatible wheels manually:
+>
+> ```bash
+> pip install 'tree-sitter>=0.24.0' tree-sitter-python
+> ```
 
 ## Limitations
 

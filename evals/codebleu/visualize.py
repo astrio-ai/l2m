@@ -26,6 +26,8 @@ COLOR_NGRAM = "#ee6c4d"  # N-gram
 COLOR_WEIGHTED_NGRAM = "#e0fbfc"  # Weighted N-gram
 COLOR_SYNTAX = "#98c1d9"  # Syntax
 COLOR_DATAFLOW = "#3d5a80"  # Data-flow
+COLOR_COMPARISON_A = "#4caf50"  # Deterministic / baseline
+COLOR_COMPARISON_B = "#42a5f5"  # LLM-controlled / variant
 
 
 def load_results(json_file: Path) -> Dict[str, Any]:
@@ -399,6 +401,281 @@ def plot_component_relationships(
     plt.close()
 
 
+def _extract_codebleu_summary(results: Dict[str, Any]) -> Dict[str, float]:
+    """Compute summary metrics with fallbacks if missing."""
+    summary = results.get("summary", {})
+    results_dict = results.get("results", {})
+
+    def _mean_from_results(extract_fn) -> float:
+        values = []
+        for result in results_dict.values():
+            has_codebleu = "codebleu" in result
+            status_check = "status" not in result or result.get("status") == "success"
+            if has_codebleu and status_check:
+                values.append(extract_fn(result))
+        if not values:
+            return 0.0
+        return float(sum(values) / len(values))
+
+    metrics = {
+        "mean_codebleu": summary.get("mean_codebleu"),
+        "mean_ngram_match": summary.get("mean_ngram_match"),
+        "mean_weighted_ngram_match": summary.get("mean_weighted_ngram_match"),
+        "mean_syntax_match": summary.get("mean_syntax_match"),
+        "mean_dataflow_match": summary.get("mean_dataflow_match"),
+    }
+
+    fallbacks = {
+        "mean_codebleu": lambda r: r.get("codebleu", 0.0),
+        "mean_ngram_match": lambda r: r.get("ngram_match_score", 0.0),
+        "mean_weighted_ngram_match": lambda r: r.get("weighted_ngram_match_score", 0.0),
+        "mean_syntax_match": lambda r: r.get("syntax_match_score", 0.0),
+        "mean_dataflow_match": lambda r: r.get("dataflow_match_score", 0.0),
+    }
+
+    computed = {}
+    for key, value in metrics.items():
+        if value is not None:
+            computed[key] = float(value)
+        else:
+            computed[key] = _mean_from_results(fallbacks[key])
+
+    computed["num_files"] = int(summary.get("num_files", len(results_dict)))
+    return computed
+
+
+def _extract_per_file_scores(results: Dict[str, Any]) -> Dict[str, float]:
+    """Return per-file CodeBLEU scores with default of 0.0."""
+    per_file = {}
+    for file_key, result in results.get("results", {}).items():
+        has_codebleu = "codebleu" in result
+        status_check = "status" not in result or result.get("status") == "success"
+        if has_codebleu and status_check:
+            per_file[file_key.replace(".CBL", "")] = float(result.get("codebleu", 0.0))
+        else:
+            per_file[file_key.replace(".CBL", "")] = 0.0
+    return per_file
+
+
+def plot_codebleu_summary_comparison(
+    results_a: Dict[str, Any],
+    results_b: Dict[str, Any],
+    labels: List[str],
+    output_file: Path,
+):
+    """Compare aggregate CodeBLEU metrics for two result sets."""
+    if not HAS_MATPLOTLIB:
+        print("Error: matplotlib is required for visualization.")
+        print("Install with: pip install matplotlib")
+        return
+
+    summary_a = _extract_codebleu_summary(results_a)
+    summary_b = _extract_codebleu_summary(results_b)
+
+    metrics = [
+        ("mean_codebleu", "CodeBLEU"),
+        ("mean_ngram_match", "N-gram"),
+        ("mean_weighted_ngram_match", "Weighted N-gram"),
+        ("mean_syntax_match", "Syntax"),
+        ("mean_dataflow_match", "Data-flow"),
+    ]
+
+    values_a = [summary_a[m[0]] for m in metrics]
+    values_b = [summary_b[m[0]] for m in metrics]
+
+    fig, ax = plt.subplots(figsize=(11, 6))
+    x_pos = range(len(metrics))
+    width = 0.35
+
+    ax.bar(
+        [x - width / 2 for x in x_pos],
+        values_a,
+        width,
+        label=labels[0],
+        color=COLOR_COMPARISON_A,
+        alpha=0.85,
+    )
+    ax.bar(
+        [x + width / 2 for x in x_pos],
+        values_b,
+        width,
+        label=labels[1],
+        color=COLOR_COMPARISON_B,
+        alpha=0.85,
+    )
+
+    ax.set_ylabel("Score", fontsize=12, fontweight="bold")
+    ax.set_xticks(list(x_pos))
+    ax.set_xticklabels([m[1] for m in metrics], fontsize=11)
+    ax.set_ylim(0, 1.0)
+    ax.set_title("CodeBLEU Summary Comparison", fontsize=14, fontweight="bold")
+    ax.grid(axis="y", linestyle="--", alpha=0.3)
+    ax.legend()
+
+    plt.tight_layout()
+    output_file.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(output_file, dpi=300, bbox_inches="tight")
+    print(f"Plot saved to: {output_file}")
+    plt.close()
+
+
+def plot_codebleu_distribution_comparison(
+    results_a: Dict[str, Any],
+    results_b: Dict[str, Any],
+    labels: List[str],
+    output_file: Path,
+):
+    """Overlay histogram comparison for CodeBLEU distributions."""
+    if not HAS_MATPLOTLIB:
+        print("Error: matplotlib is required for visualization.")
+        print("Install with: pip install matplotlib")
+        return
+
+    def _scores(results: Dict[str, Any]) -> List[float]:
+        values = []
+        for result in results.get("results", {}).values():
+            has_codebleu = "codebleu" in result
+            status_check = "status" not in result or result.get("status") == "success"
+            if has_codebleu and status_check:
+                values.append(float(result["codebleu"]))
+        return values
+
+    scores_a = _scores(results_a)
+    scores_b = _scores(results_b)
+
+    if not scores_a or not scores_b:
+        print("Insufficient results to visualize comparison.")
+        return
+
+    bins = [i / 20 for i in range(21)]  # 0.0 to 1.0 in 0.05 steps
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.hist(
+        scores_a,
+        bins=bins,
+        alpha=0.6,
+        color=COLOR_COMPARISON_A,
+        label=f"{labels[0]} (mean { _extract_codebleu_summary(results_a)['mean_codebleu']:.3f})",
+        edgecolor="black",
+    )
+    ax.hist(
+        scores_b,
+        bins=bins,
+        alpha=0.6,
+        color=COLOR_COMPARISON_B,
+        label=f"{labels[1]} (mean { _extract_codebleu_summary(results_b)['mean_codebleu']:.3f})",
+        edgecolor="black",
+    )
+
+    ax.set_xlabel("CodeBLEU Score", fontsize=12, fontweight="bold")
+    ax.set_ylabel("Number of Files", fontsize=12, fontweight="bold")
+    ax.set_title("CodeBLEU Score Distribution Comparison", fontsize=14, fontweight="bold")
+    ax.set_xlim(0, 1.0)
+    ax.grid(axis="y", linestyle="--", alpha=0.3)
+    ax.legend()
+
+    plt.tight_layout()
+    output_file.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(output_file, dpi=300, bbox_inches="tight")
+    print(f"Plot saved to: {output_file}")
+    plt.close()
+
+
+def plot_filewise_codebleu_comparison(
+    results_a: Dict[str, Any],
+    results_b: Dict[str, Any],
+    labels: List[str],
+    output_file: Path,
+):
+    """Compare per-file CodeBLEU scores."""
+    if not HAS_MATPLOTLIB:
+        print("Error: matplotlib is required for visualization.")
+        print("Install with: pip install matplotlib")
+        return
+
+    scores_a = _extract_per_file_scores(results_a)
+    scores_b = _extract_per_file_scores(results_b)
+    files = sorted(set(scores_a.keys()) | set(scores_b.keys()))
+    if not files:
+        print("No overlapping files to visualize.")
+        return
+
+    values_a = [scores_a.get(f, 0.0) for f in files]
+    values_b = [scores_b.get(f, 0.0) for f in files]
+
+    fig, ax = plt.subplots(figsize=(18, 6))
+    x_pos = range(len(files))
+    width = 0.4
+
+    ax.bar(
+        [x - width / 2 for x in x_pos],
+        values_a,
+        width,
+        label=labels[0],
+        color=COLOR_COMPARISON_A,
+        alpha=0.85,
+    )
+    ax.bar(
+        [x + width / 2 for x in x_pos],
+        values_b,
+        width,
+        label=labels[1],
+        color=COLOR_COMPARISON_B,
+        alpha=0.85,
+    )
+
+    ax.set_ylabel("CodeBLEU Score", fontsize=12, fontweight="bold")
+    ax.set_xticks(list(x_pos))
+    ax.set_xticklabels(files, rotation=45, ha="right", fontsize=8)
+    ax.set_ylim(0, 1.0)
+    ax.set_title("Per-file CodeBLEU Comparison", fontsize=14, fontweight="bold")
+    ax.grid(axis="y", linestyle="--", alpha=0.3)
+    ax.legend()
+
+    plt.tight_layout()
+    output_file.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(output_file, dpi=300, bbox_inches="tight")
+    print(f"Plot saved to: {output_file}")
+    plt.close()
+
+
+def create_codebleu_comparison_visualizations(
+    results_a: Dict[str, Any],
+    results_b: Dict[str, Any],
+    output_dir: Path,
+    labels: Optional[List[str]] = None,
+    prefix: str = "codebleu_comparison",
+):
+    """Create comparison visualizations between two CodeBLEU result sets."""
+    if labels is None:
+        labels = ["Reference", "Comparison"]
+
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    print(f"Creating CodeBLEU comparison visuals in {output_dir}...")
+
+    plot_codebleu_summary_comparison(
+        results_a,
+        results_b,
+        labels,
+        output_file=output_dir / f"{prefix}_summary.png",
+    )
+    plot_codebleu_distribution_comparison(
+        results_a,
+        results_b,
+        labels,
+        output_file=output_dir / f"{prefix}_distribution.png",
+    )
+    plot_filewise_codebleu_comparison(
+        results_a,
+        results_b,
+        labels,
+        output_file=output_dir / f"{prefix}_file_scores.png",
+    )
+
+    print(f"All comparison visuals saved to {output_dir}")
+
+
 def create_all_visualizations(
     results_json: Path,
     output_dir: Optional[Path] = None,
@@ -521,6 +798,26 @@ Examples:
         action="store_true",
         help="Only create component relationships scatter plots",
     )
+    parser.add_argument(
+        "--compare-with",
+        type=str,
+        default=None,
+        help="Path to second CodeBLEU results JSON file for comparison plots",
+    )
+    parser.add_argument(
+        "--compare-labels",
+        type=str,
+        nargs=2,
+        metavar=("LABEL_A", "LABEL_B"),
+        default=None,
+        help="Labels for comparison plots (default: derived from filenames)",
+    )
+    parser.add_argument(
+        "--comparison-prefix",
+        type=str,
+        default="codebleu_comparison",
+        help="Prefix for comparison output filenames",
+    )
     
     args = parser.parse_args()
     
@@ -530,6 +827,20 @@ Examples:
         sys.exit(1)
     
     results = load_results(results_json)
+    comparison_results: Optional[Dict[str, Any]] = None
+    comparison_labels: Optional[List[str]] = None
+
+    if args.compare_with:
+        compare_path = Path(args.compare_with)
+        if not compare_path.exists():
+            print(f"Error: Comparison file not found: {compare_path}")
+            sys.exit(1)
+        comparison_results = load_results(compare_path)
+        if args.compare_labels:
+            comparison_labels = list(args.compare_labels)
+        else:
+            comparison_labels = [results_json.stem, compare_path.stem]
+
     if args.output_dir:
         output_dir = Path(args.output_dir)
     else:
@@ -546,4 +857,13 @@ Examples:
         plot_component_relationships(results, output_file=output_dir / f"{args.prefix}_relationships.png")
     else:
         create_all_visualizations(results_json, output_dir, args.prefix)
+
+    if comparison_results:
+        create_codebleu_comparison_visualizations(
+            results,
+            comparison_results,
+            output_dir=output_dir,
+            labels=comparison_labels,
+            prefix=args.comparison_prefix,
+        )
 

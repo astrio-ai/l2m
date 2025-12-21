@@ -70,6 +70,32 @@ python -m evals.ca data/groundtruth-python/ data/output/ --timeout 60
 python -m evals.ca data/groundtruth-python/ data/output/ --strict
 ```
 
+### Visualization
+
+Once you have a CA results JSON you can generate publication-ready plots directly from the CLI:
+
+```bash
+# Generate the standard score, distribution, and breakdown charts
+python -m evals.ca.visualize data/pynative-python-llm-controlled/ca_results.json \
+  --output data/pynative-python-llm-controlled/visuals \
+  --prefix llm_controlled
+```
+
+The command above creates four PNG files (`*_scores.png`, `*_scores_detailed.png`, `*_distribution.png`, `*_match_breakdown.png`) inside the chosen output folder. Use the `--type` flag (`scores`, `distribution`, `breakdown`, `all`) to limit what is produced, and `--prefix` to control filename prefixes.
+
+To compare two different CA runs side-by-side (e.g., deterministic vs LLM-controlled orchestration) add the `--compare-with` flag:
+
+```bash
+python -m evals.ca.visualize data/pynative-python-atlas/ca_results.json \
+  --compare-with data/pynative-python-llm-controlled/ca_results.json \
+  --compare-labels "Deterministic" "LLM-Controlled" \
+  --comparison-prefix atlas_vs_llm \
+  --output data/pynative-python-comparison/visuals \
+  --type scores
+```
+
+This creates the usual single-run plot plus three comparison charts (`*_summary.png`, `*_match_distribution.png`, `*_file_scores.png`) inside the shared output directory.
+
 ## Integration with CodeBLEU
 
 CA complements CodeBLEU by measuring different aspects:
