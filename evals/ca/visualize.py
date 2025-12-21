@@ -17,13 +17,15 @@ except ImportError:
     except ImportError:
         np = None
 
-# CA color palette
-COLOR_CA = "#2e7d32"  # CA score (green for success)
-COLOR_PERFECT = "#4caf50"  # Perfect matches
-COLOR_PARTIAL = "#ff9800"  # Partial matches
-COLOR_FAILURE = "#f44336"  # Failures
-COLOR_EXACT = "#66bb6a"  # Exact matches
-COLOR_NORMALIZED = "#ffb74d"  # Normalized matches
+# CA color palette (soft pastel tones for readability)
+COLOR_CA = "#8bc34a"  # CA score (soft green)
+COLOR_PERFECT = "#aed581"  # Perfect matches
+COLOR_PARTIAL = "#ffcc80"  # Partial matches
+COLOR_FAILURE = "#ffab91"  # Failures
+COLOR_EXACT = "#81c784"  # Exact matches
+COLOR_NORMALIZED = "#ffe082"  # Normalized matches
+COLOR_COMPARISON_A = "#4caf50"  # Deterministic / baseline
+COLOR_COMPARISON_B = "#42a5f5"  # LLM-controlled / variant
 
 
 def load_results(json_file: Path) -> Dict[str, Any]:
@@ -397,6 +399,271 @@ def plot_ca_vs_codebleu(
     plt.close()
 
 
+def _extract_summary(results: Dict[str, Any]) -> Dict[str, float]:
+    """Return summary metrics with sensible defaults."""
+    summary = results.get("summary", {})
+    results_dict = results.get("results", {})
+
+    def _rate(key: str) -> float:
+        value = summary.get(key)
+        if value is not None:
+            return float(value)
+        if not results_dict:
+            return 0.0
+        if key == "exact_match_rate":
+            total = len(results_dict)
+            matches = sum(1 for r in results_dict.values() if r.get("exact_match"))
+            return matches / total if total else 0.0
+        if key == "normalized_match_rate":
+            total = len(results_dict)
+            matches = sum(1 for r in results_dict.values() if r.get("normalized_match"))
+            return matches / total if total else 0.0
+        if key == "returncode_match_rate":
+            total = len(results_dict)
+            matches = sum(1 for r in results_dict.values() if r.get("returncode_match"))
+            return matches / total if total else 0.0
+        return 0.0
+
+    def _count(key: str, predicate) -> int:
+        value = summary.get(key)
+        if value is not None:
+            return int(value)
+        return sum(1 for r in results_dict.values() if predicate(r))
+
+    return {
+        "mean_ca_score": float(summary.get("mean_ca_score", 0.0)),
+        "exact_match_rate": _rate("exact_match_rate"),
+        "normalized_match_rate": _rate("normalized_match_rate"),
+        "returncode_match_rate": _rate("returncode_match_rate"),
+        "perfect_matches": _count("perfect_matches", lambda r: r.get("ca_score") == 1.0),
+        "partial_matches": _count(
+            "partial_matches",
+            lambda r: r.get("ca_score") not in (None, 0.0, 1.0),
+        ),
+        "failures": _count("failures", lambda r: r.get("ca_score") == 0.0 or "error" in r),
+        "num_files": int(summary.get("num_files", len(results_dict))),
+    }
+
+
+def plot_summary_comparison(
+    results_a: Dict[str, Any],
+    results_b: Dict[str, Any],
+    labels: List[str],
+    output_file: Path,
+):
+    """Compare headline metrics between two CA result sets."""
+    if not HAS_MATPLOTLIB:
+        print("Error: matplotlib is required for visualization.")
+        print("Install with: pip install matplotlib")
+        return
+
+    summary_a = _extract_summary(results_a)
+    summary_b = _extract_summary(results_b)
+
+    metrics = [
+        ("mean_ca_score", "Mean CA Score"),
+        ("exact_match_rate", "Exact Match Rate"),
+        ("normalized_match_rate", "Normalized Match Rate"),
+        ("returncode_match_rate", "Return Code Match Rate"),
+    ]
+
+    values_a = [summary_a[m[0]] for m in metrics]
+    values_b = [summary_b[m[0]] for m in metrics]
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    x_pos = range(len(metrics))
+    width = 0.35
+
+    ax.bar(
+        [x - width / 2 for x in x_pos],
+        values_a,
+        width,
+        label=labels[0],
+        color=COLOR_COMPARISON_A,
+        alpha=0.85,
+    )
+    ax.bar(
+        [x + width / 2 for x in x_pos],
+        values_b,
+        width,
+        label=labels[1],
+        color=COLOR_COMPARISON_B,
+        alpha=0.85,
+    )
+
+    ax.set_ylabel("Score / Rate", fontsize=12, fontweight="bold")
+    ax.set_xticks(list(x_pos))
+    ax.set_xticklabels([m[1] for m in metrics], rotation=20, ha="right", fontsize=10)
+    ax.set_ylim(0, 1.1)
+    ax.set_title("CA Summary Comparison", fontsize=14, fontweight="bold")
+    ax.grid(axis="y", linestyle="--", alpha=0.3)
+    ax.legend()
+
+    plt.tight_layout()
+    output_file.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(output_file, dpi=300, bbox_inches="tight")
+    print(f"Plot saved to {output_file}")
+    plt.close()
+
+
+def plot_match_distribution_comparison(
+    results_a: Dict[str, Any],
+    results_b: Dict[str, Any],
+    labels: List[str],
+    output_file: Path,
+):
+    """Compare match distribution (perfect/partial/failure)."""
+    if not HAS_MATPLOTLIB:
+        print("Error: matplotlib is required for visualization.")
+        print("Install with: pip install matplotlib")
+        return
+
+    summary_a = _extract_summary(results_a)
+    summary_b = _extract_summary(results_b)
+
+    categories = ["Perfect", "Partial", "Failure"]
+    values_a = [
+        summary_a["perfect_matches"],
+        summary_a["partial_matches"],
+        summary_a["failures"],
+    ]
+    values_b = [
+        summary_b["perfect_matches"],
+        summary_b["partial_matches"],
+        summary_b["failures"],
+    ]
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    x_pos = range(len(categories))
+    width = 0.35
+
+    ax.bar(
+        [x - width / 2 for x in x_pos],
+        values_a,
+        width,
+        label=labels[0],
+        color=COLOR_COMPARISON_A,
+        alpha=0.85,
+    )
+    ax.bar(
+        [x + width / 2 for x in x_pos],
+        values_b,
+        width,
+        label=labels[1],
+        color=COLOR_COMPARISON_B,
+        alpha=0.85,
+    )
+
+    ax.set_ylabel("Number of Files", fontsize=12, fontweight="bold")
+    ax.set_xticks(list(x_pos))
+    ax.set_xticklabels(categories, fontsize=11)
+    ax.set_title("Match Type Distribution Comparison", fontsize=14, fontweight="bold")
+    ax.grid(axis="y", linestyle="--", alpha=0.3)
+    ax.legend()
+
+    plt.tight_layout()
+    output_file.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(output_file, dpi=300, bbox_inches="tight")
+    print(f"Plot saved to {output_file}")
+    plt.close()
+
+
+def plot_filewise_scores_comparison(
+    results_a: Dict[str, Any],
+    results_b: Dict[str, Any],
+    labels: List[str],
+    output_file: Path,
+):
+    """Compare per-file CA scores."""
+    if not HAS_MATPLOTLIB:
+        print("Error: matplotlib is required for visualization.")
+        print("Install with: pip install matplotlib")
+        return
+
+    results_dict_a = results_a.get("results", {})
+    results_dict_b = results_b.get("results", {})
+    files = sorted(set(results_dict_a.keys()) | set(results_dict_b.keys()))
+    if not files:
+        print("No overlapping files to visualize.")
+        return
+
+    scores_a = [results_dict_a.get(f, {}).get("ca_score", 0.0) or 0.0 for f in files]
+    scores_b = [results_dict_b.get(f, {}).get("ca_score", 0.0) or 0.0 for f in files]
+
+    fig, ax = plt.subplots(figsize=(16, 6))
+    x_pos = range(len(files))
+    width = 0.4
+
+    ax.bar(
+        [x - width / 2 for x in x_pos],
+        scores_a,
+        width,
+        label=labels[0],
+        color=COLOR_COMPARISON_A,
+        alpha=0.85,
+    )
+    ax.bar(
+        [x + width / 2 for x in x_pos],
+        scores_b,
+        width,
+        label=labels[1],
+        color=COLOR_COMPARISON_B,
+        alpha=0.85,
+    )
+
+    ax.set_ylabel("CA Score", fontsize=12, fontweight="bold")
+    ax.set_xticks(list(x_pos))
+    ax.set_xticklabels(files, rotation=45, ha="right", fontsize=8)
+    ax.set_ylim(0, 1.1)
+    ax.set_title("Per-file CA Score Comparison", fontsize=14, fontweight="bold")
+    ax.grid(axis="y", linestyle="--", alpha=0.3)
+    ax.legend()
+
+    plt.tight_layout()
+    output_file.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(output_file, dpi=300, bbox_inches="tight")
+    print(f"Plot saved to {output_file}")
+    plt.close()
+
+
+def create_comparison_visualizations(
+    results_a: Dict[str, Any],
+    results_b: Dict[str, Any],
+    output_dir: Path,
+    labels: Optional[List[str]] = None,
+    prefix: str = "comparison",
+):
+    """Create comparison visualizations between two CA result sets."""
+    if labels is None:
+        labels = ["Reference", "Comparison"]
+
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    print(f"Creating comparison visualizations in {output_dir}...")
+
+    plot_summary_comparison(
+        results_a,
+        results_b,
+        labels,
+        output_file=output_dir / f"{prefix}_summary.png",
+    )
+    plot_match_distribution_comparison(
+        results_a,
+        results_b,
+        labels,
+        output_file=output_dir / f"{prefix}_match_distribution.png",
+    )
+    plot_filewise_scores_comparison(
+        results_a,
+        results_b,
+        labels,
+        output_file=output_dir / f"{prefix}_file_scores.png",
+    )
+
+    print(f"All comparison visualizations saved to {output_dir}")
+
+
 def create_all_visualizations(
     results: Dict[str, Any],
     output_dir: Path,
@@ -477,6 +744,26 @@ def main():
         default="all",
         help="Type of visualization to create (default: all)",
     )
+    parser.add_argument(
+        "--compare-with",
+        type=str,
+        default=None,
+        help="Path to second CA results JSON file for comparison visualizations",
+    )
+    parser.add_argument(
+        "--compare-labels",
+        type=str,
+        nargs=2,
+        metavar=("LABEL_A", "LABEL_B"),
+        default=None,
+        help="Labels for comparison plots (default: derived from file names)",
+    )
+    parser.add_argument(
+        "--comparison-prefix",
+        type=str,
+        default="comparison",
+        help="Prefix for comparison output filenames (default: comparison)",
+    )
     
     args = parser.parse_args()
     
@@ -486,6 +773,19 @@ def main():
         return 1
     
     results = load_results(results_file)
+    comparison_results = None
+    comparison_labels: Optional[List[str]] = None
+
+    if args.compare_with:
+        compare_path = Path(args.compare_with)
+        if not compare_path.exists():
+            print(f"Error: Comparison file not found: {compare_path}")
+            return 1
+        comparison_results = load_results(compare_path)
+        if args.compare_labels:
+            comparison_labels = list(args.compare_labels)
+        else:
+            comparison_labels = [results_file.stem, compare_path.stem]
     
     if args.output:
         output_dir = Path(args.output)
@@ -501,6 +801,15 @@ def main():
     elif args.type == "breakdown":
         plot_match_type_breakdown(results, output_file=output_dir / f"{args.prefix}_breakdown.png")
     
+    if comparison_results:
+        create_comparison_visualizations(
+            results,
+            comparison_results,
+            output_dir=output_dir,
+            labels=comparison_labels,
+            prefix=args.comparison_prefix,
+        )
+
     return 0
 
 
