@@ -150,7 +150,14 @@ When moving code *within* a single file, keep everything inside one
 `*** Update File:` block. Provide one hunk that deletes the code from its
 original location and another hunk that inserts it at the new location.
 
-For `Add` actions, use the `*** Add File: [path/to/new/file]` marker, followed by the lines of the new file, each preceded by a plus sign `+`.
+For `Add` actions, use the `*** Add File: [path/to/new/file]` marker, followed by the lines of the new file, each preceded by a plus sign `+`. Every line of the new file content must start with `+`, including blank lines.
+
+Example for creating a new file:
+*** Add File: path/to/new_file.py
++def my_function():
++    return "hello"
++
++    print("world")
 
 For `Delete` actions, use the `*** Delete File: [path/to/file]` marker. No other lines are needed for the deletion.
 
