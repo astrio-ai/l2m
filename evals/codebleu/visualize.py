@@ -26,8 +26,8 @@ COLOR_NGRAM = "#ee6c4d"  # N-gram
 COLOR_WEIGHTED_NGRAM = "#e0fbfc"  # Weighted N-gram
 COLOR_SYNTAX = "#98c1d9"  # Syntax
 COLOR_DATAFLOW = "#3d5a80"  # Data-flow
-COLOR_COMPARISON_A = "#4caf50"  # Deterministic / baseline
-COLOR_COMPARISON_B = "#42a5f5"  # LLM-controlled / variant
+COLOR_COMPARISON_A = "#42a5f5"  # Deterministic / baseline
+COLOR_COMPARISON_B = "#4caf50"  # LLM-controlled / variant
 
 
 def load_results(json_file: Path) -> Dict[str, Any]:
@@ -648,6 +648,16 @@ def create_codebleu_comparison_visualizations(
     """Create comparison visualizations between two CodeBLEU result sets."""
     if labels is None:
         labels = ["Reference", "Comparison"]
+    else:
+        labels = list(labels)
+
+    def _is_deterministic(label: str) -> bool:
+        return "deterministic" in label.lower()
+
+    if len(labels) == 2 and not _is_deterministic(labels[0]) and _is_deterministic(labels[1]):
+        # Ensure deterministic results are always plotted first
+        results_a, results_b = results_b, results_a
+        labels = [labels[1], labels[0]]
 
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)

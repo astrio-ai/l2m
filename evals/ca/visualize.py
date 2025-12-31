@@ -24,8 +24,8 @@ COLOR_PARTIAL = "#ffcc80"  # Partial matches
 COLOR_FAILURE = "#ffab91"  # Failures
 COLOR_EXACT = "#81c784"  # Exact matches
 COLOR_NORMALIZED = "#ffe082"  # Normalized matches
-COLOR_COMPARISON_A = "#4caf50"  # Deterministic / baseline
-COLOR_COMPARISON_B = "#42a5f5"  # LLM-controlled / variant
+COLOR_COMPARISON_A = "#42a5f5"  # Deterministic / baseline (blue)
+COLOR_COMPARISON_B = "#4caf50"  # LLM-controlled / variant (green)
 
 
 def load_results(json_file: Path) -> Dict[str, Any]:

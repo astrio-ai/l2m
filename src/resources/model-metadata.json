@@ -172,7 +172,8 @@
         "supports_vision": true,
         "supports_prompt_caching": true,
         "supports_system_messages": true,
-        "supports_tool_choice": true
+        "supports_tool_choice": true,
+        "source": "https://platform.openai.com/docs/models/gpt-4.5-preview"
     },
     "gemini/gemini-2.5-pro-exp-03-25": {
         "max_tokens": 8192,

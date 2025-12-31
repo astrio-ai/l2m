@@ -1898,6 +1898,25 @@
   use_temperature: false
   accepts_settings: ["reasoning_effort"]
 
+- name: gpt-5.2
+  edit_format: diff
+  weak_model_name: gpt-5-nano
+  use_repo_map: true
+  use_temperature: false
+  accepts_settings: ["reasoning_effort"]
+  overeager: true
+  extra_params:
+    max_tokens: 128000
+
+- name: gpt-5.1-codex
+  edit_format: diff
+  weak_model_name: gpt-5-nano
+  use_repo_map: true
+  use_temperature: false
+  accepts_settings: ["reasoning_effort"]
+  extra_params:
+    max_tokens: 128000
+
 - name: azure/gpt-5
   edit_format: diff
   weak_model_name: azure/gpt-5-nano
@@ -1953,6 +1972,33 @@
   use_repo_map: true
   use_temperature: false
   accepts_settings: ["reasoning_effort"]
+
+- name: azure/gpt-5-codex
+  edit_format: diff
+  weak_model_name: azure/gpt-5-nano
+  use_repo_map: true
+  use_temperature: false
+  accepts_settings: ["reasoning_effort"]
+  extra_params:
+    max_tokens: 128000
+
+- name: azure/gpt-5.2
+  edit_format: diff
+  weak_model_name: azure/gpt-5-nano
+  use_repo_map: true
+  use_temperature: false
+  accepts_settings: ["reasoning_effort"]
+  extra_params:
+    max_tokens: 128000
+
+- name: azure/gpt-5.1-codex
+  edit_format: diff
+  weak_model_name: azure/gpt-5-nano
+  use_repo_map: true
+  use_temperature: false
+  accepts_settings: ["reasoning_effort"]
+  extra_params:
+    max_tokens: 128000
 
 - name: openai/gpt-5
   edit_format: diff
@@ -2010,6 +2056,33 @@
   use_temperature: false
   accepts_settings: ["reasoning_effort"]
 
+- name: openai/gpt-5-codex
+  edit_format: diff
+  weak_model_name: openai/gpt-5-nano
+  use_repo_map: true
+  use_temperature: false
+  accepts_settings: ["reasoning_effort"]
+  extra_params:
+    max_tokens: 128000
+
+- name: openai/gpt-5.2
+  edit_format: diff
+  weak_model_name: openai/gpt-5-nano
+  use_repo_map: true
+  use_temperature: false
+  accepts_settings: ["reasoning_effort"]
+  extra_params:
+    max_tokens: 128000
+
+- name: openai/gpt-5.1-codex
+  edit_format: diff
+  weak_model_name: openai/gpt-5-nano
+  use_repo_map: true
+  use_temperature: false
+  accepts_settings: ["reasoning_effort"]
+  extra_params:
+    max_tokens: 128000
+
 - name: openrouter/openai/gpt-5
   edit_format: diff
   weak_model_name: openrouter/openai/gpt-5-nano
@@ -2060,6 +2133,27 @@
   accepts_settings: ["reasoning_effort"]
 
 - name: openrouter/openai/gpt-5-chat-latest
+  edit_format: diff
+  weak_model_name: openrouter/openai/gpt-5-nano
+  use_repo_map: true
+  use_temperature: false
+  accepts_settings: ["reasoning_effort"]
+
+- name: openrouter/openai/gpt-5-codex
+  edit_format: diff
+  weak_model_name: openrouter/openai/gpt-5-nano
+  use_repo_map: true
+  use_temperature: false
+  accepts_settings: ["reasoning_effort"]
+
+- name: openrouter/openai/gpt-5.2
+  edit_format: diff
+  weak_model_name: openrouter/openai/gpt-5-nano
+  use_repo_map: true
+  use_temperature: false
+  accepts_settings: ["reasoning_effort"]
+
+- name: openrouter/openai/gpt-5.1-codex
   edit_format: diff
   weak_model_name: openrouter/openai/gpt-5-nano
   use_repo_map: true
