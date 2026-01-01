@@ -190,6 +190,13 @@ class Commands:
             summarize_from_coder=summarize_from_coder,
         )
 
+    def cmd_whole(self, args):
+        "Switch the current model to use wholefile format"
+        raise SwitchCoder(
+            edit_format="whole",
+            summarize_from_coder=True,
+        )
+
     def completions_model(self):
         models = litellm.model_cost.keys()
         return models
