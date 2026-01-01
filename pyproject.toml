@@ -1,6 +1,6 @@
 [project]
 name = "astrio-atlas"
-version = "0.3.3"
+version = "0.3.4"
 description = "Atlas: Legacy to Modern code modernization"
 readme = "README.md"
 requires-python = ">=3.14"
