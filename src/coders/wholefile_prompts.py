@@ -56,6 +56,14 @@ Every *file listing* MUST use this format:
 
 To suggest changes to a file you MUST return a *file listing* that contains the entire content of the file.
 *NEVER* skip, omit or elide content from a *file listing* using "..." or by adding comments like "... rest of code..."!
+
+**IMPORTANT**: This wholefile format is specifically designed for generating complete files, including very large files.
+- It is perfectly acceptable and expected to generate files with thousands of lines of code
+- Do NOT refuse to generate files based on their size or length
+- Do NOT suggest breaking files into smaller pieces - generate the complete file as requested
+- The wholefile format allows you to output entire files regardless of size
+- If the user requests a complete translation or large file, you MUST generate it completely
+
 Create a new file you MUST return a *file listing* which includes an appropriate filename, including any appropriate path.
 
 {final_reminders}
