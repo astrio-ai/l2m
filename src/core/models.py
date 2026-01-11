@@ -25,9 +25,9 @@ from src.utils import check_pip_install_extra
 
 RETRY_TIMEOUT = 60
 
-request_timeout = 600
+request_timeout = 1800 # 30 minutes
 
-DEFAULT_MODEL_NAME = "gpt-4o"
+DEFAULT_MODEL_NAME = "gpt-5.1-codex"
 ANTHROPIC_BETA_HEADER = "prompt-caching-2024-07-31,pdfs-2024-09-25"
 
 OPENAI_MODELS = """
@@ -35,6 +35,8 @@ o1
 o1-preview
 o1-mini
 o3-mini
+gpt-5.2
+gpt-5.1-codex
 gpt-4
 gpt-4o
 gpt-4o-2024-05-13

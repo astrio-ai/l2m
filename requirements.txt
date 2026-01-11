@@ -48,6 +48,8 @@ pillow>=11.0.0
 # Network and utilities
 socksio>=1.0.0
 pyperclip>=1.9.0
+urllib3>=2.6.3  # Security: Fixes decompression-bomb safeguards bypass (CVE)
+aiohttp>=3.13.3  # Security: Fixes multiple vulnerabilities (zip bomb, DoS, etc.)
 
 # Scientific computing and graph processing
 networkx>=3.4.0
